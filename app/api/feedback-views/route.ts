@@ -58,7 +58,25 @@ export async function GET() {
   }
 }
 
-export async function POST() {
+function isSameSiteRequest(request: Request): boolean {
+  const fetchSite = request.headers.get("sec-fetch-site");
+  if (fetchSite && fetchSite !== "same-origin" && fetchSite !== "same-site") return false;
+
+  const origin = request.headers.get("origin");
+  if (!origin) return true; // non-browser clients and older user agents
+  try {
+    return new URL(origin).host === new URL(request.url).host;
+  } catch {
+    return false;
+  }
+}
+
+export async function POST(request: Request) {
+  // This public counter carries no identity, but cross-site requests must not
+  // be able to inflate it. The check uses request origin only and stores no IP.
+  if (!isSameSiteRequest(request)) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
   try {
     const pending = getClient();
     if (!pending) return NextResponse.json({ count: null });

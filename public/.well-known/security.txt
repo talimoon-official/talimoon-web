@@ -1,0 +1,5 @@
+Contact: mailto:hello@talimoon.com
+Canonical: https://www.talimoon.com/.well-known/security.txt
+Policy: https://www.talimoon.com/privacy
+Preferred-Languages: uz, en, ru
+Expires: 2027-09-07T00:00:00.000Z

@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 const EN: LegalCopy = {
   title: "Privacy Policy",
   effectiveLabel: "Effective date",
-  effectiveDate: "4 September 2026",
+  effectiveDate: "7 September 2026",
   intro: [
     "TALIMOON ('TALIMOON', 'we', or 'us') creates personalized children's books and related storytelling products. This Privacy Policy explains what information we collect when you order from us or use our website, why we use it, and the choices you have.",
     "Please read it together with our Terms of Service.",
@@ -35,7 +35,7 @@ const EN: LegalCopy = {
         },
         {
           kind: "p",
-          text: "For any question about this policy or about your information, you can reach us at talimoon.production@gmail.com.",
+          text: "For any question about this policy or about your information, you can reach us at hello@talimoon.com.",
         },
       ],
     },
@@ -66,6 +66,27 @@ const EN: LegalCopy = {
       ],
     },
     {
+      heading: "Website data, IP addresses, and local storage",
+      blocks: [
+        {
+          kind: "p",
+          text: "TALIMOON's website application does not place your IP address in an order profile, the shared feedback counter, or browser storage. We do not build advertising profiles from IP addresses and we do not maintain a separate customer IP database.",
+        },
+        {
+          kind: "p",
+          text: "An IP address is nevertheless transmitted as part of every normal Internet connection. Our hosting and security providers — currently including Vercel and Cloudflare Turnstile — may process IP address, request time, requested page, browser or device information, and security signals to deliver the site, diagnose faults, prevent abuse, and verify that an order is submitted by a person. Their infrastructure logs and retention are governed by their own service terms and privacy notices. We therefore do not make the inaccurate claim that an IP address never reaches or is never temporarily retained by Internet infrastructure.",
+        },
+        {
+          kind: "p",
+          text: "We do not use advertising cookies or third-party advertising pixels. The site stores limited first-party preferences on your device, such as language and market selection, reading progress, an anonymous random reaction identifier and reaction choices, and whether an app-install prompt was dismissed. These values remain in your browser and can be removed through your browser's site-data controls. They are not derived from your IP address or device fingerprint.",
+        },
+        {
+          kind: "p",
+          text: "If you choose the optional delivery-location feature, your browser asks for permission first. Precise coordinates are requested only after your action and are sent with the order solely to help delivery; they are not collected during ordinary browsing.",
+        },
+      ],
+    },
+    {
       heading: "Why we use your information",
       blocks: [
         { kind: "p", text: "We use the information above to:" },
@@ -83,6 +104,10 @@ const EN: LegalCopy = {
         {
           kind: "p",
           text: "We use your information for these purposes only. We do not use children's photographs or personal details for advertising, or for any purpose unrelated to your order.",
+        },
+        {
+          kind: "p",
+          text: "Depending on the context and applicable law, we process this information to perform the order you ask us to fulfil, on the basis of your consent for optional features such as precise delivery location, to meet legal obligations, and for our legitimate interests in providing support, preventing fraud, and securing the service. You may withdraw consent for future optional processing by contacting us, without affecting processing already lawfully completed.",
         },
       ],
     },
@@ -103,7 +128,7 @@ const EN: LegalCopy = {
         },
         {
           kind: "p",
-          text: "If you believe a child's information has been shared with us without proper authority, contact us at talimoon.production@gmail.com and we will review it and, where appropriate, delete it.",
+          text: "If you believe a child's information has been shared with us without proper authority, contact us at hello@talimoon.com and we will review it and, where appropriate, delete it.",
         },
       ],
     },
@@ -171,6 +196,16 @@ const EN: LegalCopy = {
           kind: "p",
           text: "We use technical and organizational measures that are intended to protect the information you share with us against loss, misuse, and unauthorized access. No method of transmission or storage can be guaranteed to be completely secure, but we work to protect your information and to limit access to those who need it to do their work.",
         },
+        {
+          kind: "list",
+          items: [
+            "encrypted HTTPS transport and restrictive browser security headers;",
+            "bot protection on the order submission flow;",
+            "short-lived, order-specific authorization for file uploads instead of public upload access;",
+            "no advertising tracker or IP-based customer profile in TALIMOON's application code;",
+            "access limited to people and providers who need the information to fulfil the order or support the service.",
+          ],
+        },
       ],
     },
     {
@@ -178,7 +213,7 @@ const EN: LegalCopy = {
       blocks: [
         {
           kind: "p",
-          text: "You may contact us at talimoon.production@gmail.com to:",
+          text: "You may contact us at hello@talimoon.com to:",
         },
         {
           kind: "list",
@@ -217,7 +252,7 @@ const EN: LegalCopy = {
       blocks: [
         {
           kind: "p",
-          text: "If you have any question about this Privacy Policy or about how your information is handled, contact us at talimoon.production@gmail.com.",
+          text: "If you have any question about this Privacy Policy or about how your information is handled, contact us at hello@talimoon.com.",
         },
       ],
     },
@@ -227,7 +262,7 @@ const EN: LegalCopy = {
 const UZ: LegalCopy = {
   title: "Maxfiylik siyosati",
   effectiveLabel: "Kuchga kirgan sana",
-  effectiveDate: "2026-yil 4-sentabr",
+  effectiveDate: "2026-yil 7-sentabr",
   intro: [
     "TALIMOON ('TALIMOON', 'biz') bolalar uchun shaxsiylashtirilgan kitoblar va u bilan bog'liq hikoya mahsulotlarini yaratadi. Ushbu Maxfiylik siyosati siz buyurtma berganingizda yoki veb-saytimizdan foydalanganingizda qanday ma'lumotlarni to'plashimizni, ulardan nima uchun foydalanishimizni va sizda qanday tanlov borligini tushuntiradi.",
     "Iltimos, uni Foydalanish shartlari bilan birga o'qing.",
@@ -242,7 +277,7 @@ const UZ: LegalCopy = {
         },
         {
           kind: "p",
-          text: "Ushbu siyosat yoki ma'lumotlaringiz bo'yicha har qanday savol uchun biz bilan talimoon.production@gmail.com orqali bog'lanishingiz mumkin.",
+          text: "Ushbu siyosat yoki ma'lumotlaringiz bo'yicha har qanday savol uchun biz bilan hello@talimoon.com orqali bog'lanishingiz mumkin.",
         },
       ],
     },
@@ -273,6 +308,27 @@ const UZ: LegalCopy = {
       ],
     },
     {
+      heading: "Sayt ma'lumotlari, IP manzil va qurilmadagi saqlash",
+      blocks: [
+        {
+          kind: "p",
+          text: "TALIMOON saytining o'z dasturiy kodi IP manzilingizni buyurtma profiliga, umumiy fikr-mulohaza hisoblagichiga yoki brauzer xotirasiga yozmaydi. Biz IP manzillar asosida reklama profili tuzmaymiz va mijozlarning IP manzillari uchun alohida ma'lumotlar bazasini yuritmaymiz.",
+        },
+        {
+          kind: "p",
+          text: "Shunga qaramay, IP manzil har qanday oddiy internet ulanishining texnik qismi sifatida uzatiladi. Saytni yetkazib berish, nosozliklarni aniqlash, suiiste'molning oldini olish va buyurtmani inson yuborayotganini tekshirish uchun hosting va xavfsizlik provayderlarimiz — hozirda Vercel va Cloudflare Turnstile — IP manzil, so'rov vaqti, ochilgan sahifa, brauzer yoki qurilma ma'lumoti hamda xavfsizlik signallarini qayta ishlashi mumkin. Ularning infratuzilma loglari va saqlash muddati o'z xizmat shartlari va maxfiylik qoidalari bilan boshqariladi. Shu sabab biz IP manzil internet infratuzilmasiga umuman yetib bormaydi yoki hech qachon vaqtincha saqlanmaydi, degan noto'g'ri va'dani bermaymiz.",
+        },
+        {
+          kind: "p",
+          text: "Biz reklama cookie-fayllari yoki uchinchi tomon reklama piksellaridan foydalanmaymiz. Sayt qurilmangizda faqat cheklangan birinchi tomon sozlamalarini saqlaydi: til va hudud tanlovi, kitob o'qish jarayoni, tasodifiy yaratilgan anonim reaksiya identifikatori va tanlovlari hamda ilovani o'rnatish taklifi yopilgan vaqt. Bu qiymatlar brauzeringizda qoladi va brauzerning sayt ma'lumotlari sozlamasi orqali o'chirilishi mumkin. Ular IP manzilingizdan yoki qurilma fingerprintidan olinmaydi.",
+        },
+        {
+          kind: "p",
+          text: "Yetkazib berish uchun ixtiyoriy lokatsiya funksiyasini tanlasangiz, avval brauzer Sizdan ruxsat so'raydi. Aniq koordinatalar faqat Sizning harakatingizdan keyin olinadi va faqat yetkazib berishni osonlashtirish maqsadida buyurtma bilan yuboriladi; oddiy sayt ko'rish jarayonida lokatsiya yig'ilmaydi.",
+        },
+      ],
+    },
+    {
       heading: "Ma'lumotlardan nima uchun foydalanamiz",
       blocks: [
         {
@@ -294,6 +350,10 @@ const UZ: LegalCopy = {
           kind: "p",
           text: "Biz ma'lumotlaringizdan faqat shu maqsadlarda foydalanamiz. Bolalarning fotosuratlari va shaxsiy ma'lumotlaridan reklama uchun yoki buyurtmangizga aloqador bo'lmagan hech qanday maqsadda foydalanmaymiz.",
         },
+        {
+          kind: "p",
+          text: "Vaziyat va qo'llaniladigan qonunga qarab, ma'lumotlarni Siz so'ragan buyurtmani bajarish uchun, aniq yetkazib berish lokatsiyasi kabi ixtiyoriy funksiyalar bo'yicha roziligingiz asosida, qonuniy majburiyatlarni bajarish uchun hamda mijozlarni qo'llab-quvvatlash, firibgarlikning oldini olish va xizmatni himoyalashdagi qonuniy manfaatlarimiz uchun qayta ishlaymiz. Kelgusidagi ixtiyoriy qayta ishlashga berilgan rozilikni biz bilan bog'lanib qaytarib olishingiz mumkin; bu avval qonuniy bajarilgan amallarga ta'sir qilmaydi.",
+        },
       ],
     },
     {
@@ -313,7 +373,7 @@ const UZ: LegalCopy = {
         },
         {
           kind: "p",
-          text: "Agar bola haqidagi ma'lumot tegishli vakolatsiz biz bilan ulashilgan deb hisoblasangiz, talimoon.production@gmail.com orqali bog'laning — biz uni ko'rib chiqamiz va zarur bo'lsa, o'chirib tashlaymiz.",
+          text: "Agar bola haqidagi ma'lumot tegishli vakolatsiz biz bilan ulashilgan deb hisoblasangiz, hello@talimoon.com orqali bog'laning — biz uni ko'rib chiqamiz va zarur bo'lsa, o'chirib tashlaymiz.",
         },
       ],
     },
@@ -381,6 +441,16 @@ const UZ: LegalCopy = {
           kind: "p",
           text: "Biz siz ulashadigan ma'lumotlarni yo'qotish, suiiste'mol qilish va ruxsatsiz kirishdan himoya qilishga qaratilgan texnik va tashkiliy choralardan foydalanamiz. Ma'lumot uzatish yoki saqlashning hech bir usuli to'liq xavfsiz ekanligini kafolatlab bo'lmaydi, biroq biz ma'lumotlaringizni himoya qilish va unga kirishni faqat ish yuzasidan zarur bo'lgan shaxslar bilan cheklash ustida ishlaymiz.",
         },
+        {
+          kind: "list",
+          items: [
+            "shifrlangan HTTPS uzatish va brauzer uchun qat'iy xavfsizlik sarlavhalari;",
+            "buyurtma yuborish jarayonida botlardan himoya;",
+            "ommaviy yuklash o'rniga fayllar uchun qisqa muddatli va aynan buyurtmaga bog'langan ruxsat;",
+            "TALIMOON dasturiy kodida reklama trekerlari va IP asosidagi mijoz profili yo'qligi;",
+            "ma'lumotga kirishni faqat buyurtmani bajarishi yoki xizmatni qo'llab-quvvatlashi zarur bo'lgan shaxslar va provayderlar bilan cheklash.",
+          ],
+        },
       ],
     },
     {
@@ -388,7 +458,7 @@ const UZ: LegalCopy = {
       blocks: [
         {
           kind: "p",
-          text: "Quyidagilar uchun biz bilan talimoon.production@gmail.com orqali bog'lanishingiz mumkin:",
+          text: "Quyidagilar uchun biz bilan hello@talimoon.com orqali bog'lanishingiz mumkin:",
         },
         {
           kind: "list",
@@ -427,7 +497,7 @@ const UZ: LegalCopy = {
       blocks: [
         {
           kind: "p",
-          text: "Ushbu Maxfiylik siyosati yoki ma'lumotlaringiz qanday ishlov ko'rishi bo'yicha savolingiz bo'lsa, talimoon.production@gmail.com orqali biz bilan bog'laning.",
+          text: "Ushbu Maxfiylik siyosati yoki ma'lumotlaringiz qanday ishlov ko'rishi bo'yicha savolingiz bo'lsa, hello@talimoon.com orqali biz bilan bog'laning.",
         },
       ],
     },
@@ -437,7 +507,7 @@ const UZ: LegalCopy = {
 const RU: LegalCopy = {
   title: "Политика конфиденциальности",
   effectiveLabel: "Дата вступления в силу",
-  effectiveDate: "4 сентября 2026 г.",
+  effectiveDate: "7 сентября 2026 г.",
   intro: [
     "TALIMOON (далее «TALIMOON», «мы») создаёт именные детские книги и другие продукты, связанные с историями для детей. Настоящая Политика конфиденциальности объясняет, какие данные мы собираем при оформлении заказа или использовании нашего сайта, для чего мы их используем и какой выбор есть у Вас.",
   "Пожалуйста, ознакомьтесь с ней вместе с Условиями использования.",
@@ -452,7 +522,7 @@ const RU: LegalCopy = {
         },
         {
           kind: "p",
-          text: "По любому вопросу, связанному с этой политикой или Вашими данными, Вы можете написать нам на talimoon.production@gmail.com.",
+          text: "По любому вопросу, связанному с этой политикой или Вашими данными, Вы можете написать нам на hello@talimoon.com.",
         },
       ],
     },
@@ -483,6 +553,27 @@ const RU: LegalCopy = {
       ],
     },
     {
+      heading: "Данные сайта, IP-адрес и локальное хранение",
+      blocks: [
+        {
+          kind: "p",
+          text: "Собственный код сайта TALIMOON не записывает Ваш IP-адрес в профиль заказа, общий счётчик просмотров отзывов или хранилище браузера. Мы не создаём рекламные профили на основе IP-адресов и не ведём отдельную базу IP-адресов клиентов.",
+        },
+        {
+          kind: "p",
+          text: "Тем не менее IP-адрес передаётся как техническая часть любого обычного интернет-соединения. Наши поставщики хостинга и безопасности — в настоящее время Vercel и Cloudflare Turnstile — могут обрабатывать IP-адрес, время запроса, запрошенную страницу, сведения о браузере или устройстве и сигналы безопасности, чтобы доставлять сайт, диагностировать ошибки, предотвращать злоупотребления и проверять, что заказ отправляет человек. Срок хранения инфраструктурных журналов регулируется их собственными условиями и уведомлениями о конфиденциальности. Поэтому мы не заявляем ошибочно, что IP-адрес никогда не поступает в интернет-инфраструктуру и никогда временно не сохраняется.",
+        },
+        {
+          kind: "p",
+          text: "Мы не используем рекламные cookie-файлы или сторонние рекламные пиксели. Сайт сохраняет на Вашем устройстве только ограниченные настройки первой стороны: выбранные язык и регион, прогресс чтения, случайный анонимный идентификатор реакций и выбранные реакции, а также время закрытия предложения установить приложение. Эти значения остаются в браузере и могут быть удалены через настройки данных сайта. Они не создаются на основе IP-адреса или цифрового отпечатка устройства.",
+        },
+        {
+          kind: "p",
+          text: "Если Вы выберете дополнительную функцию геолокации для доставки, браузер сначала запросит разрешение. Точные координаты запрашиваются только после Вашего действия и отправляются вместе с заказом исключительно для облегчения доставки; при обычном просмотре сайта геолокация не собирается.",
+        },
+      ],
+    },
+    {
       heading: "Для чего мы используем Ваши данные",
       blocks: [
         { kind: "p", text: "Указанные выше сведения мы используем для того, чтобы:" },
@@ -500,6 +591,10 @@ const RU: LegalCopy = {
         {
           kind: "p",
           text: "Мы используем Ваши данные исключительно для этих целей. Мы не используем фотографии детей или личные сведения в рекламных целях и никак иначе, кроме как в связи с Вашим заказом.",
+        },
+        {
+          kind: "p",
+          text: "В зависимости от ситуации и применимого законодательства мы обрабатываем данные для исполнения заказанного Вами продукта, на основании Вашего согласия в отношении дополнительных функций, таких как точная геолокация доставки, для выполнения юридических обязанностей, а также в наших законных интересах по поддержке клиентов, предотвращению мошенничества и защите сервиса. Вы можете отозвать согласие на будущую дополнительную обработку, связавшись с нами; это не влияет на уже законно выполненную обработку.",
         },
       ],
     },
@@ -520,7 +615,7 @@ const RU: LegalCopy = {
         },
         {
           kind: "p",
-          text: "Если Вы считаете, что сведения о ребёнке были переданы нам без надлежащего согласия, напишите нам на talimoon.production@gmail.com. Мы рассмотрим обращение и при необходимости удалим эти данные.",
+          text: "Если Вы считаете, что сведения о ребёнке были переданы нам без надлежащего согласия, напишите нам на hello@talimoon.com. Мы рассмотрим обращение и при необходимости удалим эти данные.",
         },
       ],
     },
@@ -588,6 +683,16 @@ const RU: LegalCopy = {
           kind: "p",
           text: "Мы применяем технические и организационные меры, направленные на защиту предоставленных Вами данных от утраты, неправомерного использования и несанкционированного доступа. Ни один способ передачи или хранения данных не может считаться абсолютно безопасным, однако мы стремимся защищать Ваши данные и ограничивать доступ к ним только теми сотрудниками, которым он необходим по работе.",
         },
+        {
+          kind: "list",
+          items: [
+            "зашифрованная передача по HTTPS и строгие заголовки безопасности браузера;",
+            "защита формы заказа от автоматических ботов;",
+            "краткосрочная авторизация загрузки файлов, привязанная к конкретному заказу, вместо публичного доступа;",
+            "отсутствие рекламных трекеров и IP-профилирования клиентов в коде TALIMOON;",
+            "ограничение доступа лицами и поставщиками, которым данные необходимы для исполнения заказа или поддержки сервиса.",
+          ],
+        },
       ],
     },
     {
@@ -595,7 +700,7 @@ const RU: LegalCopy = {
       blocks: [
         {
           kind: "p",
-          text: "Вы можете написать нам на talimoon.production@gmail.com, чтобы:",
+          text: "Вы можете написать нам на hello@talimoon.com, чтобы:",
         },
         {
           kind: "list",
@@ -634,7 +739,7 @@ const RU: LegalCopy = {
       blocks: [
         {
           kind: "p",
-          text: "Если у Вас есть вопрос по настоящей Политике конфиденциальности или по тому, как обрабатываются Ваши данные, напишите нам на talimoon.production@gmail.com.",
+          text: "Если у Вас есть вопрос по настоящей Политике конфиденциальности или по тому, как обрабатываются Ваши данные, напишите нам на hello@talimoon.com.",
         },
       ],
     },
