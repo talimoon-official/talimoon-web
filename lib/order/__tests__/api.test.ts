@@ -15,6 +15,19 @@ const BASE = {
   orderer: { fullName: "Test Orderer", phone: "+998900000000" },
   children: [{ name: "Ali", age: 7 }],
   bookLanguage: "uz" as const,
+  consent: {
+    schema: "talimoon-order-consent-v1" as const,
+    acceptedAt: "2026-09-07T10:00:00.000Z",
+    locale: "uz" as const,
+    electronicSignature: "Test Orderer",
+    drawnSignature: "[[[0.1,0.2],[0.2,0.3],[0.3,0.2],[0.4,0.4]]]",
+    adultAndChildAuthority: true as const,
+    privacyAccepted: true as const,
+    privacyVersion: "2026-09-06",
+    termsAccepted: true as const,
+    termsVersion: "2026-09-06",
+    marketingConsent: false as const,
+  },
 };
 
 describe("isBackendBookLanguage", () => {

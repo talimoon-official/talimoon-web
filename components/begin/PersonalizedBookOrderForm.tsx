@@ -1168,21 +1168,19 @@ export default function PersonalizedBookOrderForm({
           personalMessage: data.wantsPersonalMessage ? data.personalMessage || undefined : undefined,
           extraCharacters: extraCharactersText,
           bookLanguage: data.bookLanguageCode,
-          notes: JSON.stringify({
-            consent: {
+        consent: {
               schema: "talimoon-order-consent-v1",
               acceptedAt: consentAcceptedAtRef.current,
               locale: bookLoc,
               electronicSignature: data.orderer.name.trim(),
               drawnSignature: data.consentSignature,
-              adultAndChildAuthority: data.consentAuthority,
-              privacyAccepted: data.consentPrivacy,
+              adultAndChildAuthority: true,
+              privacyAccepted: true,
               privacyVersion: PRIVACY_POLICY_VERSION,
-              termsAccepted: data.consentTerms,
+              termsAccepted: true,
               termsVersion: TERMS_VERSION,
               marketingConsent: false,
-            },
-          }),
+        },
         });
 
         const result = await submitOrder(payload);

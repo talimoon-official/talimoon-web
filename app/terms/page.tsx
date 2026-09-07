@@ -195,7 +195,7 @@ const EN: LegalCopy = {
       blocks: [
         {
           kind: "p",
-          text: "These Terms are interpreted and applied subject to applicable law. Nothing in these Terms removes mandatory legal protections available to you where you live.",
+          text: "These Terms and each order are governed by the laws of the Republic of Uzbekistan. The parties will first seek an amicable resolution; unresolved disputes are submitted to the competent courts of Uzbekistan. Nothing in these Terms removes mandatory consumer protections that apply to you where you live.",
         },
       ],
     },
@@ -213,7 +213,7 @@ const EN: LegalCopy = {
       blocks: [
         {
           kind: "p",
-          text: "For any question about these Terms, or about an order, contact us at hello@talimoon.com.",
+          text: "Contracting party: Talimoon MCHJ, state registration number 856745, Sebzor 2, building 16, Tashkent, Uzbekistan. For legal or order questions, contact Sh.yunusov@talimoon.com.",
         },
       ],
     },
@@ -398,7 +398,7 @@ const UZ: LegalCopy = {
       blocks: [
         {
           kind: "p",
-          text: "Ushbu Shartlar amaldagi qonunga muvofiq talqin qilinadi va qo'llaniladi. Ushbu Shartlardagi hech narsa siz yashaydigan joyda mavjud majburiy huquqiy himoyalarni bekor qilmaydi.",
+          text: "Ushbu Shartlar va har bir buyurtmaga O‘zbekiston Respublikasi qonunchiligi qo‘llanadi. Tomonlar nizoni avval muzokara orqali hal qilishga harakat qiladi; hal bo‘lmagan nizo vakolatli O‘zbekiston sudlarida ko‘riladi. Ushbu Shartlar siz yashaydigan joyda amal qiladigan majburiy iste’molchi himoyalarini bekor qilmaydi.",
         },
       ],
     },
@@ -416,7 +416,7 @@ const UZ: LegalCopy = {
       blocks: [
         {
           kind: "p",
-          text: "Ushbu Shartlar yoki buyurtma bo'yicha har qanday savol uchun biz bilan hello@talimoon.com orqali bog'laning.",
+          text: "Shartnoma tomoni: Talimoon MCHJ, davlat ro‘yxat raqami 856745, O‘zbekiston, Toshkent shahar, Sebzor 2, uy 16. Huquqiy yoki buyurtma savollari uchun: Sh.yunusov@talimoon.com.",
         },
       ],
     },
@@ -601,7 +601,7 @@ const RU: LegalCopy = {
       blocks: [
         {
           kind: "p",
-          text: "Настоящие Условия толкуются и применяются в соответствии с применимым правом. Ничто в настоящих Условиях не отменяет обязательные средства правовой защиты, доступные Вам по месту Вашего проживания.",
+          text: "К настоящим Условиям и каждому заказу применяется законодательство Республики Узбекистан. Стороны сначала стремятся урегулировать спор мирно; неурегулированные споры рассматриваются компетентными судами Узбекистана. Обязательные права потребителя по месту Вашего проживания сохраняются.",
         },
       ],
     },
@@ -619,7 +619,7 @@ const RU: LegalCopy = {
       blocks: [
         {
           kind: "p",
-          text: "По любому вопросу об этих Условиях или о заказе свяжитесь с нами по адресу hello@talimoon.com.",
+          text: "Сторона договора: Talimoon MCHJ, номер государственной регистрации 856745, Узбекистан, г. Ташкент, Себзор 2, дом 16. Юридические вопросы и вопросы по заказу: Sh.yunusov@talimoon.com.",
         },
       ],
     },

@@ -57,6 +57,19 @@ export interface SubmitOrderPayload {
   delivery: { required: boolean; regionCode?: string; countryCode?: string };
   clientDeclaredTotal?: number;
   declaredArtifacts: Array<{ kind: ArtifactKind; count: number }>;
+  consent: {
+    schema: "talimoon-order-consent-v1";
+    acceptedAt: string;
+    locale: "uz" | "en" | "ru";
+    electronicSignature: string;
+    drawnSignature: string;
+    adultAndChildAuthority: true;
+    privacyAccepted: true;
+    privacyVersion: string;
+    termsAccepted: true;
+    termsVersion: string;
+    marketingConsent: false;
+  };
   profile: {
     orderer: { fullName: string; phone: string };
     addressText?: string;
@@ -141,6 +154,7 @@ export interface BuildSubmitPayloadArgs {
   personalMessage?: string;
   extraCharacters?: string;
   bookLanguage: BackendBookLanguage;
+  consent: SubmitOrderPayload["consent"];
   notes?: string;
 }
 
@@ -186,6 +200,7 @@ export function buildSubmitPayload(args: BuildSubmitPayloadArgs): SubmitOrderPay
     },
     clientDeclaredTotal: args.clientDeclaredTotal,
     declaredArtifacts,
+    consent: args.consent,
     profile: {
       orderer: args.orderer,
       addressText: args.addressText,

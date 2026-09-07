@@ -31,11 +31,11 @@ const EN: LegalCopy = {
       blocks: [
         {
           kind: "p",
-          text: "TALIMOON is a personalized children's book and storytelling brand. We design and produce custom books in which a child is the central character, based on details a parent or guardian shares with us.",
+          text: "TALIMOON is operated by Talimoon MCHJ, state registration number 856745, registered at Sebzor 2, building 16, Tashkent, Uzbekistan. We design and produce personalized children's books and storytelling products.",
         },
         {
           kind: "p",
-          text: "For any question about this policy or about your information, you can reach us at hello@talimoon.com.",
+          text: "For any question about this policy or your information, contact Sh.yunusov@talimoon.com.",
         },
       ],
     },
@@ -275,11 +275,11 @@ const UZ: LegalCopy = {
       blocks: [
         {
           kind: "p",
-          text: "TALIMOON — bolalar uchun shaxsiylashtirilgan kitoblar va hikoyalar brendi. Biz ota-ona yoki vasiy ulashgan ma'lumotlar asosida, bola asosiy qahramon bo'lgan maxsus kitoblarni ishlab chiqamiz.",
+          text: "TALIMOON xizmatini O‘zbekistonda Toshkent shahar, Sebzor 2, uy 16 manzilida ro‘yxatdan o‘tgan, davlat ro‘yxat raqami 856745 bo‘lgan Talimoon MCHJ boshqaradi. Biz bolalar uchun shaxsiylashtirilgan kitoblar va hikoya mahsulotlarini yaratamiz.",
         },
         {
           kind: "p",
-          text: "Ushbu siyosat yoki ma'lumotlaringiz bo'yicha har qanday savol uchun biz bilan hello@talimoon.com orqali bog'lanishingiz mumkin.",
+          text: "Ushbu siyosat yoki ma’lumotlaringiz bo‘yicha savollar uchun Sh.yunusov@talimoon.com manziliga yozing.",
         },
       ],
     },
@@ -522,11 +522,11 @@ const RU: LegalCopy = {
       blocks: [
         {
           kind: "p",
-          text: "TALIMOON — бренд именных детских книг и историй. Мы создаём книги, в которых главным героем становится Ваш ребёнок, на основе данных, которыми делится с нами родитель или законный представитель.",
+          text: "Сервис TALIMOON управляется компанией Talimoon MCHJ, номер государственной регистрации 856745, зарегистрированной по адресу: Узбекистан, г. Ташкент, Себзор 2, дом 16. Мы создаём персонализированные детские книги и истории.",
         },
         {
           kind: "p",
-          text: "По любому вопросу, связанному с этой политикой или Вашими данными, Вы можете написать нам на hello@talimoon.com.",
+          text: "По вопросам этой политики или обработки Ваших данных напишите на Sh.yunusov@talimoon.com.",
         },
       ],
     },

@@ -14,25 +14,29 @@ export function OrderConsent({ copy, accepted, signature, onAccepted, onSignatur
   copy: OrderConsentCopy; accepted:boolean; signature:string;
   onAccepted:(v:boolean)=>void; onSignature:(v:string)=>void;
 }) {
+  const [privacyLabel, termsLabel] = copy.links.split('·').map((value)=>value.trim());
   const [documentOpen,setDocumentOpen]=useState(false);
   const [signatureOpen,setSignatureOpen]=useState(false);
   const canvasRef=useRef<HTMLCanvasElement>(null);
   const drawing=useRef(false);
-  const points=useRef<Array<[number,number]>>([]);
+  const strokes=useRef<Array<Array<[number,number]>>>([]);
 
   const point=(e:PointerEvent<HTMLCanvasElement>)=>{
     const c=canvasRef.current!; const r=c.getBoundingClientRect();
     return [(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height] as [number,number];
   };
-  const start=(e:PointerEvent<HTMLCanvasElement>)=>{ drawing.current=true; points.current=[point(e)]; e.currentTarget.setPointerCapture(e.pointerId); };
+  const start=(e:PointerEvent<HTMLCanvasElement>)=>{ drawing.current=true; strokes.current.push([point(e)]); e.currentTarget.setPointerCapture(e.pointerId); };
   const move=(e:PointerEvent<HTMLCanvasElement>)=>{
-    if(!drawing.current)return; const c=canvasRef.current!; const p=point(e); const prev=points.current.at(-1)!;
+    if(!drawing.current)return; const c=canvasRef.current!; const p=point(e); const stroke=strokes.current.at(-1)!; const prev=stroke.at(-1)!;
     const ctx=c.getContext('2d')!; ctx.strokeStyle='#162338'; ctx.lineWidth=2.4; ctx.lineCap='round';
     ctx.beginPath(); ctx.moveTo(prev[0]*c.width,prev[1]*c.height); ctx.lineTo(p[0]*c.width,p[1]*c.height); ctx.stroke();
-    if(points.current.length<420) points.current.push([+p[0].toFixed(3),+p[1].toFixed(3)]);
+    // Keep the signed stroke record below the intake contract's strict
+    // metadata ceiling while retaining enough points to reproduce it.
+    const total=strokes.current.reduce((n,s)=>n+s.length,0);
+    if(total<220) stroke.push([+p[0].toFixed(3),+p[1].toFixed(3)]);
   };
-  const clear=()=>{ const c=canvasRef.current; if(c)c.getContext('2d')?.clearRect(0,0,c.width,c.height); points.current=[]; };
-  const save=()=>{ if(points.current.length<8)return; onSignature(JSON.stringify(points.current)); setSignatureOpen(false); };
+  const clear=()=>{ const c=canvasRef.current; if(c)c.getContext('2d')?.clearRect(0,0,c.width,c.height); strokes.current=[]; };
+  const save=()=>{ if(strokes.current.reduce((n,s)=>n+s.length,0)<8)return; onSignature(JSON.stringify(strokes.current)); setSignatureOpen(false); };
 
   return <>
     <section className="rounded-xl border border-accent-primary/35 bg-surface-raised/60 p-5 shadow-sm sm:p-6">
@@ -52,7 +56,7 @@ export function OrderConsent({ copy, accepted, signature, onAccepted, onSignatur
     {documentOpen&&<div className="fixed inset-0 z-[1200] grid place-items-center bg-[#07101d]/70 p-3 backdrop-blur-sm" role="dialog" aria-modal="true">
       <div className="flex max-h-[90dvh] w-full max-w-3xl flex-col overflow-hidden rounded-[24px] bg-[#fbf8f2] shadow-2xl">
         <header className="flex items-center justify-between border-b border-[#b8935b]/25 px-5 py-4"><h2 className="font-display text-2xl text-[#162338]">{copy.documentTitle}</h2><button onClick={()=>setDocumentOpen(false)} aria-label={copy.close}><X/></button></header>
-        <div className="overflow-y-auto px-6 py-6 font-sans text-[14px] leading-7 text-[#49433c] sm:px-10">{copy.documentBody.map((p,i)=><p key={i} className="mb-5">{p}</p>)}<p><a href="/privacy" target="_blank" className="font-bold text-[#9c7a47] underline">{copy.links}</a></p></div>
+        <div className="overflow-y-auto px-6 py-6 font-sans text-[14px] leading-7 text-[#49433c] sm:px-10">{copy.documentBody.map((p,i)=><p key={i} className="mb-5">{p}</p>)}<p className="flex flex-wrap gap-x-5 gap-y-2"><a href="/privacy" target="_blank" className="font-bold text-[#9c7a47] underline">{privacyLabel}</a><a href="/terms" target="_blank" className="font-bold text-[#9c7a47] underline">{termsLabel}</a></p></div>
         <footer className="border-t border-[#b8935b]/25 p-4"><button onClick={()=>setDocumentOpen(false)} className="w-full rounded-full bg-[#162338] py-3 font-sans font-bold text-white">{copy.close}</button></footer>
       </div>
     </div>}
