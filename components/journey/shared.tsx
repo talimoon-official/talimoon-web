@@ -369,21 +369,30 @@ export function VideoPlayer({
   className?: string;
   transcriptLabel?: string;
 }) {
+  // The inline slot stays horizontal (a 16:9 plate) whatever the
+  // source shape — a vertical film simply sits centred inside it on a
+  // dark mat. Fullscreen is native, so a portrait film still fills the
+  // screen edge to edge when the visitor expands it.
   return (
     <div className={className}>
       {video.provider === 'file' ? (
-        <video
-          controls
-          preload="none"
-          playsInline
-          poster={video.poster.src}
-          className="tm-media-float aspect-video w-full bg-[#0c1116]"
+        <div
+          className="tm-media-float relative aspect-video w-full overflow-hidden"
+          style={{ background: '#0c1116' }}
         >
-          <source src={video.src} />
-          {video.captionsSrc ? (
-            <track kind="captions" src={video.captionsSrc} srcLang="uz" default />
-          ) : null}
-        </video>
+          <video
+            controls
+            preload="none"
+            playsInline
+            poster={video.poster.src}
+            className="absolute inset-0 h-full w-full object-contain"
+          >
+            <source src={video.src} />
+            {video.captionsSrc ? (
+              <track kind="captions" src={video.captionsSrc} srcLang="uz" default />
+            ) : null}
+          </video>
+        </div>
       ) : (
         <div className="tm-media-float relative aspect-video w-full bg-[#0c1116]">
           <iframe

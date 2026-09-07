@@ -26,11 +26,33 @@ import {
   type Direction,
   type EntryContent,
   type JourneyEntry,
+  type JourneyVideo,
   type JourneyWorld,
   type Locale,
   type PulseItem,
   type PulseSeed,
 } from './types';
+
+// ── Shared media ───────────────────────────────────────────────────
+/**
+ * TALIMOON kundaligi · 01 — the vertical mini-film shot at the Qatar
+ * National Library. Poster-first (nothing loads until play). Shared
+ * by the entry's lead `video` slot (preview poster + play cue on the
+ * premiere / worlds index) and the `video` block in its body.
+ */
+const TALIMOON_DIARY_01_FILM: JourneyVideo = {
+  poster: {
+    id: 'talimoon-diary-01-poster',
+    src: '/images/journey/talimoon-diary-01-poster.jpg',
+    width: 1080,
+    height: 1920,
+    credit: 'Qatar National Library · Doha, Qatar',
+  },
+  provider: 'file',
+  src: '/video/talimoon-goyalari-qayerdan-tugiladi.mp4',
+  durationSec: 60,
+  credit: 'Video: TALIMOON · Qatar National Library, Doha',
+};
 
 // ── Dataset ────────────────────────────────────────────────────────
 /**
@@ -52,6 +74,7 @@ const PRODUCTION_ENTRIES: readonly JourneyEntry[] = [
     defaultLocale: 'uz',
     indexable: true,
     media: { consent: 'not-applicable' },
+    video: TALIMOON_DIARY_01_FILM,
     relatedSlugs: ['hali-kichkina-keyin-organadi'],
     translations: {
       uz: {
@@ -61,12 +84,7 @@ const PRODUCTION_ENTRIES: readonly JourneyEntry[] = [
           'TALIMOON’ning ilk kunlari. Bir tomonda minglab kitoblar, ikkinchi tomonda esa hali qurilayotgan yangi platforma. Bu safar ish stolimiz Qatar National Library’da.',
         author: 'Qatar National Library · Doha, Qatar',
         blocks: [
-          {
-            t: 'videoPlaceholder',
-            label: 'TALIMOON MINI-FILMI',
-            title: 'G‘oyalar tug‘iladigan joy',
-            note: '60–70 soniyalik hujjatli video shu yerda joylanadi.',
-          },
+          { t: 'video', video: TALIMOON_DIARY_01_FILM },
           { t: 'paragraph', text: 'Bugun TALIMOON ustidagi ish Qatar National Library’da davom etmoqda.' },
           { t: 'paragraph', text: 'Atrofda minglab kitoblar. Turli tillar, turli hikoyalar, turli avlodlar uchun yaratilgan bilimlar. Stol ustida esa ikki kompyuter va ularda asta-sekin o‘z shaklini topayotgan TALIMOON.' },
           { t: 'paragraph', text: 'Bu TALIMOON’ning hali ilk kunlari.' },
@@ -94,12 +112,7 @@ const PRODUCTION_ENTRIES: readonly JourneyEntry[] = [
           'The earliest days of TALIMOON. On one side, thousands of books; on the other, a new platform still taking shape. This time, our desk is at the Qatar National Library.',
         author: 'Qatar National Library · Doha, Qatar',
         blocks: [
-          {
-            t: 'videoPlaceholder',
-            label: 'TALIMOON MINI-FILM',
-            title: 'Where ideas are born',
-            note: 'A 60–70 second documentary video will be placed here.',
-          },
+          { t: 'video', video: TALIMOON_DIARY_01_FILM },
           { t: 'paragraph', text: 'Today, work on TALIMOON continues at the Qatar National Library.' },
           { t: 'paragraph', text: 'Thousands of books surround us. Different languages, different stories, knowledge created for different generations. And on the desk, two laptops, with TALIMOON slowly taking shape on their screens.' },
           { t: 'paragraph', text: 'These are still TALIMOON’s very first days.' },
