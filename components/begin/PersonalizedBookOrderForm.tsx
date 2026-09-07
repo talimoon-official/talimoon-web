@@ -88,6 +88,7 @@ import {
 import Phase01 from "./Phase01";
 import { JourneyProgress } from "./JourneyProgress";
 import { CheckRow } from "./CheckRow";
+import { OrderConsent, type OrderConsentCopy } from "./OrderConsent";
 
 /** Where "Yuragingizda qolgan gaplar" (its own quiet screen, not a
  *  wizard step) slots in: after "a personal touch", before the photos. */
@@ -95,6 +96,11 @@ const PERSONAL_TOUCH_STEP = STEPS.findIndex((s) => s.id === "personal-touch");
 const PHOTOS_STEP = STEPS.findIndex((s) => s.id === "photos");
 const PRIVACY_POLICY_VERSION = "2026-09-07";
 const TERMS_VERSION = "2026-09-07";
+const CONSENT_COPY: Record<"uz" | "en" | "ru", OrderConsentCopy> = {
+  uz: { heading:"Buyurtma roziligi", summary:"Bitta tasdiq va qo‘lda elektron imzo — ma’lumotlaringiz faqat buyurtmani tayyorlash uchun ishlatiladi.", details:"Batafsil shartnomani o‘qish", documentTitle:"TALIMOON buyurtma va maxfiylik shartnomasi", documentBody:["Men 18 yoshdan kattaman hamda bolaning ota-onasi yoki qonuniy vakiliman yoxud ulardan ushbu buyurtma uchun aniq vakolat olganman.","TALIMOON men bergan aloqa ma’lumotlari, bola haqidagi ma’lumotlar va fotosuratlardan faqat shaxsiylashtirilgan kitobni yaratish, ishlab chiqarish, yetkazish va buyurtmani qo‘llab-quvvatlash uchun foydalanishiga roziman.","Yuborgan fotosuratlarim reklama yoki ommaviy targ‘ibotda alohida roziligimsiz ishlatilmaydi. Ushbu tasdiq meni marketing xabarlariga obuna qilmaydi.","Men Maxfiylik siyosati va Foydalanish shartlarini o‘qidim va qabul qilaman. Elektron imzo, rozilik vaqti, til va hujjat versiyalari buyurtma bilan qayd etiladi; IP-manzil imzoga biriktirilmaydi."], close:"Tushundim", accept:"Shartnomani o‘qidim, tushundim va barcha shartlarga roziman.", sign:"Elektron imzo qo‘yish", signatureTitle:"Elektron imzo", signatureHelp:"Oq maydonga barmoq yoki sichqoncha bilan imzo qo‘ying.", clear:"Tozalash", save:"Imzoni tasdiqlash", signed:"Imzo qo‘yildi — o‘zgartirish", links:"Maxfiylik siyosati · Foydalanish shartlari" },
+  en: { heading:"Order consent", summary:"One confirmation and a handwritten electronic signature — your data is used only to fulfil the order.", details:"Read the detailed agreement", documentTitle:"TALIMOON Order and Privacy Agreement", documentBody:["I am at least 18 and I am the child's parent or legal guardian, or I have their clear authority for this order.","I consent to TALIMOON using the contact details, child information, and photographs I provide only to create, produce, deliver, and support the personalized book.","My photographs will not be used in advertising or public promotion without separate permission. This confirmation does not subscribe me to marketing.","I have read and accept the Privacy Policy and Terms of Service. The signature, acceptance time, language, and document versions are recorded with the order; no IP address is attached to the signature."], close:"I understand", accept:"I have read and understood the agreement and accept all its terms.", sign:"Add electronic signature", signatureTitle:"Electronic signature", signatureHelp:"Sign in the white area with your finger or mouse.", clear:"Clear", save:"Confirm signature", signed:"Signed — change", links:"Privacy Policy · Terms of Service" },
+  ru: { heading:"Согласие на заказ", summary:"Одно подтверждение и рукописная электронная подпись — данные используются только для выполнения заказа.", details:"Прочитать подробный договор", documentTitle:"Договор заказа и конфиденциальности TALIMOON", documentBody:["Мне исполнилось 18 лет, и я являюсь родителем или законным представителем ребёнка либо имею их явное разрешение на этот заказ.","Я разрешаю TALIMOON использовать предоставленные контактные данные, сведения о ребёнке и фотографии только для создания, производства, доставки и сопровождения именной книги.","Фотографии не используются в рекламе или публичном продвижении без отдельного разрешения. Это подтверждение не оформляет маркетинговую подписку.","Я прочитал(а) и принимаю Политику конфиденциальности и Условия использования. Подпись, время, язык и версии документов записываются с заказом; IP-адрес к подписи не прикрепляется."], close:"Понятно", accept:"Я прочитал(а), понял(а) договор и принимаю все его условия.", sign:"Поставить электронную подпись", signatureTitle:"Электронная подпись", signatureHelp:"Распишитесь в белом поле пальцем или мышью.", clear:"Очистить", save:"Подтвердить подпись", signed:"Подписано — изменить", links:"Политика конфиденциальности · Условия использования" },
+};
 
 // ─── Copy ───────────────────────────────────────────────────────────────────
 
@@ -722,15 +728,12 @@ function isStepComplete(stepId: StepId, data: FormData): boolean {
       // A receipt must be attached before the order can be sent
       // (spec §13). This is NOT payment verification — that stays a
       // later admin action.
-      const signatureMatchesOrderer =
-        data.consentSignature.trim().replace(/\s+/g, " ").toLocaleLowerCase() ===
-        data.orderer.name.trim().replace(/\s+/g, " ").toLocaleLowerCase();
       return (
         data.receipt != null &&
         data.consentAuthority &&
         data.consentPrivacy &&
         data.consentTerms &&
-        signatureMatchesOrderer
+        data.consentSignature.length > 20
       );
     default:
       return true;
@@ -1170,7 +1173,8 @@ export default function PersonalizedBookOrderForm({
               schema: "talimoon-order-consent-v1",
               acceptedAt: consentAcceptedAtRef.current,
               locale: bookLoc,
-              electronicSignature: data.consentSignature.trim(),
+              electronicSignature: data.orderer.name.trim(),
+              drawnSignature: data.consentSignature,
               adultAndChildAuthority: data.consentAuthority,
               privacyAccepted: data.consentPrivacy,
               privacyVersion: PRIVACY_POLICY_VERSION,
@@ -2287,9 +2291,18 @@ export default function PersonalizedBookOrderForm({
                 </p>
               )}
 
+              <div className="hidden" aria-hidden="true"><CheckRow id="unused-consent" checked={false} onChange={()=>undefined} label="" /></div>
+              <OrderConsent
+                copy={CONSENT_COPY[bookLoc]}
+                accepted={data.consentAuthority && data.consentPrivacy && data.consentTerms}
+                signature={data.consentSignature}
+                onAccepted={(checked) => setData(prev => ({...prev, consentAuthority:checked, consentPrivacy:checked, consentTerms:checked}))}
+                onSignature={(value) => update("consentSignature", value)}
+              />
+
               <section
                 aria-labelledby="order-consent-heading"
-                className="rounded-xl border border-accent-primary/30 bg-surface-raised/55 p-5 sm:p-6"
+                className="hidden"
               >
                 <div className="border-b border-border-subtle pb-4">
                   <h3
