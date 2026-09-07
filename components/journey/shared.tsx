@@ -23,7 +23,7 @@
  * the band accepts a `dir` for future RTL editions.
  */
 
-import React from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import {
@@ -351,6 +351,126 @@ export function WorldLabel({
   );
 }
 
+// ── Film surface (self-hosted file) ────────────────────────────────
+/**
+ * A native <video> on a dark 16:9 mat with one extra affordance: a
+ * round centre play/pause cue. It sits over the poster at rest;
+ * pressing it starts the film and it fades out ~1s later. Any pointer
+ * activity over the surface brings it (and the native controls) back,
+ * and it fades again 1s after the pointer goes quiet. While the film
+ * is paused it always stays. Native controls remain for scrubbing,
+ * volume and fullscreen.
+ */
+function FilmSurface({ video }: { video: JourneyVideo }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [cueVisible, setCueVisible] = useState(true);
+
+  const clearHide = useCallback(() => {
+    if (hideTimer.current) {
+      clearTimeout(hideTimer.current);
+      hideTimer.current = null;
+    }
+  }, []);
+
+  const armHide = useCallback(() => {
+    clearHide();
+    hideTimer.current = setTimeout(() => {
+      if (videoRef.current && !videoRef.current.paused) setCueVisible(false);
+    }, 1000);
+  }, [clearHide]);
+
+  const reveal = useCallback(() => {
+    setCueVisible(true);
+    armHide();
+  }, [armHide]);
+
+  const toggle = useCallback(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    if (el.paused) void el.play();
+    else el.pause();
+  }, []);
+
+  useEffect(() => clearHide, [clearHide]);
+
+  return (
+    <div
+      className="tm-media-float relative aspect-video w-full overflow-hidden"
+      style={{ background: '#0c1116' }}
+      onMouseEnter={reveal}
+      onMouseMove={reveal}
+      onTouchStart={reveal}
+    >
+      <video
+        ref={videoRef}
+        controls
+        preload="none"
+        playsInline
+        poster={video.poster.src}
+        className="absolute inset-0 h-full w-full object-contain"
+        onPlay={() => {
+          setPlaying(true);
+          armHide();
+        }}
+        onPause={() => {
+          setPlaying(false);
+          clearHide();
+          setCueVisible(true);
+        }}
+        onEnded={() => {
+          setPlaying(false);
+          clearHide();
+          setCueVisible(true);
+        }}
+      >
+        <source src={video.src} />
+        {video.captionsSrc ? (
+          <track kind="captions" src={video.captionsSrc} srcLang="uz" default />
+        ) : null}
+      </video>
+
+      <button
+        type="button"
+        aria-label={playing ? 'Pause' : 'Play'}
+        onClick={toggle}
+        onFocus={reveal}
+        className={`absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full outline-none transition-opacity duration-300 focus-visible:ring-2 focus-visible:ring-[#B8935B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c1116] ${
+          cueVisible ? 'opacity-100' : 'pointer-events-none opacity-0'
+        }`}
+        style={{
+          backgroundColor: 'rgba(247,243,236,0.94)',
+          boxShadow: '0 6px 24px rgba(12,17,22,0.28)',
+        }}
+      >
+        {playing ? (
+          <span aria-hidden="true" className="flex gap-[5px]">
+            <span
+              className="block h-[18px] w-[4px] rounded-[1px]"
+              style={{ backgroundColor: NAVY }}
+            />
+            <span
+              className="block h-[18px] w-[4px] rounded-[1px]"
+              style={{ backgroundColor: NAVY }}
+            />
+          </span>
+        ) : (
+          <span
+            aria-hidden="true"
+            className="ms-1 block h-0 w-0"
+            style={{
+              borderTop: '11px solid transparent',
+              borderBottom: '11px solid transparent',
+              borderInlineStart: `18px solid ${NAVY}`,
+            }}
+          />
+        )}
+      </button>
+    </div>
+  );
+}
+
 // ── VideoPlayer ────────────────────────────────────────────────────
 /**
  * Poster-first video. Nothing loads until the visitor presses play
@@ -376,23 +496,7 @@ export function VideoPlayer({
   return (
     <div className={className}>
       {video.provider === 'file' ? (
-        <div
-          className="tm-media-float relative aspect-video w-full overflow-hidden"
-          style={{ background: '#0c1116' }}
-        >
-          <video
-            controls
-            preload="none"
-            playsInline
-            poster={video.poster.src}
-            className="absolute inset-0 h-full w-full object-contain"
-          >
-            <source src={video.src} />
-            {video.captionsSrc ? (
-              <track kind="captions" src={video.captionsSrc} srcLang="uz" default />
-            ) : null}
-          </video>
-        </div>
+        <FilmSurface video={video} />
       ) : (
         <div className="tm-media-float relative aspect-video w-full bg-[#0c1116]">
           <iframe
