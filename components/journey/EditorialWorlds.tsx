@@ -368,17 +368,22 @@ function WorldPortal({
   const primaryView = mediaView(preview.primary, locale);
   const secondaryView = mediaView(preview.secondary, locale);
   const fallbackMedia = WORLD_FALLBACK_MEDIA[world];
-  // Worlds 02 and 03 have their own enduring gateway artwork. Article
-  // covers belong inside their journal streams and detail pages, not in
-  // this visual index where a newly published piece would replace the
-  // category's established visual identity.
-  const fixedGatewayArtwork = world === 'parents' || world === 'wisdom-science';
+  // Every world keeps its own enduring gateway artwork here. This is
+  // the permanent Journey section identity: a newly published or
+  // featured piece belongs in the premiere hero, the journal stream
+  // and its detail page, never in this visual index where it would
+  // overwrite the category's established look. `primaryView` /
+  // `secondaryView` are still resolved above so the surrounding copy
+  // (facets, latest line) can use them without changing this frame.
+  const fixedGatewayArtwork = true;
   const primarySrc = fixedGatewayArtwork
     ? fallbackMedia.primary
     : primaryView?.src ?? fallbackMedia.primary;
   const primaryAlt = fixedGatewayArtwork ? name : primaryView?.alt || name;
   const primaryPlayCue = fixedGatewayArtwork ? false : primaryView?.isVideo;
-  const secondarySrc = secondaryView?.src ?? fallbackMedia.secondary ?? null;
+  const secondarySrc = fixedGatewayArtwork
+    ? fallbackMedia.secondary ?? null
+    : secondaryView?.src ?? fallbackMedia.secondary ?? null;
 
   const numEl = (
     <span
@@ -516,7 +521,7 @@ function WorldPortal({
                   <MediaFrame
                     ratio="aspect-[3/4]"
                     src={secondarySrc}
-                    alt={secondaryView?.alt || `${name} — detail`}
+                    alt={secondaryView?.alt || name}
                     markerLabel={undefined}
                     sizes="180px"
                   />

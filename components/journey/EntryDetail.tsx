@@ -54,6 +54,8 @@ const EN = {
   transcript: 'Transcript',
   sources: 'Sources',
   link: 'Link',
+  play: 'Play',
+  pause: 'Pause',
 };
 const UZ: typeof EN = {
   back: 'Orqaga',
@@ -64,6 +66,8 @@ const UZ: typeof EN = {
   transcript: 'Matn (transkript)',
   sources: 'Manbalar',
   link: 'Havola',
+  play: "Ko'rish",
+  pause: "To'xtatish",
 };
 const RU: typeof EN = {
   back: 'Назад',
@@ -74,6 +78,8 @@ const RU: typeof EN = {
   transcript: 'Расшифровка',
   sources: 'Источники',
   link: 'Ссылка',
+  play: 'Смотреть',
+  pause: 'Пауза',
 };
 
 /** One reference → a quiet bibliographic line (no URL — that is a
@@ -115,9 +121,15 @@ const READING = 'mx-auto w-full max-w-[680px]';
 function BlockView({
   block,
   transcriptLabel,
+  posterAlt,
+  playLabel,
+  pauseLabel,
 }: {
   block: Block;
   transcriptLabel: string;
+  posterAlt: string;
+  playLabel: string;
+  pauseLabel: string;
 }) {
   switch (block.t) {
     case 'paragraph':
@@ -219,6 +231,9 @@ function BlockView({
           video={block.video}
           className="mx-auto w-full max-w-[1000px]"
           transcriptLabel={transcriptLabel}
+          posterAlt={posterAlt}
+          playLabel={playLabel}
+          pauseLabel={pauseLabel}
         />
       );
     case 'videoPlaceholder':
@@ -570,7 +585,13 @@ export function EntryDetail({ entry }: { entry: JourneyEntry }) {
       {leadVideo ? (
         <div className="w-full bg-surface-base">
           <div className="mx-auto w-full max-w-[1000px] px-4 sm:px-6">
-            <VideoPlayer video={leadVideo} transcriptLabel={t.transcript} />
+            <VideoPlayer
+              video={leadVideo}
+              transcriptLabel={t.transcript}
+              posterAlt={content.coverAlt ?? ''}
+              playLabel={t.play}
+              pauseLabel={t.pause}
+            />
           </div>
         </div>
       ) : photo ? (
@@ -619,7 +640,14 @@ export function EntryDetail({ entry }: { entry: JourneyEntry }) {
       <Band className="py-10 md:py-14">
         <div className="space-y-5 md:space-y-6">
           {content.blocks.map((block, i) => (
-            <BlockView key={i} block={block} transcriptLabel={t.transcript} />
+            <BlockView
+              key={i}
+              block={block}
+              transcriptLabel={t.transcript}
+              posterAlt={content.coverAlt ?? ''}
+              playLabel={t.play}
+              pauseLabel={t.pause}
+            />
           ))}
         </div>
 

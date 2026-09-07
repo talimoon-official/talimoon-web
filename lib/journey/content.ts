@@ -35,21 +35,32 @@ import {
 
 // ── Shared media ───────────────────────────────────────────────────
 /**
- * TALIMOON kundaligi · 01 — the vertical mini-film shot at the Qatar
+ * The language-neutral TALIMOON Kundaligi · 01 cinematic artwork.
+ * One image, no baked-in words: it fronts the FEATURED HERO on the
+ * Journey landing and doubles as the film's poster inside the
+ * article. Every headline, date and CTA around it is real localized
+ * HTML, so UZ, EN and RU all use this same file.
+ */
+const TALIMOON_KUNDALIGI_01_COVER = {
+  id: 'talimoon-kundaligi-01-qnl-cover',
+  src: '/images/journey/talimoon-kundaligi-01-qnl-cover.webp',
+  width: 1672,
+  height: 941,
+} as const;
+
+/**
+ * TALIMOON Kundaligi · 01 — the vertical mini-film shot at the Qatar
  * National Library. Poster-first (nothing loads until play). Shared
  * by the entry's lead `video` slot (preview poster + play cue on the
- * premiere / worlds index) and the `video` block in its body.
+ * premiere / worlds index) and the `video` block in its body. The
+ * frame is a real 9:16, so the player keeps it vertical and never
+ * stretches it into a horizontal box.
  */
 const TALIMOON_DIARY_01_FILM: JourneyVideo = {
-  poster: {
-    id: 'talimoon-diary-01-poster',
-    src: '/images/journey/talimoon-diary-01-poster.jpg',
-    width: 1080,
-    height: 1920,
-    credit: 'Qatar National Library · Doha, Qatar',
-  },
+  poster: { ...TALIMOON_KUNDALIGI_01_COVER },
   provider: 'file',
   src: '/video/talimoon-goyalari-qayerdan-tugiladi.mp4',
+  orientation: 'portrait',
   durationSec: 60,
   credit: 'Video: TALIMOON · Qatar National Library, Doha',
 };
@@ -74,6 +85,7 @@ const PRODUCTION_ENTRIES: readonly JourneyEntry[] = [
     defaultLocale: 'uz',
     indexable: true,
     media: { consent: 'not-applicable' },
+    heroImage: { ...TALIMOON_KUNDALIGI_01_COVER },
     video: TALIMOON_DIARY_01_FILM,
     relatedSlugs: ['hali-kichkina-keyin-organadi'],
     translations: {
@@ -82,6 +94,8 @@ const PRODUCTION_ENTRIES: readonly JourneyEntry[] = [
         title: 'TALIMOON g‘oyalari qayerdan tug‘iladi?',
         standfirst:
           'TALIMOON’ning ilk kunlari. Bir tomonda minglab kitoblar, ikkinchi tomonda esa hali qurilayotgan yangi platforma. Bu safar ish stolimiz Qatar National Library’da.',
+        coverAlt:
+          'TALIMOON kundaligi · 01 uchun kinematik muqova tasviri: Qatar National Library yonida stol ustidagi kitoblar va noutbukda TALIMOON sayti.',
         author: 'Qatar National Library · Doha, Qatar',
         blocks: [
           { t: 'video', video: TALIMOON_DIARY_01_FILM },
@@ -89,7 +103,7 @@ const PRODUCTION_ENTRIES: readonly JourneyEntry[] = [
           { t: 'paragraph', text: 'Atrofda minglab kitoblar. Turli tillar, turli hikoyalar, turli avlodlar uchun yaratilgan bilimlar. Stol ustida esa ikki kompyuter va ularda asta-sekin o‘z shaklini topayotgan TALIMOON.' },
           { t: 'paragraph', text: 'Bu TALIMOON’ning hali ilk kunlari.' },
           { t: 'paragraph', text: 'Hozir biz ko‘rayotgan har bir sahifa, sinab ko‘rayotgan har bir yechim va qayta ko‘rib chiqayotgan har bir detal kelajakda bolaning qo‘liga yetib boradigan tajribaning bir qismiga aylanishi mumkin.' },
-          { t: 'heading', level: 2, text: 'Ilhom — shunchaki yangi g‘oya emas' },
+          { t: 'heading', level: 2, text: 'Ilhom shunchaki yangi g‘oya emas' },
           { t: 'paragraph', text: 'Biz kitoblarni ko‘ramiz. Hikoyalar qanday taqdim etilganini kuzatamiz. Bolalar uchun yaratilgan muhitlarni o‘rganamiz. Yaxshi tajriba ortidagi kichik detallarni izlaymiz.' },
           { t: 'paragraph', text: 'Va doim bir savolga qaytamiz:' },
           { t: 'quote', text: 'Farzand uchun bundan ham mazmunliroq tajribani qanday yarata olamiz?' },
@@ -101,7 +115,7 @@ const PRODUCTION_ENTRIES: readonly JourneyEntry[] = [
           { t: 'quote', text: 'Bir tomonda o‘tmishdan bizgacha yetib kelgan bilimlar. Ikkinchi tomonda esa hali yozilmagan hikoyalar. O‘rtada TALIMOON.' },
           { t: 'paragraph', text: 'Hali oldinda qilinadigan ishlar ko‘p. Yuzlab hikoyalar, yangi kitoblar, yangi tajribalar va bugun biz hali tasavvur qilayotgan bolalar olami bor.' },
           { t: 'paragraph', text: 'Lekin katta yo‘llarning ham birinchi sahifasi bo‘ladi.' },
-          { t: 'paragraph', text: 'Bu — biznikining ilk sahifalaridan biri.' },
+          { t: 'paragraph', text: 'Bu bizning ilk sahifalarimizdan biri.' },
           { t: 'note', text: 'Qatar National Library · Doha, Qatar · 5-sentabr, 2026 · TALIMOON kundaligi · 01' },
         ],
       },
@@ -110,6 +124,8 @@ const PRODUCTION_ENTRIES: readonly JourneyEntry[] = [
         title: 'Where do TALIMOON’s ideas come from?',
         standfirst:
           'The earliest days of TALIMOON. On one side, thousands of books; on the other, a new platform still taking shape. This time, our desk is at the Qatar National Library.',
+        coverAlt:
+          'Cinematic cover for TALIMOON Diary · 01: books on a desk beside the Qatar National Library, with the TALIMOON site open on a laptop.',
         author: 'Qatar National Library · Doha, Qatar',
         blocks: [
           { t: 'video', video: TALIMOON_DIARY_01_FILM },
@@ -131,6 +147,36 @@ const PRODUCTION_ENTRIES: readonly JourneyEntry[] = [
           { t: 'paragraph', text: 'But even the longest journeys have a first page.' },
           { t: 'paragraph', text: 'This is one of the first pages of ours.' },
           { t: 'note', text: 'Qatar National Library · Doha, Qatar · September 5, 2026 · TALIMOON Diary · 01' },
+        ],
+      },
+      ru: {
+        kicker: { label: 'ДНЕВНИК TALIMOON · 01', dateLabel: '5 СЕНТЯБРЯ 2026' },
+        title: 'Откуда рождаются идеи TALIMOON?',
+        standfirst:
+          'Самые первые дни TALIMOON. С одной стороны тысячи книг, с другой пока только строящаяся новая платформа. На этот раз наш рабочий стол в Катарской национальной библиотеке.',
+        coverAlt:
+          'Кинематографическая обложка «Дневника TALIMOON · 01»: книги на столе рядом с Катарской национальной библиотекой и сайт TALIMOON, открытый на ноутбуке.',
+        author: 'Qatar National Library · Doha, Qatar',
+        blocks: [
+          { t: 'video', video: TALIMOON_DIARY_01_FILM },
+          { t: 'paragraph', text: 'Сегодня работа над TALIMOON продолжается в Катарской национальной библиотеке.' },
+          { t: 'paragraph', text: 'Вокруг тысячи книг. Разные языки, разные истории, знания, созданные для разных поколений. А на столе два компьютера, и на их экранах постепенно обретает форму TALIMOON.' },
+          { t: 'paragraph', text: 'Это всё ещё самые первые дни TALIMOON.' },
+          { t: 'paragraph', text: 'Каждая страница, которую мы сейчас просматриваем, каждое решение, которое мы проверяем, и каждая деталь, которую мы пересматриваем, однажды может стать частью того опыта, который дойдёт до рук ребёнка.' },
+          { t: 'heading', level: 2, text: 'Вдохновение это не просто новая идея' },
+          { t: 'paragraph', text: 'Мы смотрим книги. Наблюдаем, как подаются истории. Изучаем среды, созданные для детей. Ищем маленькие детали, которые стоят за хорошим опытом.' },
+          { t: 'paragraph', text: 'И всегда возвращаемся к одному вопросу:' },
+          { t: 'quote', text: 'Как создать для ребёнка ещё более осмысленный опыт?' },
+          { t: 'paragraph', text: 'В TALIMOON мы не представляем книгу просто как продукт для чтения. Мы хотим, чтобы история помогала ребёнку увидеть в ней себя, открыть что-то новое, задать вопрос и надолго запомнить узнанное.' },
+          { t: 'heading', level: 2, text: 'Идеи не рождаются в одном месте' },
+          { t: 'paragraph', text: 'Поэтому TALIMOON не создаётся в одном месте.' },
+          { t: 'paragraph', text: 'Иногда идея приходит со страницы книги. Иногда из любопытства ребёнка. Иногда из разговора, наблюдения или вопроса, который пока не нашёл ответа.' },
+          { t: 'paragraph', text: 'А сегодня этот поиск продолжается в Дохе, среди тысяч книг Катарской национальной библиотеки.' },
+          { t: 'quote', text: 'С одной стороны знания, дошедшие до нас из прошлого. С другой истории, которые ещё не написаны. Между ними TALIMOON.' },
+          { t: 'paragraph', text: 'Впереди ещё много работы. Сотни историй, новые книги, новый опыт и целый мир детства, который мы только начинаем себе представлять.' },
+          { t: 'paragraph', text: 'Но и у самых длинных путей есть первая страница.' },
+          { t: 'paragraph', text: 'Это одна из наших первых страниц.' },
+          { t: 'note', text: 'Qatar National Library · Doha, Qatar · 5 сентября 2026 · Дневник TALIMOON · 01' },
         ],
       },
     },

@@ -4,7 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { getStreamEntries, mediaPolicy, resolveEntryContent } from "@/lib/journey/content";
+import {
+  getFeaturedEntry,
+  getStreamEntries,
+  mediaPolicy,
+  resolveEntryContent,
+} from "@/lib/journey/content";
 import {
   JOURNEY_WORLDS,
   toLocale,
@@ -61,33 +66,41 @@ export function JourneyPremiere() {
   const [interacting, setInteracting] = useState(false);
   const paused = manuallyPaused || interacting;
 
-  const slides = useMemo(
-    () =>
-      JOURNEY_WORLDS.map((world) => {
-        const entry = getStreamEntries({
-          world,
-          limit: 1,
-          excludePromoted: false,
-        }).entries[0] ?? null;
-        const resolved = entry ? resolveEntryContent(entry, locale) : null;
-        const policy = entry ? mediaPolicy(entry) : null;
-        const asset = entry?.cover ?? entry?.video?.poster;
-        const image =
-          policy?.showMedia && asset?.src.trim() ? asset.src : FALLBACK_ART[world];
-        return {
-          world,
-          entry,
-          image,
-          alt: resolved?.content.coverAlt ?? worldName(world, locale),
-          title: resolved?.content.title ?? worldName(world, locale),
-          description: resolved?.content.standfirst ?? worldBlurb(world, locale),
-          href: entry ? `/journey/${entry.slug}` : worldPath(world),
-          isVideo: Boolean(entry?.video),
-          kicker: resolved?.content.kicker,
-        };
-      }),
-    [locale],
-  );
+  const slides = useMemo(() => {
+    // The hero is a dynamic featured slot. The current editorial pin
+    // (`getFeaturedEntry`) owns its world's slide, so a newer, unpinned
+    // entry can't quietly take the hero; other worlds show their newest
+    // entry, and with nothing published a world falls back to its own
+    // permanent art + name. Publishing featured content only ever
+    // changes this hero, never the fixed world gateway artwork.
+    const featured = getFeaturedEntry()?.entry ?? null;
+
+    return JOURNEY_WORLDS.map((world) => {
+      const newest =
+        getStreamEntries({ world, limit: 1, excludePromoted: false }).entries[0] ??
+        null;
+      const entry = featured && featured.world === world ? featured : newest;
+
+      const resolved = entry ? resolveEntryContent(entry, locale) : null;
+      const policy = entry ? mediaPolicy(entry) : null;
+      // A featured entry leads with its language-neutral hero artwork;
+      // everything else keeps the existing cover / poster behaviour.
+      const asset = entry?.heroImage ?? entry?.cover ?? entry?.video?.poster;
+      const image =
+        policy?.showMedia && asset?.src.trim() ? asset.src : FALLBACK_ART[world];
+      return {
+        world,
+        entry,
+        image,
+        alt: resolved?.content.coverAlt ?? worldName(world, locale),
+        title: resolved?.content.title ?? worldName(world, locale),
+        description: resolved?.content.standfirst ?? worldBlurb(world, locale),
+        href: entry ? `/journey/${entry.slug}` : worldPath(world),
+        isVideo: Boolean(entry?.video),
+        kicker: resolved?.content.kicker,
+      };
+    });
+  }, [locale]);
 
   useEffect(() => {
     if (paused || reducedMotion) return;

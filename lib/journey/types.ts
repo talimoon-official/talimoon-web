@@ -93,6 +93,10 @@ export interface JourneyVideo {
   provider: 'file' | 'youtube';
   /** File URL, or a YouTube video id. */
   src: string;
+  /** Frame orientation. Drives the player's media box so a vertical
+   *  film keeps its real 9:16 shape and is never stretched into a
+   *  horizontal frame. Defaults to `landscape` when omitted. */
+  orientation?: 'landscape' | 'portrait';
   durationSec: number;
   /** WebVTT captions track. Kept in the model even when empty so the
    *  accessibility path is ready before captions are produced. */
@@ -177,8 +181,8 @@ export const WORLD_NAME_KEYS: Record<
     },
     blurb: {
       uz: 'Bola psixologiyasi, tarbiya va oilaviy munosabatlar haqida kitoblar, mutaxassislar va ishonchli manbalarga tayangan foydali fikr va tavsiyalar.',
-      en: 'Practical thinking on child psychology, upbringing and family life — grounded in books, experts and trustworthy sources.',
-      ru: 'Полезные мысли о детской психологии, воспитании и семейных отношениях — с опорой на книги, экспертов и надёжные источники.',
+      en: 'Practical thinking on child psychology, upbringing and family life, grounded in books, experts and trustworthy sources.',
+      ru: 'Полезные мысли о детской психологии, воспитании и семейных отношениях, с опорой на книги, экспертов и надёжные источники.',
       ar: 'أفكار عملية حول نفسية الطفل والتربية والعلاقات الأسرية، مستندة إلى الكتب والخبراء والمصادر الموثوقة.',
     },
   },
@@ -386,6 +390,16 @@ export interface JourneyEntry {
 
   /** Atmospheric / lead image. Meaningful alt is `EntryContent.coverAlt`. */
   cover?: JourneyImage;
+  /**
+   * Language-neutral promotional artwork for the Journey landing's
+   * FEATURED HERO. Carries no baked-in headline, date or CTA — the UI
+   * renders every word around it, so one image serves every locale.
+   * Only meaningful with `featured: true`; when absent the hero falls
+   * back to `cover` / `video.poster`, then the world's default art.
+   * It never replaces the permanent Journey section / world gateway
+   * artwork, which is fixed in the components.
+   */
+  heroImage?: JourneyImage;
   /** Present for `format === 'video'`, or any entry with a film. */
   video?: JourneyVideo;
   /** Present for `format === 'campaign'`. */

@@ -24,6 +24,7 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import {
@@ -353,17 +354,31 @@ export function WorldLabel({
 
 // ── Film surface (self-hosted file) ────────────────────────────────
 /**
- * A native <video> on a dark 16:9 mat with one extra affordance: a
- * round centre play/pause cue. It sits over the poster at rest;
- * pressing it starts the film and it fades out ~1s later. Any pointer
- * activity over the surface brings it (and the native controls) back,
- * and it fades again 1s after the pointer goes quiet. While the film
- * is paused it always stays. Native controls remain for scrubbing,
- * volume and fullscreen.
+ * A native <video> that keeps its real shape: a `portrait` film sits
+ * in a 9:16 media box, never stretched into a horizontal frame; a
+ * `landscape` one fills a 16:9 plate. Both open with the cinematic
+ * cover artwork as a real UI poster (no Play icon burned into the
+ * asset) plus a round centre play/pause cue. Pressing the cue starts
+ * the film: the poster fades out, the video is revealed, and the cue
+ * fades ~1s later. Any pointer activity over the surface brings the
+ * cue (and the native controls) back, and it fades again 1s after the
+ * pointer goes quiet; while paused it stays. Native controls remain
+ * for scrubbing, volume and fullscreen.
  */
-function FilmSurface({ video }: { video: JourneyVideo }) {
+function FilmSurface({
+  video,
+  posterAlt = '',
+  playLabel = 'Play',
+  pauseLabel = 'Pause',
+}: {
+  video: JourneyVideo;
+  posterAlt?: string;
+  playLabel?: string;
+  pauseLabel?: string;
+}) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [started, setStarted] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [cueVisible, setCueVisible] = useState(true);
 
@@ -395,9 +410,15 @@ function FilmSurface({ video }: { video: JourneyVideo }) {
 
   useEffect(() => clearHide, [clearHide]);
 
+  const portrait = video.orientation === 'portrait';
+
   return (
     <div
-      className="tm-media-float relative aspect-video w-full overflow-hidden"
+      className={`tm-media-float relative overflow-hidden ${
+        portrait
+          ? 'mx-auto aspect-[9/16] w-full max-w-[420px]'
+          : 'aspect-video w-full'
+      }`}
       style={{ background: '#0c1116' }}
       onMouseEnter={reveal}
       onMouseMove={reveal}
@@ -408,12 +429,12 @@ function FilmSurface({ video }: { video: JourneyVideo }) {
         controls
         preload="none"
         playsInline
-        poster={video.poster.src}
-        className="absolute inset-0 h-full w-full object-contain"
+        className="absolute inset-0 h-full w-full object-cover"
         onPlay={() => {
           setPlaying(true);
           armHide();
         }}
+        onPlaying={() => setStarted(true)}
         onPause={() => {
           setPlaying(false);
           clearHide();
@@ -431,9 +452,30 @@ function FilmSurface({ video }: { video: JourneyVideo }) {
         ) : null}
       </video>
 
+      {/* The cinematic cover artwork, as a real UI poster. It fades
+          away once playback actually begins, revealing the video. */}
+      <div
+        aria-hidden={started}
+        className={`absolute inset-0 transition-opacity duration-500 ease-out ${
+          started ? 'pointer-events-none opacity-0' : 'opacity-100'
+        }`}
+      >
+        <Image
+          src={video.poster.src}
+          alt={posterAlt}
+          fill
+          sizes={
+            portrait
+              ? '(min-width: 480px) 420px, 92vw'
+              : '(min-width: 1024px) 1000px, 100vw'
+          }
+          className="object-cover object-center"
+        />
+      </div>
+
       <button
         type="button"
-        aria-label={playing ? 'Pause' : 'Play'}
+        aria-label={playing ? pauseLabel : playLabel}
         onClick={toggle}
         onFocus={reveal}
         className={`absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full outline-none transition-opacity duration-300 focus-visible:ring-2 focus-visible:ring-[#B8935B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c1116] ${
@@ -484,19 +526,28 @@ export function VideoPlayer({
   video,
   className = '',
   transcriptLabel = 'Transcript',
+  posterAlt = '',
+  playLabel = 'Play',
+  pauseLabel = 'Pause',
 }: {
   video: JourneyVideo;
   className?: string;
   transcriptLabel?: string;
+  posterAlt?: string;
+  playLabel?: string;
+  pauseLabel?: string;
 }) {
-  // The inline slot stays horizontal (a 16:9 plate) whatever the
-  // source shape — a vertical film simply sits centred inside it on a
-  // dark mat. Fullscreen is native, so a portrait film still fills the
-  // screen edge to edge when the visitor expands it.
+  // Self-hosted files render through FilmSurface, which honours the
+  // clip's real orientation (a 9:16 film keeps its vertical box).
   return (
     <div className={className}>
       {video.provider === 'file' ? (
-        <FilmSurface video={video} />
+        <FilmSurface
+          video={video}
+          posterAlt={posterAlt}
+          playLabel={playLabel}
+          pauseLabel={pauseLabel}
+        />
       ) : (
         <div className="tm-media-float relative aspect-video w-full bg-[#0c1116]">
           <iframe
