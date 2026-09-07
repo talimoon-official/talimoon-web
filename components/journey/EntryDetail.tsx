@@ -223,9 +223,9 @@ function BlockView({
       );
     case 'videoPlaceholder':
       return (
-        <div className="mx-auto w-full max-w-[1000px]">
+        <div className="mx-auto w-full max-w-[430px] px-2 sm:px-0">
           <div
-            className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-[2px] border px-6 text-center shadow-[0_24px_70px_rgba(28,42,58,0.13)]"
+            className="relative flex aspect-[9/16] w-full items-center justify-center overflow-hidden rounded-[22px] border px-7 text-center shadow-[0_28px_80px_rgba(17,29,44,0.22)] sm:rounded-[28px]"
             style={{
               borderColor: 'rgba(184,147,91,0.32)',
               background:
@@ -234,30 +234,30 @@ function BlockView({
           >
             <div
               aria-hidden="true"
-              className="absolute inset-5 border"
+              className="absolute inset-3 rounded-[17px] border sm:inset-4 sm:rounded-[21px]"
               style={{ borderColor: 'rgba(255,255,255,0.08)' }}
             />
-            <div className="relative z-10 max-w-[460px]">
+            <div className="relative z-10 max-w-[330px]">
               <span
-                className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border text-[17px] md:h-16 md:w-16"
+                className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border text-[17px] sm:h-16 sm:w-16"
                 style={{ borderColor: 'rgba(211,177,104,0.72)', color: '#D3B168' }}
               >
                 &#9654;
               </span>
               <p
-                className="mt-6 text-[11px] uppercase md:text-[12px]"
+                className="mt-6 text-[10px] uppercase sm:text-[11px]"
                 style={{ fontFamily: BODY, fontWeight: 700, letterSpacing: '0.24em', color: '#D3B168' }}
               >
                 {block.label}
               </p>
               <p
-                className="mt-3 text-[23px] text-white md:text-[31px]"
+                className="mt-3 text-[25px] text-white sm:text-[31px]"
                 style={{ fontFamily: DISPLAY, fontWeight: 600, lineHeight: 1.2 }}
               >
                 {block.title}
               </p>
               <p
-                className="mx-auto mt-3 max-w-[38ch] text-[13px] md:text-[15px]"
+                className="mx-auto mt-3 max-w-[30ch] text-[13px] sm:text-[14px]"
                 style={{ fontFamily: BODY, lineHeight: 1.65, color: 'rgba(255,255,255,0.62)' }}
               >
                 {block.note}
