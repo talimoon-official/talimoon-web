@@ -31,6 +31,21 @@ export interface RelationshipPayload {
   customLabel?: string;
 }
 
+/**
+ * The customer-selected delivery pin. STRUCTURED coordinates are the
+ * contract — `formattedAddress` is a bonus label, never a substitute, and
+ * lat/lng are never inferred from an address. Mirrors talimoon-intake's
+ * `submitOrderSchema.delivery.location`. Complementary to `addressText`.
+ */
+export interface DeliveryLocationPayload {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+  source: "device" | "map";
+  formattedAddress?: string;
+  confirmedByCustomer: true;
+}
+
 /** Book languages accepted by the TALIMOON order intake. */
 export type BackendBookLanguage = "uz" | "ru" | "en" | "kk" | "ky" | "tg" | "ar";
 
@@ -54,7 +69,12 @@ export interface SubmitOrderPayload {
   market: "UZ" | "INTERNATIONAL";
   bookType: "single" | "multi";
   copies: number;
-  delivery: { required: boolean; regionCode?: string; countryCode?: string };
+  delivery: {
+    required: boolean;
+    regionCode?: string;
+    countryCode?: string;
+    location?: DeliveryLocationPayload;
+  };
   clientDeclaredTotal?: number;
   declaredArtifacts: Array<{ kind: ArtifactKind; count: number }>;
   consent: {
@@ -126,6 +146,8 @@ export interface BuildSubmitPayloadArgs {
   deliveryRequired: boolean;
   regionCode?: string;
   countryCode?: string;
+  /** The customer's confirmed delivery pin, when they set one. */
+  deliveryLocation?: DeliveryLocationPayload;
   clientDeclaredTotal?: number;
   declaredArtifacts: {
     childPhotoCount: number;
@@ -197,6 +219,13 @@ export function buildSubmitPayload(args: BuildSubmitPayloadArgs): SubmitOrderPay
       required: args.deliveryRequired,
       regionCode: args.regionCode,
       countryCode: args.countryCode,
+      // The pin, exactly as the customer confirmed it. Only ever attached
+      // for a delivery order; a written address is still required and is
+      // never replaced by this.
+      location:
+        args.deliveryRequired && args.deliveryLocation
+          ? args.deliveryLocation
+          : undefined,
     },
     clientDeclaredTotal: args.clientDeclaredTotal,
     declaredArtifacts,

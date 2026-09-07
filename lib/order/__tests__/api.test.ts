@@ -152,6 +152,64 @@ describe("buildSubmitPayload", () => {
     expect(payload.profile.recipientRelationship).toBeUndefined();
     expect(payload.profile.children[0]!.relationship).toBeUndefined();
   });
+
+  const NO_ART = {
+    childPhotoCount: 0,
+    wantsSpecialPhoto: false,
+    characterPhotoCount: 0,
+    hasReceipt: false,
+  };
+  const PIN = {
+    latitude: 41.311081,
+    longitude: 69.240562,
+    accuracy: 8,
+    source: "map" as const,
+    formattedAddress: "Amir Temur ko'chasi 1, Toshkent",
+    confirmedByCustomer: true as const,
+  };
+
+  it("forwards a confirmed delivery pin verbatim on a delivery order", () => {
+    const payload = buildSubmitPayload({
+      ...BASE,
+      deliveryRequired: true,
+      regionCode: "tashkent_city",
+      deliveryLocation: PIN,
+      declaredArtifacts: NO_ART,
+    });
+    expect(payload.delivery.location).toEqual(PIN);
+    // structured coordinates survive as numbers, complementary to addressText
+    expect(typeof payload.delivery.location!.latitude).toBe("number");
+  });
+
+  it("keeps map-selected coords that differ from the device's current location", () => {
+    const mapPick = { ...PIN, latitude: 40.1, longitude: 65.4, source: "map" as const };
+    const payload = buildSubmitPayload({
+      ...BASE,
+      deliveryRequired: true,
+      deliveryLocation: mapPick,
+      declaredArtifacts: NO_ART,
+    });
+    expect(payload.delivery.location).toEqual(mapPick);
+  });
+
+  it("drops the pin for a pickup order (no delivery) — never sends a stray location", () => {
+    const payload = buildSubmitPayload({
+      ...BASE,
+      deliveryRequired: false,
+      deliveryLocation: PIN,
+      declaredArtifacts: NO_ART,
+    });
+    expect(payload.delivery.location).toBeUndefined();
+  });
+
+  it("omits location entirely when the customer set no pin", () => {
+    const payload = buildSubmitPayload({
+      ...BASE,
+      deliveryRequired: true,
+      declaredArtifacts: NO_ART,
+    });
+    expect(payload.delivery.location).toBeUndefined();
+  });
 });
 
 describe("planChildPhotoUploads", () => {

@@ -10,9 +10,16 @@ const intakeOrigin = (() => {
   }
 })();
 
+// Google Maps JS + Places (delivery-location picker). The browser key is
+// public and referrer-restricted; nothing secret is in the page. These
+// entries are inert when the map picker is not used.
+const GOOGLE_MAPS = "https://maps.googleapis.com";
+const GOOGLE_MAPS_STATIC = "https://maps.gstatic.com";
+
 const connectSources = [
   "'self'",
   "https://challenges.cloudflare.com",
+  GOOGLE_MAPS,
   ...(intakeOrigin ? [intakeOrigin] : []),
 ].join(" ");
 
@@ -25,10 +32,10 @@ const contentSecurityPolicy = [
   "object-src 'none'",
   "frame-ancestors 'none'",
   "form-action 'self'",
-  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""} https://challenges.cloudflare.com`,
+  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""} https://challenges.cloudflare.com ${GOOGLE_MAPS}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https:",
-  "font-src 'self' data:",
+  `img-src 'self' data: blob: https: ${GOOGLE_MAPS_STATIC}`,
+  "font-src 'self' data: https://fonts.gstatic.com",
   "media-src 'self' blob:",
   `connect-src ${connectSources}`,
   "frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com",

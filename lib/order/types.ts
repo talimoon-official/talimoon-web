@@ -26,13 +26,23 @@ export type { BookType, Market };
  * The written delivery address is the PRIMARY address (spec §42–49).
  * `location` is optional extra precision — a pin the courier can use —
  * and never a substitute for the written fields. Stored provider-neutral
- * (plain lat/lng/accuracy) so a map layer can be added later without
- * touching the order model.
+ * (plain lat/lng) so the value survives any map layer.
+ *
+ * `source` records how the customer chose the point:
+ *  - `"device"` — browser geolocation ("Hozirgi joylashuvimni yuborish")
+ *  - `"map"`    — an explicit pick on the interactive map ("Xaritadan joy tanlash"),
+ *                 which may be somewhere other than where the customer is now
+ * `formattedAddress` is a human-readable label when the provider returned one;
+ * it never replaces the written address. `confirmedByCustomer` is only ever
+ * true — an unconfirmed pin is never attached to the order.
  */
 export interface DeliveryLocation {
   latitude: number;
   longitude: number;
   accuracy?: number;
+  source: "device" | "map";
+  formattedAddress?: string;
+  confirmedByCustomer: true;
 }
 
 export interface DeliveryAddress {

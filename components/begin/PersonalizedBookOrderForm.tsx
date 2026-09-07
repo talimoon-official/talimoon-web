@@ -40,6 +40,7 @@ import {
 } from "@/lib/order/profileText";
 import Turnstile, { type TurnstileHandle } from "./Turnstile";
 import { PaymentAccount } from "./PaymentAccount";
+import { MapLocationPicker } from "./MapLocationPicker";
 import { setMarketPreference, useMarketPreference, marketFromLocation } from "@/lib/order/market";
 import { useFlowScroll } from "@/lib/order/useFlowScroll";
 import {
@@ -152,6 +153,16 @@ const CHROME_EN = {
   locationUnsupported:
     "This device can't share a location. The written address is enough.",
   locationLoading: "Getting location…",
+  locationCurrentCta: "Send my current location",
+  locationMapCta: "Choose a point on the map",
+  locationChange: "Change location",
+  locationSelected: "Delivery point selected",
+  locationPickerTitle: "Choose the delivery point",
+  locationSearchPlaceholder: "Search for an address or place",
+  locationConfirm: "Confirm this point",
+  locationPickerClose: "Cancel",
+  locationMapUnavailable:
+    "The map isn't available right now. You can send your current location or carry on with the written address.",
 
   namePlaceholder: "Name",
   agePlaceholder: "Age",
@@ -312,6 +323,16 @@ const CHROME_UZ: typeof CHROME_EN = {
   locationUnsupported:
     "Bu qurilma lokatsiyani ulasholmaydi. Yozilgan manzil yetarli.",
   locationLoading: "Lokatsiya olinmoqda…",
+  locationCurrentCta: "Hozirgi joylashuvimni yuborish",
+  locationMapCta: "Xaritadan joy tanlash",
+  locationChange: "Lokatsiyani o'zgartirish",
+  locationSelected: "Yetkazib berish joyi tanlandi",
+  locationPickerTitle: "Yetkazib berish joyini tanlang",
+  locationSearchPlaceholder: "Manzil yoki joy nomini qidiring",
+  locationConfirm: "Shu joyni tasdiqlash",
+  locationPickerClose: "Bekor qilish",
+  locationMapUnavailable:
+    "Xarita hozircha ishlamayapti. Hozirgi joylashuvingizni yuborishingiz yoki yozilgan manzil bilan davom etishingiz mumkin.",
 
   namePlaceholder: "Ismi",
   agePlaceholder: "Yoshi",
@@ -474,6 +495,16 @@ const CHROME_RU: typeof CHROME_EN = {
   locationUnsupported:
     "Это устройство не поддерживает передачу геолокации. Указанного адреса достаточно.",
   locationLoading: "Определяем местоположение…",
+  locationCurrentCta: "Отправить моё текущее местоположение",
+  locationMapCta: "Выбрать точку на карте",
+  locationChange: "Изменить местоположение",
+  locationSelected: "Точка доставки выбрана",
+  locationPickerTitle: "Выберите точку доставки",
+  locationSearchPlaceholder: "Поиск адреса или места",
+  locationConfirm: "Подтвердить эту точку",
+  locationPickerClose: "Отмена",
+  locationMapUnavailable:
+    "Карта сейчас недоступна. Можно отправить текущее местоположение или продолжить с указанным адресом.",
 
   namePlaceholder: "Имя",
   agePlaceholder: "Возраст",
@@ -976,12 +1007,17 @@ export default function PersonalizedBookOrderForm({
     setShowStepError(false);
   }
 
-  // ── Optional delivery location (spec §44–49). Permission is requested
-  //    ONLY on an explicit tap — never on load. A denial / no support
-  //    never blocks checkout; the written address is always enough.
+  // ── Optional delivery location (spec §44–49). Two explicit choices:
+  //    "Hozirgi joylashuvimni yuborish" (browser geolocation) and
+  //    "Xaritadan joy tanlash" (an interactive Google map pick, which may
+  //    be somewhere other than where the customer is now). Both produce the
+  //    same normalized `DeliveryLocation`. Nothing is requested on load; a
+  //    denial / no support / no map key never blocks checkout — the written
+  //    address is always enough.
   const [locState, setLocState] = useState<
     "idle" | "loading" | "denied" | "unsupported"
   >("idle");
+  const [mapPickerOpen, setMapPickerOpen] = useState(false);
 
   function requestLocation() {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
@@ -997,6 +1033,8 @@ export default function PersonalizedBookOrderForm({
           accuracy: Number.isFinite(pos.coords.accuracy)
             ? pos.coords.accuracy
             : undefined,
+          source: "device",
+          confirmedByCustomer: true,
         };
         updateAddress("location", loc);
         setLocState("idle");
@@ -1006,10 +1044,20 @@ export default function PersonalizedBookOrderForm({
     );
   }
 
+  function handleMapConfirm(loc: DeliveryLocation) {
+    updateAddress("location", loc);
+    setLocState("idle");
+    setMapPickerOpen(false);
+  }
+
   function clearLocation() {
     updateAddress("location", undefined);
     setLocState("idle");
   }
+
+  const mapsKeyPresent = Boolean(
+    process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY,
+  );
 
   function handlePhase01(result: Phase01Result) {
     setData((prev) => ({
@@ -1133,6 +1181,9 @@ export default function PersonalizedBookOrderForm({
           deliveryRequired: wantsDelivery,
           regionCode: data.orderer.deliveryAddress.regionCode || undefined,
           countryCode: data.orderer.deliveryAddress.countryCode || undefined,
+          // The customer-confirmed delivery pin, when they set one. A
+          // written address is still required; this never replaces it.
+          deliveryLocation: data.orderer.deliveryAddress.location ?? undefined,
           clientDeclaredTotal: totals.grandTotal,
           declaredArtifacts: {
             childPhotoCount: data.children.reduce((n, c) => n + (c.photos?.length ?? 0), 0),
@@ -1983,30 +2034,58 @@ export default function PersonalizedBookOrderForm({
 
                   <div className="rounded-md border border-border-default p-4">
                     {data.orderer.deliveryAddress.location ? (
-                      <div className="flex items-center justify-between gap-3">
+                      <div className="flex flex-col gap-2">
                         <span className="inline-flex items-center gap-2 font-sans text-[13px] font-medium text-text-primary">
                           <MapPin size={15} strokeWidth={1.75} className="text-accent-primary" />
-                          {t.locationAttached}
+                          {t.locationSelected}
                         </span>
-                        <button
-                          type="button"
-                          onClick={clearLocation}
-                          className="font-sans text-[12.5px] font-medium text-text-secondary underline underline-offset-4 hover:text-text-primary"
-                        >
-                          {t.locationClear}
-                        </button>
+                        {data.orderer.deliveryAddress.location.formattedAddress ? (
+                          <p className="font-sans text-[12.5px] leading-[1.5] text-text-secondary">
+                            {data.orderer.deliveryAddress.location.formattedAddress}
+                          </p>
+                        ) : null}
+                        <div className="flex flex-wrap gap-x-4 gap-y-1">
+                          {mapsKeyPresent ? (
+                            <button
+                              type="button"
+                              onClick={() => setMapPickerOpen(true)}
+                              className="font-sans text-[12.5px] font-medium text-text-secondary underline underline-offset-4 hover:text-text-primary"
+                            >
+                              {t.locationChange}
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            onClick={clearLocation}
+                            className="font-sans text-[12.5px] font-medium text-text-secondary underline underline-offset-4 hover:text-text-primary"
+                          >
+                            {t.locationClear}
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <>
-                        <button
-                          type="button"
-                          onClick={requestLocation}
-                          disabled={locState === "loading"}
-                          className="inline-flex items-center gap-2 rounded-md border border-border-strong px-3.5 py-2 font-sans text-[13px] font-medium text-text-primary transition-colors hover:border-accent-primary disabled:opacity-60"
-                        >
-                          <MapPin size={15} strokeWidth={1.75} className="text-accent-primary" />
-                          {locState === "loading" ? t.locationLoading : t.locationCta}
-                        </button>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={requestLocation}
+                            disabled={locState === "loading"}
+                            className="inline-flex items-center gap-2 rounded-md border border-border-strong px-3.5 py-2 font-sans text-[13px] font-medium text-text-primary transition-colors hover:border-accent-primary disabled:opacity-60"
+                          >
+                            <MapPin size={15} strokeWidth={1.75} className="text-accent-primary" />
+                            {locState === "loading" ? t.locationLoading : t.locationCurrentCta}
+                          </button>
+                          {mapsKeyPresent ? (
+                            <button
+                              type="button"
+                              onClick={() => setMapPickerOpen(true)}
+                              className="inline-flex items-center gap-2 rounded-md border border-border-strong px-3.5 py-2 font-sans text-[13px] font-medium text-text-primary transition-colors hover:border-accent-primary"
+                            >
+                              <MapPin size={15} strokeWidth={1.75} className="text-accent-primary" />
+                              {t.locationMapCta}
+                            </button>
+                          ) : null}
+                        </div>
                         <p className="mt-2 font-sans text-[12px] leading-[1.5] text-text-secondary">
                           {locState === "denied"
                             ? t.locationDenied
@@ -2017,6 +2096,20 @@ export default function PersonalizedBookOrderForm({
                       </>
                     )}
                   </div>
+                  {mapPickerOpen && mapsKeyPresent ? (
+                    <MapLocationPicker
+                      initial={data.orderer.deliveryAddress.location ?? null}
+                      labels={{
+                        title: t.locationPickerTitle,
+                        search: t.locationSearchPlaceholder,
+                        confirm: t.locationConfirm,
+                        close: t.locationPickerClose,
+                        unavailable: t.locationMapUnavailable,
+                      }}
+                      onConfirm={handleMapConfirm}
+                      onClose={() => setMapPickerOpen(false)}
+                    />
+                  ) : null}
 
                   {/* The fee, shown immediately here — updates the moment
                       the region changes (spec C7). */}
