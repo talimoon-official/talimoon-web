@@ -450,8 +450,9 @@ function FilmSurface({
     </video>
   );
 
-  // The cinematic cover artwork, as a real UI poster over the crisp
-  // stage. Fades away once playback actually begins.
+  // The cinematic cover artwork is its own 16:9 banner — shown IN FULL
+  // across the whole plate (not cropped into the portrait stage) until
+  // playback actually begins, then it fades to reveal the film.
   const posterEl = (
     <div
       aria-hidden={started}
@@ -463,11 +464,7 @@ function FilmSurface({
         src={video.poster.src}
         alt={posterAlt}
         fill
-        sizes={
-          portrait
-            ? '(min-width: 640px) 380px, 66vw'
-            : '(min-width: 1024px) 1000px, 100vw'
-        }
+        sizes="(min-width: 1024px) 1000px, 100vw"
         className="object-cover object-center"
       />
     </div>
@@ -522,8 +519,9 @@ function FilmSurface({
     >
       {portrait ? (
         <>
-          {/* Soft blurred fill of the cover — the horizontal plate is
-              always full, never raw black bars beside a vertical clip. */}
+          {/* Once playing: the vertical film sits crisp + centred at its
+              true 9:16 on a soft blurred fill of the cover, so the
+              horizontal plate stays full without stretching the clip. */}
           <div aria-hidden="true" className="absolute inset-0">
             <Image
               src={video.poster.src}
@@ -537,15 +535,15 @@ function FilmSurface({
               style={{ background: 'rgba(12,17,22,0.5)' }}
             />
           </div>
-          {/* The crisp film, centred at its true 9:16. */}
           <div
             className="absolute left-1/2 top-1/2 aspect-[9/16] h-full -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[2px]"
             style={{ boxShadow: '0 12px 44px rgba(0,0,0,0.45)' }}
           >
             {videoEl}
-            {posterEl}
-            {cueEl}
           </div>
+          {/* Full-bleed 16:9 banner on top until play. */}
+          {posterEl}
+          {cueEl}
         </>
       ) : (
         <>
