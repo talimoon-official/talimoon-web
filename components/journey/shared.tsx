@@ -354,16 +354,21 @@ export function WorldLabel({
 
 // ── Film surface (self-hosted file) ────────────────────────────────
 /**
- * A native <video> that keeps its real shape: a `portrait` film sits
- * in a 9:16 media box, never stretched into a horizontal frame; a
- * `landscape` one fills a 16:9 plate. Both open with the cinematic
- * cover artwork as a real UI poster (no Play icon burned into the
- * asset) plus a round centre play/pause cue. Pressing the cue starts
- * the film: the poster fades out, the video is revealed, and the cue
- * fades ~1s later. Any pointer activity over the surface brings the
- * cue (and the native controls) back, and it fades again 1s after the
- * pointer goes quiet; while paused it stays. Native controls remain
- * for scrubbing, volume and fullscreen.
+ * A native <video> in a premium horizontal 16:9 plate. A `landscape`
+ * film simply fills it. A `portrait` (9:16) film is NOT stretched: it
+ * plays crisp and centred at its true aspect on a soft blurred fill
+ * of its own cover (the treatment Shorts / Reels embeds use), so the
+ * inline frame reads as intentional, never as a letterboxed strip.
+ * Fullscreen is native, so tapping fullscreen on a phone opens the
+ * vertical film full-height in portrait.
+ *
+ * Both open with the cinematic cover artwork as a real UI poster (no
+ * Play icon burned into the asset) plus a round centre play/pause
+ * cue. Pressing the cue starts the film: the poster fades out, the
+ * video is revealed, and the cue fades ~1s later. Any pointer
+ * activity brings the cue (and the native controls) back; while
+ * paused it stays. Native controls handle scrubbing, volume and
+ * fullscreen.
  */
 function FilmSurface({
   video,
@@ -412,103 +417,143 @@ function FilmSurface({
 
   const portrait = video.orientation === 'portrait';
 
+  const videoEl = (
+    <video
+      ref={videoRef}
+      controls
+      preload="none"
+      playsInline
+      className={`absolute inset-0 h-full w-full ${
+        portrait ? 'object-contain' : 'object-cover'
+      }`}
+      style={portrait ? { background: '#0c1116' } : undefined}
+      onPlay={() => {
+        setPlaying(true);
+        armHide();
+      }}
+      onPlaying={() => setStarted(true)}
+      onPause={() => {
+        setPlaying(false);
+        clearHide();
+        setCueVisible(true);
+      }}
+      onEnded={() => {
+        setPlaying(false);
+        clearHide();
+        setCueVisible(true);
+      }}
+    >
+      <source src={video.src} />
+      {video.captionsSrc ? (
+        <track kind="captions" src={video.captionsSrc} srcLang="uz" default />
+      ) : null}
+    </video>
+  );
+
+  // The cinematic cover artwork, as a real UI poster over the crisp
+  // stage. Fades away once playback actually begins.
+  const posterEl = (
+    <div
+      aria-hidden={started}
+      className={`absolute inset-0 transition-opacity duration-500 ease-out ${
+        started ? 'pointer-events-none opacity-0' : 'opacity-100'
+      }`}
+    >
+      <Image
+        src={video.poster.src}
+        alt={posterAlt}
+        fill
+        sizes={
+          portrait
+            ? '(min-width: 640px) 380px, 66vw'
+            : '(min-width: 1024px) 1000px, 100vw'
+        }
+        className="object-cover object-center"
+      />
+    </div>
+  );
+
+  const cueEl = (
+    <button
+      type="button"
+      aria-label={playing ? pauseLabel : playLabel}
+      onClick={toggle}
+      onFocus={reveal}
+      className={`absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full outline-none transition-opacity duration-300 focus-visible:ring-2 focus-visible:ring-[#B8935B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c1116] ${
+        cueVisible ? 'opacity-100' : 'pointer-events-none opacity-0'
+      }`}
+      style={{
+        backgroundColor: 'rgba(247,243,236,0.94)',
+        boxShadow: '0 6px 24px rgba(12,17,22,0.28)',
+      }}
+    >
+      {playing ? (
+        <span aria-hidden="true" className="flex gap-[5px]">
+          <span
+            className="block h-[18px] w-[4px] rounded-[1px]"
+            style={{ backgroundColor: NAVY }}
+          />
+          <span
+            className="block h-[18px] w-[4px] rounded-[1px]"
+            style={{ backgroundColor: NAVY }}
+          />
+        </span>
+      ) : (
+        <span
+          aria-hidden="true"
+          className="ms-1 block h-0 w-0"
+          style={{
+            borderTop: '11px solid transparent',
+            borderBottom: '11px solid transparent',
+            borderInlineStart: `18px solid ${NAVY}`,
+          }}
+        />
+      )}
+    </button>
+  );
+
   return (
     <div
-      className={`tm-media-float relative overflow-hidden ${
-        portrait
-          ? 'mx-auto aspect-[9/16] w-full max-w-[420px]'
-          : 'aspect-video w-full'
-      }`}
+      className="tm-media-float relative aspect-video w-full overflow-hidden"
       style={{ background: '#0c1116' }}
       onMouseEnter={reveal}
       onMouseMove={reveal}
       onTouchStart={reveal}
     >
-      <video
-        ref={videoRef}
-        controls
-        preload="none"
-        playsInline
-        className="absolute inset-0 h-full w-full object-cover"
-        onPlay={() => {
-          setPlaying(true);
-          armHide();
-        }}
-        onPlaying={() => setStarted(true)}
-        onPause={() => {
-          setPlaying(false);
-          clearHide();
-          setCueVisible(true);
-        }}
-        onEnded={() => {
-          setPlaying(false);
-          clearHide();
-          setCueVisible(true);
-        }}
-      >
-        <source src={video.src} />
-        {video.captionsSrc ? (
-          <track kind="captions" src={video.captionsSrc} srcLang="uz" default />
-        ) : null}
-      </video>
-
-      {/* The cinematic cover artwork, as a real UI poster. It fades
-          away once playback actually begins, revealing the video. */}
-      <div
-        aria-hidden={started}
-        className={`absolute inset-0 transition-opacity duration-500 ease-out ${
-          started ? 'pointer-events-none opacity-0' : 'opacity-100'
-        }`}
-      >
-        <Image
-          src={video.poster.src}
-          alt={posterAlt}
-          fill
-          sizes={
-            portrait
-              ? '(min-width: 480px) 420px, 92vw'
-              : '(min-width: 1024px) 1000px, 100vw'
-          }
-          className="object-cover object-center"
-        />
-      </div>
-
-      <button
-        type="button"
-        aria-label={playing ? pauseLabel : playLabel}
-        onClick={toggle}
-        onFocus={reveal}
-        className={`absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full outline-none transition-opacity duration-300 focus-visible:ring-2 focus-visible:ring-[#B8935B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c1116] ${
-          cueVisible ? 'opacity-100' : 'pointer-events-none opacity-0'
-        }`}
-        style={{
-          backgroundColor: 'rgba(247,243,236,0.94)',
-          boxShadow: '0 6px 24px rgba(12,17,22,0.28)',
-        }}
-      >
-        {playing ? (
-          <span aria-hidden="true" className="flex gap-[5px]">
-            <span
-              className="block h-[18px] w-[4px] rounded-[1px]"
-              style={{ backgroundColor: NAVY }}
+      {portrait ? (
+        <>
+          {/* Soft blurred fill of the cover — the horizontal plate is
+              always full, never raw black bars beside a vertical clip. */}
+          <div aria-hidden="true" className="absolute inset-0">
+            <Image
+              src={video.poster.src}
+              alt=""
+              fill
+              sizes="100vw"
+              className="scale-110 object-cover blur-2xl"
             />
             <span
-              className="block h-[18px] w-[4px] rounded-[1px]"
-              style={{ backgroundColor: NAVY }}
+              className="absolute inset-0"
+              style={{ background: 'rgba(12,17,22,0.5)' }}
             />
-          </span>
-        ) : (
-          <span
-            aria-hidden="true"
-            className="ms-1 block h-0 w-0"
-            style={{
-              borderTop: '11px solid transparent',
-              borderBottom: '11px solid transparent',
-              borderInlineStart: `18px solid ${NAVY}`,
-            }}
-          />
-        )}
-      </button>
+          </div>
+          {/* The crisp film, centred at its true 9:16. */}
+          <div
+            className="absolute left-1/2 top-1/2 aspect-[9/16] h-full -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[2px]"
+            style={{ boxShadow: '0 12px 44px rgba(0,0,0,0.45)' }}
+          >
+            {videoEl}
+            {posterEl}
+            {cueEl}
+          </div>
+        </>
+      ) : (
+        <>
+          {videoEl}
+          {posterEl}
+          {cueEl}
+        </>
+      )}
     </div>
   );
 }
@@ -537,8 +582,9 @@ export function VideoPlayer({
   playLabel?: string;
   pauseLabel?: string;
 }) {
-  // Self-hosted files render through FilmSurface, which honours the
-  // clip's real orientation (a 9:16 film keeps its vertical box).
+  // Self-hosted files render through FilmSurface: a horizontal 16:9
+  // plate, with a 9:16 film shown crisp + centred on a blurred fill
+  // (never stretched), and native portrait fullscreen.
   return (
     <div className={className}>
       {video.provider === 'file' ? (
