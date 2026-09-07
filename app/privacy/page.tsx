@@ -56,6 +56,7 @@ const EN: LegalCopy = {
             "Photographs of the child that you upload for illustration reference.",
             "Photographs and details of additional characters (for example a parent, sibling, or friend) that you choose to include.",
             "Order and delivery information — what you ordered, delivery choices, and the payment confirmation details you send us.",
+            "Consent record — the adult orderer's typed electronic signature, acceptance time, interface language, and the versions of the Privacy Policy and Terms accepted. TALIMOON does not attach an IP address to this consent record.",
             "Communications — messages, questions, and feedback you send us about an order.",
           ],
         },
@@ -181,6 +182,7 @@ const EN: LegalCopy = {
             "create and deliver your order;",
             "provide customer support and handle any questions or disputes;",
             "meet operational, accounting, and legal requirements.",
+            "document the order instructions and consent received.",
           ],
         },
         {
@@ -298,6 +300,7 @@ const UZ: LegalCopy = {
             "Rasm chizishda namuna sifatida foydalanish uchun siz yuklaydigan bola fotosuratlari.",
             "Buyurtmaga qo'shishni istagan qo'shimcha qahramonlarning (masalan, ota-ona, aka-uka yoki do'stning) fotosuratlari va ma'lumotlari.",
             "Buyurtma va yetkazib berish ma'lumotlari — nima buyurtma qilganingiz, yetkazib berish tanlovlari va siz yuboradigan to'lov tasdig'i.",
+            "Rozilik qaydi — voyaga yetgan buyurtmachining kiritgan elektron imzosi, rozilik vaqti, interfeys tili hamda qabul qilingan Maxfiylik siyosati va Shartlar versiyalari. TALIMOON bu rozilik qaydiga IP-manzilni biriktirmaydi.",
             "Yozishmalar — buyurtma yuzasidan bizga yo'llagan xabarlar, savollar va fikr-mulohazalar.",
           ],
         },
@@ -426,6 +429,7 @@ const UZ: LegalCopy = {
             "buyurtmangizni yaratish va yetkazib berish;",
             "mijozlarni qo'llab-quvvatlash hamda har qanday savol yoki nizolarni hal qilish;",
             "operatsion, buxgalteriya va qonuniy talablarni bajarish.",
+            "buyurtma ko‘rsatmalari va olingan rozilikni tasdiqlash.",
           ],
         },
         {
@@ -543,6 +547,7 @@ const RU: LegalCopy = {
             "Фотографии ребёнка, которые Вы загружаете как основу для иллюстраций.",
             "Фотографии и данные дополнительных персонажей (например, родителя, брата, сестры или друга), которых Вы хотите включить в книгу.",
             "Данные заказа и доставки: что именно Вы заказали, выбранный способ доставки и сведения о подтверждении оплаты, которые Вы нам присылаете.",
+            "Запись согласия: введённая совершеннолетним заказчиком электронная подпись, время принятия, язык интерфейса и версии принятой Политики конфиденциальности и Условий. TALIMOON не связывает IP-адрес с этой записью согласия.",
             "Переписку: сообщения, вопросы и отзывы, которые Вы направляете нам по заказу.",
           ],
         },
@@ -668,6 +673,7 @@ const RU: LegalCopy = {
             "создать и доставить Ваш заказ;",
             "обеспечить поддержку клиентов и разрешить любые вопросы или споры;",
             "выполнить операционные, бухгалтерские и юридические требования.",
+            "подтвердить инструкции по заказу и полученное согласие.",
           ],
         },
         {

@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 const EN: LegalCopy = {
   title: "Terms of Service",
   effectiveLabel: "Effective date",
-  effectiveDate: "4 September 2026",
+  effectiveDate: "7 September 2026",
   intro: [
     "These Terms of Service ('Terms') apply to your use of the TALIMOON website and to orders you place with us for personalized books and related products.",
     "Please read them together with our Privacy Policy.",
@@ -59,6 +59,19 @@ const EN: LegalCopy = {
         {
           kind: "p",
           text: "We rely on what you tell us. We are not responsible for errors that result from inaccurate or incomplete information provided to us.",
+        },
+      ],
+    },
+    {
+      heading: "Order consent and electronic acceptance",
+      blocks: [
+        {
+          kind: "p",
+          text: "Before an order can be submitted, the adult placing it must separately confirm that they are at least 18 and are the child's parent or legal guardian, or have clear authority from that person; accept the Privacy Policy; and accept these Terms. The adult must also type their full name as an electronic signature.",
+        },
+        {
+          kind: "p",
+          text: "We record the typed name, acceptance time, interface language, and the versions of the Privacy Policy and Terms accepted with the order. We do not use an IP address as the signature. These records are kept to demonstrate the order instructions and consent received. This order consent does not permit advertising use or public sharing of submitted photographs and does not subscribe the customer to marketing.",
         },
       ],
     },
@@ -200,7 +213,7 @@ const EN: LegalCopy = {
       blocks: [
         {
           kind: "p",
-          text: "For any question about these Terms, or about an order, contact us at talimoon.production@gmail.com.",
+          text: "For any question about these Terms, or about an order, contact us at hello@talimoon.com.",
         },
       ],
     },
@@ -210,7 +223,7 @@ const EN: LegalCopy = {
 const UZ: LegalCopy = {
   title: "Foydalanish shartlari",
   effectiveLabel: "Kuchga kirgan sana",
-  effectiveDate: "2026-yil 4-sentabr",
+  effectiveDate: "2026-yil 7-sentabr",
   intro: [
     "Ushbu Foydalanish shartlari ('Shartlar') TALIMOON veb-saytidan foydalanishingizga hamda shaxsiylashtirilgan kitoblar va u bilan bog'liq mahsulotlar uchun beradigan buyurtmalaringizga tatbiq etiladi.",
     "Iltimos, ularni Maxfiylik siyosati bilan birga o'qing.",
@@ -249,6 +262,19 @@ const UZ: LegalCopy = {
         {
           kind: "p",
           text: "Biz siz aytgan ma'lumotlarga tayanamiz. Bizga taqdim etilgan noto'g'ri yoki chala ma'lumot tufayli yuzaga kelgan xatolar uchun javobgar emasmiz.",
+        },
+      ],
+    },
+    {
+      heading: "Buyurtma roziligi va elektron qabul qilish",
+      blocks: [
+        {
+          kind: "p",
+          text: "Buyurtma yuborilishidan oldin uni berayotgan voyaga yetgan shaxs 18 yoshdan katta ekanini va bolaning ota-onasi yoki qonuniy vakili ekanini yoxud ulardan aniq vakolat olganini; Maxfiylik siyosatini; hamda ushbu Shartlarni alohida tasdiqlashi kerak. Shuningdek, elektron imzo sifatida to‘liq ism-familiyasini kiritadi.",
+        },
+        {
+          kind: "p",
+          text: "Biz buyurtma bilan birga kiritilgan ismni, rozilik vaqtini, interfeys tilini va qabul qilingan Maxfiylik siyosati hamda Shartlar versiyalarini qayd etamiz. IP-manzildan imzo sifatida foydalanmaymiz. Bu qaydlar buyurtma ko‘rsatmalari va olingan rozilikni tasdiqlash uchun saqlanadi. Buyurtma roziligi yuborilgan fotosuratlardan reklamada foydalanish yoki ularni ommaga tarqatishga ruxsat bermaydi va mijozni marketing xabarlariga obuna qilmaydi.",
         },
       ],
     },
@@ -390,7 +416,7 @@ const UZ: LegalCopy = {
       blocks: [
         {
           kind: "p",
-          text: "Ushbu Shartlar yoki buyurtma bo'yicha har qanday savol uchun biz bilan talimoon.production@gmail.com orqali bog'laning.",
+          text: "Ushbu Shartlar yoki buyurtma bo'yicha har qanday savol uchun biz bilan hello@talimoon.com orqali bog'laning.",
         },
       ],
     },
@@ -400,7 +426,7 @@ const UZ: LegalCopy = {
 const RU: LegalCopy = {
   title: "Условия использования",
   effectiveLabel: "Дата вступления в силу",
-  effectiveDate: "4 сентября 2026 г.",
+  effectiveDate: "7 сентября 2026 г.",
   intro: [
     "Настоящие Условия использования (далее «Условия») применяются к использованию Вами сайта TALIMOON и к заказам именных книг и связанных с ними продуктов.",
     "Пожалуйста, ознакомьтесь с ними вместе с Политикой конфиденциальности.",
@@ -439,6 +465,19 @@ const RU: LegalCopy = {
         {
           kind: "p",
           text: "Мы полагаемся на сведения, которые Вы нам сообщаете. Мы не несём ответственности за ошибки, возникшие из за неточных или неполных данных, предоставленных нам.",
+        },
+      ],
+    },
+    {
+      heading: "Согласие на заказ и электронное принятие",
+      blocks: [
+        {
+          kind: "p",
+          text: "До отправки заказа оформляющий его совершеннолетний должен отдельно подтвердить, что ему исполнилось 18 лет и он является родителем или законным представителем ребёнка либо имеет их явное разрешение; принять Политику конфиденциальности; и принять настоящие Условия. Он также вводит полное имя в качестве электронной подписи.",
+        },
+        {
+          kind: "p",
+          text: "Вместе с заказом мы записываем введённое имя, время принятия, язык интерфейса и версии принятой Политики конфиденциальности и Условий. Мы не используем IP-адрес в качестве подписи. Эти записи хранятся для подтверждения полученных инструкций и согласия. Согласие на заказ не разрешает рекламное или публичное использование загруженных фотографий и не оформляет подписку на маркетинговые сообщения.",
         },
       ],
     },
@@ -580,7 +619,7 @@ const RU: LegalCopy = {
       blocks: [
         {
           kind: "p",
-          text: "По любому вопросу об этих Условиях или о заказе свяжитесь с нами по адресу talimoon.production@gmail.com.",
+          text: "По любому вопросу об этих Условиях или о заказе свяжитесь с нами по адресу hello@talimoon.com.",
         },
       ],
     },

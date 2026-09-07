@@ -87,11 +87,14 @@ import {
 } from "@/lib/order/relationship";
 import Phase01 from "./Phase01";
 import { JourneyProgress } from "./JourneyProgress";
+import { CheckRow } from "./CheckRow";
 
 /** Where "Yuragingizda qolgan gaplar" (its own quiet screen, not a
  *  wizard step) slots in: after "a personal touch", before the photos. */
 const PERSONAL_TOUCH_STEP = STEPS.findIndex((s) => s.id === "personal-touch");
 const PHOTOS_STEP = STEPS.findIndex((s) => s.id === "photos");
+const PRIVACY_POLICY_VERSION = "2026-09-07";
+const TERMS_VERSION = "2026-09-07";
 
 // ─── Copy ───────────────────────────────────────────────────────────────────
 
@@ -219,6 +222,17 @@ const CHROME_EN = {
   receiptReplace: "Replace",
   receiptError: "Please upload the payment receipt to finish.",
   submitError: "We couldn't send your order. Please try again.",
+  consentHeading: "Consent and electronic signature",
+  consentIntro: "Before sending the order, please confirm how we may use the information and photographs you provided.",
+  consentAuthority: "I am at least 18 years old and I am the child's parent/legal guardian, or I have clear authority from the parent/legal guardian to provide the child's information and photographs for this order.",
+  consentPrivacy: "I have read the Privacy Policy and consent to TALIMOON processing the personal data and photographs provided only to create, produce, deliver, and support this order.",
+  consentTerms: "I have read and accept the Terms of Service, including the rules for personalized products, payment, production, delivery, cancellation, and refunds.",
+  consentNoMarketing: "This consent does not permit advertising use or public sharing of your photographs and does not subscribe you to marketing.",
+  signatureLabel: "Electronic signature — your full name",
+  signatureHint: "Type the same full name used for this order. Your typed name and submission time will be recorded as your acceptance.",
+  consentError: "Please complete all three confirmations and enter your full name as the electronic signature.",
+  privacyLink: "Privacy Policy",
+  termsLink: "Terms of Service",
 
   reviewLanguage: "Book language",
   reviewAddress: "Delivery",
@@ -370,6 +384,17 @@ const CHROME_UZ: typeof CHROME_EN = {
   receiptReplace: "Almashtirish",
   receiptError: "Yakunlash uchun to‘lov chekini yuklang.",
   submitError: "Buyurtmangizni yuborishda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.",
+  consentHeading: "Rozilik va elektron imzo",
+  consentIntro: "Buyurtmani yuborishdan oldin taqdim etgan ma’lumot va fotosuratlaringizdan qanday foydalanishimiz mumkinligini tasdiqlang.",
+  consentAuthority: "Men 18 yoshdan kattaman va bolaning ota-onasi/qonuniy vakiliman yoki ushbu buyurtma uchun bolaning ma’lumotlari va fotosuratlarini taqdim etishga ota-ona/qonuniy vakildan aniq vakolat olganman.",
+  consentPrivacy: "Men Maxfiylik siyosatini o‘qidim va TALIMOON taqdim etilgan shaxsiy ma’lumotlar hamda fotosuratlarni faqat ushbu buyurtmani yaratish, ishlab chiqarish, yetkazish va qo‘llab-quvvatlash uchun qayta ishlashiga roziman.",
+  consentTerms: "Men Foydalanish shartlarini, jumladan shaxsiylashtirilgan mahsulot, to‘lov, ishlab chiqarish, yetkazib berish, bekor qilish va pulni qaytarish qoidalarini o‘qidim va qabul qilaman.",
+  consentNoMarketing: "Bu rozilik fotosuratlaringizdan reklamada foydalanishga yoki ularni ommaga tarqatishga ruxsat bermaydi va sizni marketing xabarlariga obuna qilmaydi.",
+  signatureLabel: "Elektron imzo — to‘liq ism-familiyangiz",
+  signatureHint: "Buyurtmada ko‘rsatilgan to‘liq ismni kiriting. Kiritilgan ism va yuborish vaqti roziligingiz tasdig‘i sifatida qayd etiladi.",
+  consentError: "Uchala tasdiqni belgilang va elektron imzo sifatida to‘liq ism-familiyangizni kiriting.",
+  privacyLink: "Maxfiylik siyosati",
+  termsLink: "Foydalanish shartlari",
 
   reviewLanguage: "Kitob tili",
   reviewAddress: "Yetkazib berish",
@@ -519,6 +544,17 @@ const CHROME_RU: typeof CHROME_EN = {
   receiptReplace: "Заменить",
   receiptError: "Пожалуйста, загрузите чек об оплате, чтобы завершить заказ.",
   submitError: "Не удалось отправить Ваш заказ. Пожалуйста, попробуйте ещё раз.",
+  consentHeading: "Согласие и электронная подпись",
+  consentIntro: "Перед отправкой заказа подтвердите, как мы можем использовать предоставленные Вами сведения и фотографии.",
+  consentAuthority: "Мне исполнилось 18 лет, и я являюсь родителем/законным представителем ребёнка либо имею явное разрешение родителя/законного представителя предоставить сведения и фотографии ребёнка для этого заказа.",
+  consentPrivacy: "Я прочитал(а) Политику конфиденциальности и соглашаюсь на обработку TALIMOON предоставленных персональных данных и фотографий исключительно для создания, производства, доставки и сопровождения этого заказа.",
+  consentTerms: "Я прочитал(а) и принимаю Условия использования, включая правила для персонализированных товаров, оплаты, производства, доставки, отмены и возврата средств.",
+  consentNoMarketing: "Это согласие не разрешает использовать Ваши фотографии в рекламе или публиковать их и не подписывает Вас на маркетинговые сообщения.",
+  signatureLabel: "Электронная подпись — Ваши имя и фамилия",
+  signatureHint: "Введите то же полное имя, которое указано в заказе. Введённое имя и время отправки будут записаны как подтверждение принятия условий.",
+  consentError: "Пожалуйста, отметьте все три подтверждения и введите полное имя в качестве электронной подписи.",
+  privacyLink: "Политика конфиденциальности",
+  termsLink: "Условия использования",
 
   reviewLanguage: "Язык книги",
   reviewAddress: "Доставка",
@@ -587,6 +623,10 @@ interface FormData {
   copies: number;
   paymentMethod: string;
   receipt: File | null;
+  consentAuthority: boolean;
+  consentPrivacy: boolean;
+  consentTerms: boolean;
+  consentSignature: string;
 }
 
 function emptyForm(market: Market = "UZ"): FormData {
@@ -614,6 +654,10 @@ function emptyForm(market: Market = "UZ"): FormData {
     bookLanguageCode: "",
     copies: 1,
     receipt: null,
+    consentAuthority: false,
+    consentPrivacy: false,
+    consentTerms: false,
+    consentSignature: "",
   };
 }
 
@@ -678,7 +722,16 @@ function isStepComplete(stepId: StepId, data: FormData): boolean {
       // A receipt must be attached before the order can be sent
       // (spec §13). This is NOT payment verification — that stays a
       // later admin action.
-      return data.receipt != null;
+      const signatureMatchesOrderer =
+        data.consentSignature.trim().replace(/\s+/g, " ").toLocaleLowerCase() ===
+        data.orderer.name.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+      return (
+        data.receipt != null &&
+        data.consentAuthority &&
+        data.consentPrivacy &&
+        data.consentTerms &&
+        signatureMatchesOrderer
+      );
     default:
       return true;
   }
@@ -775,6 +828,9 @@ export default function PersonalizedBookOrderForm({
    *  retry, so a network retry never creates a second order (spec: the
    *  backend dedupes POST /v1/orders by this key). */
   const idempotencyKeyRef = useRef<string | null>(null);
+  /** Immutable consent receipt for this submission. It is created only
+   * when the customer presses Send and reused verbatim on a retry. */
+  const consentAcceptedAtRef = useRef<string | null>(null);
   /** The capability token lives ONLY here — component memory for the
    *  active flow. Never written to localStorage/sessionStorage/cookies,
    *  never logged. Per-item `*Done` flags let a retry (after e.g. an
@@ -1035,11 +1091,14 @@ export default function PersonalizedBookOrderForm({
    */
   async function submitOrderFlow(): Promise<void> {
     try {
+      if (!consentAcceptedAtRef.current) {
+        consentAcceptedAtRef.current = new Date().toISOString();
+      }
       if (!idempotencyKeyRef.current) {
-        idempotencyKeyRef.current =
-          typeof crypto !== "undefined" && crypto.randomUUID
-            ? crypto.randomUUID()
-            : `web-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        if (typeof crypto === "undefined" || !crypto.randomUUID) {
+          throw new Error(t.submitError);
+        }
+        idempotencyKeyRef.current = crypto.randomUUID();
       }
 
       const namedCharacters = data.additionalCharacters.filter(additionalCharacterNamed);
@@ -1106,6 +1165,20 @@ export default function PersonalizedBookOrderForm({
           personalMessage: data.wantsPersonalMessage ? data.personalMessage || undefined : undefined,
           extraCharacters: extraCharactersText,
           bookLanguage: data.bookLanguageCode,
+          notes: JSON.stringify({
+            consent: {
+              schema: "talimoon-order-consent-v1",
+              acceptedAt: consentAcceptedAtRef.current,
+              locale: bookLoc,
+              electronicSignature: data.consentSignature.trim(),
+              adultAndChildAuthority: data.consentAuthority,
+              privacyAccepted: data.consentPrivacy,
+              privacyVersion: PRIVACY_POLICY_VERSION,
+              termsAccepted: data.consentTerms,
+              termsVersion: TERMS_VERSION,
+              marketingConsent: false,
+            },
+          }),
         });
 
         const result = await submitOrder(payload);
@@ -2208,11 +2281,84 @@ export default function PersonalizedBookOrderForm({
                 onChange={(f) => update("receipt", f)}
               />
 
-              {showStepError && !canContinue() && (
+              {showStepError && data.receipt == null && (
                 <p role="alert" className="font-sans text-[13px] text-state-error">
                   {t.receiptError}
                 </p>
               )}
+
+              <section
+                aria-labelledby="order-consent-heading"
+                className="rounded-xl border border-accent-primary/30 bg-surface-raised/55 p-5 sm:p-6"
+              >
+                <div className="border-b border-border-subtle pb-4">
+                  <h3
+                    id="order-consent-heading"
+                    className="font-display text-[24px] leading-tight text-text-primary"
+                  >
+                    {t.consentHeading}
+                  </h3>
+                  <p className="mt-2 font-sans text-[13.5px] leading-[1.65] text-text-secondary">
+                    {t.consentIntro}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 font-sans text-[13px] font-semibold">
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-accent-primary underline underline-offset-4">
+                      {t.privacyLink}
+                    </a>
+                    <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-accent-primary underline underline-offset-4">
+                      {t.termsLink}
+                    </a>
+                  </div>
+                </div>
+
+                <div className="mt-5 space-y-3">
+                  <CheckRow
+                    id="consent-authority"
+                    checked={data.consentAuthority}
+                    onChange={(checked) => update("consentAuthority", checked)}
+                    label={t.consentAuthority}
+                  />
+                  <CheckRow
+                    id="consent-privacy"
+                    checked={data.consentPrivacy}
+                    onChange={(checked) => update("consentPrivacy", checked)}
+                    label={t.consentPrivacy}
+                  />
+                  <CheckRow
+                    id="consent-terms"
+                    checked={data.consentTerms}
+                    onChange={(checked) => update("consentTerms", checked)}
+                    label={t.consentTerms}
+                  />
+                </div>
+
+                <div className="mt-5">
+                  <label htmlFor="consent-signature" className="font-sans text-[14px] font-semibold text-text-primary">
+                    {t.signatureLabel}
+                  </label>
+                  <input
+                    id="consent-signature"
+                    type="text"
+                    autoComplete="name"
+                    value={data.consentSignature}
+                    onChange={(event) => update("consentSignature", event.target.value)}
+                    className={`${inputClass} mt-2`}
+                  />
+                  <p className="mt-2 font-sans text-[12.5px] leading-[1.6] text-text-secondary">
+                    {t.signatureHint}
+                  </p>
+                </div>
+
+                <p className="mt-4 border-t border-border-subtle pt-4 font-sans text-[12.5px] leading-[1.6] text-text-muted">
+                  {t.consentNoMarketing}
+                </p>
+
+                {showStepError && data.receipt != null && !canContinue() && (
+                  <p role="alert" className="mt-4 font-sans text-[13px] text-state-error">
+                    {t.consentError}
+                  </p>
+                )}
+              </section>
             </>
           )}
 
