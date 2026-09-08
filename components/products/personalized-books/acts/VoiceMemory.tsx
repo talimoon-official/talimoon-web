@@ -478,7 +478,7 @@ export default function VoiceMemory() {
       aria-labelledby="voice-memory-heading"
       className="w-full scroll-mt-20 bg-gradient-to-b from-[#FDFBF7] via-surface-base to-surface-base md:scroll-mt-24"
     >
-      <div className="mx-auto max-w-[1480px] px-5 pb-10 pt-14 sm:px-8 md:pb-12 md:pt-16">
+      <div className="mx-auto max-w-[1480px] px-5 pb-10 pt-9 sm:px-8 md:pb-12 md:pt-6 lg:pt-4">
         {/* ============ THE SPREAD: book | copy | time-story ============ */}
         <div
           className="
@@ -515,7 +515,7 @@ export default function VoiceMemory() {
                 </p>
               ))}
             </div>
-            <p className="mt-7 max-w-[40ch] border-s-2 border-accent-primary/40 ps-5 font-display text-[1.1875rem] font-medium italic leading-[1.45] text-text-primary lg:text-[1.3125rem]">
+            <p className="mt-7 max-w-[40ch] border-s-2 border-accent-primary/40 ps-5 font-display text-[1.1875rem] font-normal leading-[1.55] text-text-primary lg:text-[1.3125rem]">
               {t.keyLine}
             </p>
           </Reveal>
@@ -542,10 +542,11 @@ export default function VoiceMemory() {
 
               <TimeThread className="pointer-events-none absolute right-3 top-[42%] hidden h-12 w-16 sm:block" />
 
-              {/* YILLAR O‘TGACH - in front, slightly right, rotated +1deg */}
+              {/* YILLAR O‘TGACH - in front, smaller, pushed further right and
+                  lower so BUGUN stays clearly readable underneath it */}
               <figure
-                className="relative -mt-8 ms-auto w-[86%]"
-                style={{ transform: "rotate(1deg)" }}
+                className="relative -mt-3 ms-auto w-[70%]"
+                style={{ transform: "translateX(6%) rotate(1deg)" }}
               >
                 <PhotoField
                   variant="later"
@@ -566,7 +567,7 @@ export default function VoiceMemory() {
 
           {/* ---- LEFT (desktop) / last: the large final book page + player ---- */}
           <Reveal className="md:order-3 md:col-span-2 lg:order-1 lg:col-span-1">
-            <div className="relative mx-auto w-full max-w-[440px] md:max-w-[460px] lg:mx-0 lg:max-w-none lg:pe-14 xl:pe-20">
+            <div className="relative mx-auto w-full max-w-[440px] md:max-w-[460px] lg:mx-0 lg:max-w-none lg:ps-4 lg:pe-14 xl:ps-10 xl:pe-20">
               <div
                 role="img"
                 aria-label={t.finalPageAria}
