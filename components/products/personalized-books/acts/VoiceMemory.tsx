@@ -576,28 +576,57 @@ export default function VoiceMemory() {
           {/* ---- LEFT (desktop) / last: the large final book page + player ---- */}
           <Reveal className="md:order-3 md:col-span-2 lg:order-1 lg:col-span-1">
             <div className="relative mx-auto w-full max-w-[440px] md:max-w-[460px] lg:mx-0 lg:max-w-none lg:ps-4 lg:pe-14 xl:ps-10 xl:pe-20">
-              {/* The final book page: the real designed spread (its own
-                  printed photo, words and QR). A crisp QR chip sits on the
-                  lower-left so the "scan to hear" cue stays a clear UI
-                  element (clear of the player card on the lower-right). */}
+              {/*
+               * The final-page MOCKUP: a warm paper card that explains the
+               * real book page - image field, printed personal words, then
+               * the QR area. The generated book photo is the CONTENT of the
+               * image field, not the card itself. Structure matches the
+               * approved pre-asset version; only the image field now holds
+               * the real asset.
+               */}
               <div
-                className="relative overflow-hidden rounded-[12px] bg-[#FEFDFB] shadow-[0_34px_70px_-36px_rgba(28,42,58,0.34)] ring-1 ring-[color:var(--border-subtle)]"
+                role="img"
+                aria-label={t.finalPageAria}
+                className="rounded-[12px] bg-[#FEFDFB] p-4 shadow-[0_34px_70px_-36px_rgba(28,42,58,0.34)] ring-1 ring-[color:var(--border-subtle)] sm:p-5"
                 style={{ transform: "rotate(-1deg)" }}
               >
-                <Image
-                  src={IMG.bookPage}
-                  alt={t.finalPageAria}
-                  width={ASSET_W}
-                  height={ASSET_H}
-                  quality={100}
-                  sizes="(min-width: 1280px) 440px, (min-width: 1024px) 33vw, (min-width: 768px) 460px, 92vw"
-                  className="block h-auto w-full"
-                />
-                <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-lg bg-[#FEFDFB]/95 px-2.5 py-2 shadow-[0_10px_28px_-12px_rgba(28,42,58,0.45)] ring-1 ring-border-subtle backdrop-blur-sm sm:bottom-4 sm:left-4 sm:gap-2.5 sm:px-3">
-                  <QrGlyph size={30} />
-                  <span className="max-w-[11ch] text-[9px] font-semibold uppercase leading-tight tracking-[0.12em] text-text-muted sm:text-[10px]">
+                {/* IMAGE FIELD - the real generated book image sits inside it */}
+                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[8px] ring-1 ring-border-subtle">
+                  <Image
+                    src={IMG.bookPage}
+                    alt=""
+                    fill
+                    quality={100}
+                    sizes="(min-width: 1280px) 440px, (min-width: 1024px) 33vw, (min-width: 768px) 460px, 92vw"
+                    className="object-cover object-center"
+                  />
+                </div>
+
+                {/* PERSONAL WORDS - the message printed on the final page */}
+                <div aria-hidden="true" className="mt-4 space-y-2 sm:mt-5">
+                  <span className="block h-2 w-[92%] rounded-full bg-text-primary/10" />
+                  <span className="block h-2 w-[82%] rounded-full bg-text-primary/10" />
+                  <span className="block h-2 w-[88%] rounded-full bg-text-primary/10" />
+                  <span className="block h-2 w-[46%] rounded-full bg-text-primary/10" />
+                </div>
+
+                {/* QR ROW - crisp UI-level glyph, label, gold scan accent */}
+                <div className="mt-5 flex items-center gap-3 border-t border-border-subtle pt-4">
+                  <QrGlyph size={42} />
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted">
                     {t.qrLabel}
                   </span>
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 16 22"
+                    className="ms-auto h-5 w-3.5 shrink-0 text-[color:var(--gold-mid)]"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                  >
+                    <path d="M5 6a13 13 0 0 1 0 10" strokeWidth="1.4" opacity="0.5" />
+                    <path d="M9 3.5a19 19 0 0 1 0 15" strokeWidth="1.5" opacity="0.8" />
+                  </svg>
                 </div>
               </div>
 
