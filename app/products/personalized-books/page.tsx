@@ -3,6 +3,7 @@ import Hero from "@/components/products/personalized-books/hero/hero";
 import Recognition from "@/components/products/personalized-books/acts/Recognition";
 import Method from "@/components/products/personalized-books/acts/Method";
 import Exclusivity from "@/components/products/personalized-books/acts/Exclusivity";
+import VoiceMemory from "@/components/products/personalized-books/acts/VoiceMemory";
 import ProcessPrice from "@/components/products/personalized-books/acts/ProcessPrice";
 import Close from "@/components/products/personalized-books/acts/Close";
 import Footer from "@/components/layout/Footer";
@@ -21,6 +22,8 @@ import Footer from "@/components/layout/Footer";
  *   03 Method ........ RELEASE     the mechanism, shown not explained
  *                                   (deep-navy beat, #method)
  *   04 Exclusivity ... DESIRE      "do'kondan topolmaysiz" + product
+ *   04.5 VoiceMemory . MEANING     the optional preserved-voice
+ *                                   differentiator, before price (#voice-memory)
  *   05 ProcessPrice .. CONFIDENCE  3 steps + the PricingSection at
  *                                   `#pricing` (market + plan cards)
  *   06 Close ......... WARMTH      the quiet ask + a compact FAQ
@@ -50,6 +53,10 @@ export default function PersonalizedBooksPage() {
         <Method />
 
         <Exclusivity />
+
+        {/* Act 04.5: the optional Voice Memory differentiator, placed at
+            peak desire and right before the how-it-made / price run. */}
+        <VoiceMemory />
 
         <ProcessPrice />
 
