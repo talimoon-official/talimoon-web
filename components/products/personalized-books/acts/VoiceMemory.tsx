@@ -33,9 +33,25 @@
  * customer-facing copy (project rule).
  */
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useT } from "@/lib/i18n/LanguageContext";
 import { Reveal, usePrefersReducedMotion } from "../_shared/Reveal";
+
+// ---------------------------------------------------------------------------
+// FINAL image assets - one intentional visual story:
+//   real TALIMOON book -> present-day memory -> the same memory years later.
+// Native ratio 3:2 (1536x1024); rendered with next/image at intrinsic size
+// so there is no layout shift and no crop.
+// ---------------------------------------------------------------------------
+const ASSET_DIR = "/images/products/personalized-books/voice-memory";
+const IMG = {
+  bookPage: `${ASSET_DIR}/voice-memory-book-page.webp`,
+  today: `${ASSET_DIR}/voice-memory-today.webp`,
+  yearsLater: `${ASSET_DIR}/voice-memory-years-later.webp`,
+} as const;
+const ASSET_W = 1536;
+const ASSET_H = 1024;
 
 // ---------------------------------------------------------------------------
 // Copy - UZ is the approved source. EN / RU are careful (not literal)
@@ -204,72 +220,6 @@ const COPY_RU: typeof COPY_UZ = {
 // ---------------------------------------------------------------------------
 // Decorative building blocks - pure CSS / SVG, no assets required.
 // ---------------------------------------------------------------------------
-
-/**
- * Warm editorial photo field: a soft "window light" paper wash with a faint
- * child, close-person and book line motif. Intentionally graphic, never a
- * broken image. `label` -> role="img" with that description; otherwise it is
- * decorative (meaning carried by an adjacent caption / wrapping role="img").
- *
- * Final assets, dropped in later as `next/image` (fill, sizes, quality 100)
- * keeping this element's aspect box unchanged:
- *   variant "today" -> /images/products/personalized-books/voice-memory/voice-memory-today.webp   (3:2 source crop)
- *   variant "later" -> /images/products/personalized-books/voice-memory/voice-memory-years-later.webp (4:3 source crop)
- * Use object-fit: cover; object-position ~ "50% 38%" (today) / "50% 42%" (later).
- */
-function PhotoField({
-  variant,
-  className = "",
-  label,
-}: {
-  variant: "today" | "later";
-  className?: string;
-  label?: string;
-}) {
-  const a11y = label ? { role: "img" as const, "aria-label": label } : { "aria-hidden": true };
-  return (
-    <div
-      {...a11y}
-      data-asset={
-        variant === "today" ? "voice-memory-today.webp" : "voice-memory-years-later.webp"
-      }
-      className={`relative overflow-hidden ${className}`}
-      style={{
-        background:
-          variant === "today"
-            ? "radial-gradient(120% 100% at 28% 8%, #FEFCF7 0%, #F6EEDF 55%, #EEE1CC 100%)"
-            : "radial-gradient(120% 100% at 74% 14%, #FDFAF3 0%, #F1E7D6 58%, #E6D8BF 100%)",
-      }}
-    >
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0) 40%, rgba(120,95,55,0.11) 100%)",
-        }}
-      />
-      <svg
-        viewBox="0 0 240 160"
-        preserveAspectRatio="xMidYMid slice"
-        className="absolute inset-0 h-full w-full text-[color:var(--gold-mid)]"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity="0.24"
-        aria-hidden="true"
-      >
-        <circle cx="96" cy="58" r="13" />
-        <path d="M80 110c0-14 7-24 16-24s16 10 16 24" />
-        <circle cx="134" cy="52" r="17" />
-        <path d="M114 116c0-18 9-30 20-30s20 12 20 30" />
-        <path d="M84 118h72l-5 34H89z" />
-        <path d="M120 118v34" />
-      </svg>
-    </div>
-  );
-}
 
 /** One short gold time thread between the two right-side frames, drawing once
  *  on scroll-in (reduced motion: static). Not an arrow, not an infographic. */
@@ -583,10 +533,14 @@ export default function VoiceMemory() {
                     {t.todayNote}
                   </span>
                 </figcaption>
-                <PhotoField
-                  variant="today"
-                  label={t.photoTodayAlt}
-                  className="aspect-[3/2] w-full rounded-[11px] shadow-[0_20px_44px_-26px_rgba(28,42,58,0.34)] ring-1 ring-border-subtle"
+                <Image
+                  src={IMG.today}
+                  alt={t.photoTodayAlt}
+                  width={ASSET_W}
+                  height={ASSET_H}
+                  quality={100}
+                  sizes="(min-width: 768px) 330px, 78vw"
+                  className="block h-auto w-full rounded-[11px] shadow-[0_20px_44px_-26px_rgba(28,42,58,0.34)] ring-1 ring-border-subtle"
                 />
               </figure>
 
@@ -598,10 +552,14 @@ export default function VoiceMemory() {
                 className="relative -mt-3 ms-auto w-[70%]"
                 style={{ transform: "translateX(6%) rotate(1deg)" }}
               >
-                <PhotoField
-                  variant="later"
-                  label={t.photoLaterAlt}
-                  className="aspect-[4/3] w-full rounded-[11px] shadow-[0_22px_46px_-24px_rgba(28,42,58,0.42)] ring-2 ring-[#FDFBF7]"
+                <Image
+                  src={IMG.yearsLater}
+                  alt={t.photoLaterAlt}
+                  width={ASSET_W}
+                  height={ASSET_H}
+                  quality={100}
+                  sizes="(min-width: 768px) 270px, 64vw"
+                  className="block h-auto w-full rounded-[11px] shadow-[0_22px_46px_-24px_rgba(28,42,58,0.42)] ring-2 ring-[#FDFBF7]"
                 />
                 <figcaption className="mt-2">
                   <span className="block font-sans text-[9.5px] font-semibold uppercase tracking-[0.18em] text-accent-primary">
@@ -618,28 +576,22 @@ export default function VoiceMemory() {
           {/* ---- LEFT (desktop) / last: the large final book page + player ---- */}
           <Reveal className="md:order-3 md:col-span-2 lg:order-1 lg:col-span-1">
             <div className="relative mx-auto w-full max-w-[440px] md:max-w-[460px] lg:mx-0 lg:max-w-none lg:ps-4 lg:pe-14 xl:ps-10 xl:pe-20">
+              {/* The final book page: the real designed spread already carries
+                  the printed photo, the personal words and the "Ovozli xotirani
+                  tinglash" QR - it is the image itself, no CSS mock over it. */}
               <div
-                role="img"
-                aria-label={t.finalPageAria}
-                className="rounded-[12px] bg-[#FEFDFB] p-4 shadow-[0_34px_70px_-36px_rgba(28,42,58,0.34)] ring-1 ring-[color:var(--border-subtle)] sm:p-5"
+                className="overflow-hidden rounded-[12px] bg-[#FEFDFB] shadow-[0_34px_70px_-36px_rgba(28,42,58,0.34)] ring-1 ring-[color:var(--border-subtle)]"
                 style={{ transform: "rotate(-1deg)" }}
               >
-                <PhotoField
-                  variant="today"
-                  className="aspect-[4/3] w-full rounded-[8px] ring-1 ring-border-subtle"
+                <Image
+                  src={IMG.bookPage}
+                  alt={t.finalPageAria}
+                  width={ASSET_W}
+                  height={ASSET_H}
+                  quality={100}
+                  sizes="(min-width: 1280px) 440px, (min-width: 1024px) 33vw, (min-width: 768px) 460px, 92vw"
+                  className="block h-auto w-full"
                 />
-                <div aria-hidden="true" className="mt-4 space-y-2 sm:mt-5">
-                  <span className="block h-2 w-[92%] rounded-full bg-text-primary/10" />
-                  <span className="block h-2 w-[82%] rounded-full bg-text-primary/10" />
-                  <span className="block h-2 w-[88%] rounded-full bg-text-primary/10" />
-                  <span className="block h-2 w-[46%] rounded-full bg-text-primary/10" />
-                </div>
-                <div className="mt-5 flex items-center gap-3 border-t border-border-subtle pt-4">
-                  <QrGlyph size={42} />
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-muted">
-                    {t.qrLabel}
-                  </span>
-                </div>
               </div>
 
               {/* memory card: attached to the lower-right, spilling past the
