@@ -576,11 +576,12 @@ export default function VoiceMemory() {
           {/* ---- LEFT (desktop) / last: the large final book page + player ---- */}
           <Reveal className="md:order-3 md:col-span-2 lg:order-1 lg:col-span-1">
             <div className="relative mx-auto w-full max-w-[440px] md:max-w-[460px] lg:mx-0 lg:max-w-none lg:ps-4 lg:pe-14 xl:ps-10 xl:pe-20">
-              {/* The final book page: the real designed spread already carries
-                  the printed photo, the personal words and the "Ovozli xotirani
-                  tinglash" QR - it is the image itself, no CSS mock over it. */}
+              {/* The final book page: the real designed spread (its own
+                  printed photo, words and QR). A crisp QR chip sits on the
+                  lower-left so the "scan to hear" cue stays a clear UI
+                  element (clear of the player card on the lower-right). */}
               <div
-                className="overflow-hidden rounded-[12px] bg-[#FEFDFB] shadow-[0_34px_70px_-36px_rgba(28,42,58,0.34)] ring-1 ring-[color:var(--border-subtle)]"
+                className="relative overflow-hidden rounded-[12px] bg-[#FEFDFB] shadow-[0_34px_70px_-36px_rgba(28,42,58,0.34)] ring-1 ring-[color:var(--border-subtle)]"
                 style={{ transform: "rotate(-1deg)" }}
               >
                 <Image
@@ -592,6 +593,12 @@ export default function VoiceMemory() {
                   sizes="(min-width: 1280px) 440px, (min-width: 1024px) 33vw, (min-width: 768px) 460px, 92vw"
                   className="block h-auto w-full"
                 />
+                <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-lg bg-[#FEFDFB]/95 px-2.5 py-2 shadow-[0_10px_28px_-12px_rgba(28,42,58,0.45)] ring-1 ring-border-subtle backdrop-blur-sm sm:bottom-4 sm:left-4 sm:gap-2.5 sm:px-3">
+                  <QrGlyph size={30} />
+                  <span className="max-w-[11ch] text-[9px] font-semibold uppercase leading-tight tracking-[0.12em] text-text-muted sm:text-[10px]">
+                    {t.qrLabel}
+                  </span>
+                </div>
               </div>
 
               {/* memory card: attached to the lower-right, spilling past the
