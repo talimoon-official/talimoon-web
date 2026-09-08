@@ -80,6 +80,16 @@ export interface JourneyImage {
   /** Photographer / source line, e.g. "Foto: Aziza R." — a name, so
    *  language-neutral. Rendered small, near the image. */
   credit?: string;
+  /**
+   * Per-breakpoint focal point for `object-cover` crops, as a CSS
+   * `object-position` value (e.g. `{ mobile: '50% 38%', desktop:
+   * '50% 50%' }`). Consulted only where the image is rendered
+   * `object-cover` inside a fixed box whose aspect differs from the
+   * asset — today just the Journey premiere hero, where a wide
+   * editorial frame is shown in a taller phone box. Defaults to
+   * centre on both breakpoints when omitted. Language-neutral.
+   */
+  focus?: { mobile?: string; desktop?: string };
 }
 
 /**

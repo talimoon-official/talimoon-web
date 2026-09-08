@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -56,6 +56,19 @@ const FALLBACK_ART: Record<JourneyWorld, string> = {
   "wisdom-science": "/images/journey/journey-habits-knowledge-research.png",
 };
 
+/**
+ * Mobile `object-position` for a slide's wide art when it is shown in
+ * the taller phone hero box. Entry covers carry their own `focus`
+ * (see JourneyImage); this is the per-world default for the permanent
+ * fallback art and for covers that set none. Desktop stays centred.
+ */
+const FALLBACK_FOCUS_MOBILE: Record<JourneyWorld, string> = {
+  "talimoon-life": "50% 40%",
+  parents: "62% 42%",
+  "wisdom-science": "50% 44%",
+};
+const DEFAULT_FOCUS_MOBILE = "50% 42%";
+
 export function JourneyPremiere() {
   const { language } = useLanguage();
   const locale = toLocale(language);
@@ -86,12 +99,22 @@ export function JourneyPremiere() {
       // A featured entry leads with its language-neutral hero artwork;
       // everything else keeps the existing cover / poster behaviour.
       const asset = entry?.heroImage ?? entry?.cover ?? entry?.video?.poster;
-      const image =
-        policy?.showMedia && asset?.src.trim() ? asset.src : FALLBACK_ART[world];
+      const usingAsset = Boolean(policy?.showMedia && asset?.src.trim());
+      const image = usingAsset ? asset!.src : FALLBACK_ART[world];
+      // Wide editorial art in a tall phone box would otherwise zoom
+      // into the centre. The asset's own focus wins; otherwise a
+      // per-world default keeps the meaningful subject in frame.
+      const focusMobile = usingAsset
+        ? asset!.focus?.mobile ?? DEFAULT_FOCUS_MOBILE
+        : FALLBACK_FOCUS_MOBILE[world];
+      const focusDesktop =
+        (usingAsset ? asset!.focus?.desktop : undefined) ?? "50% 50%";
       return {
         world,
         entry,
         image,
+        focusMobile,
+        focusDesktop,
         alt: resolved?.content.coverAlt ?? worldName(world, locale),
         title: resolved?.content.title ?? worldName(world, locale),
         description: resolved?.content.standfirst ?? worldBlurb(world, locale),
@@ -123,7 +146,7 @@ export function JourneyPremiere() {
       onFocusCapture={() => setInteracting(true)}
       onBlurCapture={() => setInteracting(false)}
     >
-      <div className="relative mx-auto min-h-[clamp(575px,144vw,620px)] max-w-[1600px] overflow-hidden sm:min-h-[680px] lg:min-h-[720px]">
+      <div className="relative mx-auto min-h-[clamp(452px,116vw,532px)] max-w-[1600px] overflow-hidden sm:min-h-[680px] lg:min-h-[720px]">
         <AnimatePresence mode="sync" initial={false}>
           <motion.div
             key={slide.world}
@@ -145,7 +168,13 @@ export function JourneyPremiere() {
                 fill
                 loading="eager"
                 sizes="(min-width: 1600px) 1600px, 100vw"
-                className="object-cover object-center"
+                className="object-cover [object-position:var(--hero-focus-m)] sm:[object-position:var(--hero-focus-d)]"
+                style={
+                  {
+                    "--hero-focus-m": slide.focusMobile,
+                    "--hero-focus-d": slide.focusDesktop,
+                  } as CSSProperties
+                }
               />
             </motion.div>
           </motion.div>
@@ -188,7 +217,7 @@ export function JourneyPremiere() {
           className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[var(--surface-contrast)]/55 to-transparent"
         />
 
-        <div className="relative z-10 flex min-h-[clamp(575px,144vw,620px)] flex-col justify-end px-6 pb-[4.25rem] pt-40 sm:min-h-[680px] sm:px-10 sm:pb-32 sm:pt-36 lg:min-h-[720px] lg:justify-center lg:px-16 lg:pb-24 lg:pt-28 xl:px-24">
+        <div className="relative z-10 flex min-h-[clamp(452px,116vw,532px)] flex-col justify-end px-6 pb-[4.25rem] pt-24 sm:min-h-[680px] sm:px-10 sm:pb-32 sm:pt-36 lg:min-h-[720px] lg:justify-center lg:px-16 lg:pb-24 lg:pt-28 xl:px-24">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={`${slide.world}-copy`}

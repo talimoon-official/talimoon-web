@@ -46,6 +46,11 @@ const TALIMOON_KUNDALIGI_01_COVER = {
   src: '/images/journey/talimoon-kundaligi-01-qnl-cover.webp',
   width: 1672,
   height: 941,
+  // Wide desk-and-skyline scene. On a phone the hero box is much
+  // taller than the frame, so bias the cover crop slightly up-left:
+  // keeps the child, the laptop and the stacked books in view instead
+  // of zooming into the centre of the desk.
+  focus: { mobile: '38% 42%', desktop: '50% 50%' },
 } as const;
 
 /**
@@ -977,6 +982,45 @@ export function resolveEntryContent(
     isFallback: true,
     direction: directionFor(entry.defaultLocale),
   };
+}
+
+/**
+ * A rough reading time in whole minutes for an entry's resolved body,
+ * from the word count of its text-bearing blocks (+ the standfirst) at
+ * ~200 wpm, floored at 1. Derived, never stored — same discipline as
+ * the rest of this model. Word counting is whitespace-based, which is
+ * a fair estimate for uz / en / ru.
+ */
+export function readingMinutes(content: EntryContent): number {
+  let words = 0;
+  const add = (s?: string): void => {
+    if (s) words += s.trim().split(/\s+/).filter(Boolean).length;
+  };
+
+  add(content.standfirst);
+  for (const block of content.blocks) {
+    switch (block.t) {
+      case 'paragraph':
+      case 'heading':
+      case 'note':
+      case 'quote':
+        add(block.text);
+        break;
+      case 'fact':
+        add(block.label);
+        add(block.note);
+        break;
+      case 'steps':
+        for (const item of block.items) {
+          add(item.title);
+          add(item.text);
+        }
+        break;
+      default:
+        break;
+    }
+  }
+  return Math.max(1, Math.round(words / 200));
 }
 
 // ── Accessors — THE CMS SEAM ───────────────────────────────────────
