@@ -370,22 +370,40 @@ export function WorldLabel({
  * paused it stays. Native controls handle scrubbing, volume and
  * fullscreen.
  */
+/**
+ * A `<video>` with the non-standard fullscreen hooks Safari / iOS add.
+ * iOS never implemented `Element.requestFullscreen()` — only a video
+ * element can go fullscreen there, via `webkitEnterFullscreen()`.
+ */
+type FullscreenVideo = HTMLVideoElement & {
+  webkitRequestFullscreen?: () => void;
+  webkitEnterFullscreen?: () => void;
+  webkitExitFullscreen?: () => void;
+  webkitDisplayingFullscreen?: boolean;
+};
+
 function FilmSurface({
   video,
   posterAlt = '',
   playLabel = 'Play',
   pauseLabel = 'Pause',
+  enterFullscreenLabel = 'Enter fullscreen',
+  exitFullscreenLabel = 'Exit fullscreen',
 }: {
   video: JourneyVideo;
   posterAlt?: string;
   playLabel?: string;
   pauseLabel?: string;
+  enterFullscreenLabel?: string;
+  exitFullscreenLabel?: string;
 }) {
+  const reduced = useReducedMotion();
   const videoRef = useRef<HTMLVideoElement>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [started, setStarted] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [cueVisible, setCueVisible] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const clearHide = useCallback(() => {
     if (hideTimer.current) {
@@ -415,6 +433,49 @@ function FilmSurface({
 
   useEffect(() => clearHide, [clearHide]);
 
+  // ── Fullscreen — a custom control on the OUTER frame, targeting the
+  //    <video> element so the portrait frame is shown whole, centred and
+  //    letterboxed (never a giant article canvas), and iOS hands off to
+  //    its native portrait player. Synced via events so Esc / the OS UI
+  //    also keep the button's label + icon correct.
+  useEffect(() => {
+    const el = videoRef.current as FullscreenVideo | null;
+    const onFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    const onIOSBegin = () => setIsFullscreen(true);
+    const onIOSEnd = () => setIsFullscreen(false);
+    document.addEventListener('fullscreenchange', onFsChange);
+    el?.addEventListener('webkitbeginfullscreen', onIOSBegin);
+    el?.addEventListener('webkitendfullscreen', onIOSEnd);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFsChange);
+      el?.removeEventListener('webkitbeginfullscreen', onIOSBegin);
+      el?.removeEventListener('webkitendfullscreen', onIOSEnd);
+    };
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    const el = videoRef.current as FullscreenVideo | null;
+    if (!el) return;
+    reveal();
+
+    const doc = document as Document & { webkitExitFullscreen?: () => void };
+    if (doc.fullscreenElement) {
+      void doc.exitFullscreen();
+      return;
+    }
+    if (el.webkitDisplayingFullscreen) {
+      el.webkitExitFullscreen?.();
+      return;
+    }
+    if (el.requestFullscreen) {
+      el.requestFullscreen().catch(() => el.webkitEnterFullscreen?.());
+    } else if (el.webkitRequestFullscreen) {
+      el.webkitRequestFullscreen();
+    } else {
+      el.webkitEnterFullscreen?.();
+    }
+  }, [reveal]);
+
   const portrait = video.orientation === 'portrait';
 
   const videoEl = (
@@ -423,7 +484,7 @@ function FilmSurface({
       controls
       preload="none"
       playsInline
-      className={`absolute inset-0 h-full w-full ${
+      className={`tm-film-video absolute inset-0 h-full w-full ${
         portrait ? 'object-contain' : 'object-cover'
       }`}
       style={portrait ? { background: '#0c1116' } : undefined}
@@ -509,6 +570,53 @@ function FilmSurface({
     </button>
   );
 
+  // Anchored to the OUTER frame's lower-right (this button is a direct
+  // child of `.tm-media-float`, not of the inner portrait stage), so the
+  // whole dark plate reads and behaves as the video player.
+  const fullscreenBtn = (
+    <button
+      type="button"
+      aria-label={isFullscreen ? exitFullscreenLabel : enterFullscreenLabel}
+      onClick={toggleFullscreen}
+      onFocus={reveal}
+      className={`absolute bottom-4 right-4 z-20 flex h-11 w-11 items-center justify-center rounded-xl text-[#F7F3EC] outline-none backdrop-blur-sm focus-visible:ring-2 focus-visible:ring-[#B8935B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c1116] ${
+        reduced ? '' : 'transition-opacity duration-300'
+      } ${cueVisible ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+      style={{
+        backgroundColor: 'rgba(12,17,22,0.55)',
+        boxShadow: 'inset 0 0 0 1px rgba(247,243,236,0.16)',
+      }}
+    >
+      <svg
+        viewBox="0 0 24 24"
+        width="17"
+        height="17"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        {isFullscreen ? (
+          <>
+            <path d="M9 4v5H4" />
+            <path d="M15 4v5h5" />
+            <path d="M9 20v-5H4" />
+            <path d="M15 20v-5h5" />
+          </>
+        ) : (
+          <>
+            <path d="M4 9V4h5" />
+            <path d="M20 9V4h-5" />
+            <path d="M4 15v5h5" />
+            <path d="M20 15v5h-5" />
+          </>
+        )}
+      </svg>
+    </button>
+  );
+
   return (
     <div
       className="tm-media-float relative aspect-video w-full overflow-hidden"
@@ -544,12 +652,14 @@ function FilmSurface({
           {/* Full-bleed 16:9 banner on top until play. */}
           {posterEl}
           {cueEl}
+          {fullscreenBtn}
         </>
       ) : (
         <>
           {videoEl}
           {posterEl}
           {cueEl}
+          {fullscreenBtn}
         </>
       )}
     </div>
@@ -572,6 +682,8 @@ export function VideoPlayer({
   posterAlt = '',
   playLabel = 'Play',
   pauseLabel = 'Pause',
+  enterFullscreenLabel = 'Enter fullscreen',
+  exitFullscreenLabel = 'Exit fullscreen',
 }: {
   video: JourneyVideo;
   className?: string;
@@ -579,10 +691,13 @@ export function VideoPlayer({
   posterAlt?: string;
   playLabel?: string;
   pauseLabel?: string;
+  enterFullscreenLabel?: string;
+  exitFullscreenLabel?: string;
 }) {
   // Self-hosted files render through FilmSurface: a horizontal 16:9
   // plate, with a 9:16 film shown crisp + centred on a blurred fill
-  // (never stretched), and native portrait fullscreen.
+  // (never stretched), and a custom fullscreen control on the outer
+  // frame (targeting the <video>, so the portrait frame stays whole).
   return (
     <div className={className}>
       {video.provider === 'file' ? (
@@ -591,6 +706,8 @@ export function VideoPlayer({
           posterAlt={posterAlt}
           playLabel={playLabel}
           pauseLabel={pauseLabel}
+          enterFullscreenLabel={enterFullscreenLabel}
+          exitFullscreenLabel={exitFullscreenLabel}
         />
       ) : (
         <div className="tm-media-float relative aspect-video w-full bg-[#0c1116]">

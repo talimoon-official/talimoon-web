@@ -56,6 +56,8 @@ const EN = {
   link: 'Link',
   play: 'Play',
   pause: 'Pause',
+  fullscreen: 'Enter fullscreen',
+  exitFullscreen: 'Exit fullscreen',
 };
 const UZ: typeof EN = {
   back: 'Orqaga',
@@ -68,6 +70,8 @@ const UZ: typeof EN = {
   link: 'Havola',
   play: "Ko'rish",
   pause: "To'xtatish",
+  fullscreen: "To'liq ekran",
+  exitFullscreen: "To'liq ekrandan chiqish",
 };
 const RU: typeof EN = {
   back: 'Назад',
@@ -80,6 +84,8 @@ const RU: typeof EN = {
   link: 'Ссылка',
   play: 'Смотреть',
   pause: 'Пауза',
+  fullscreen: 'Полноэкранный режим',
+  exitFullscreen: 'Выйти из полноэкранного режима',
 };
 
 /** One reference → a quiet bibliographic line (no URL — that is a
@@ -124,12 +130,16 @@ function BlockView({
   posterAlt,
   playLabel,
   pauseLabel,
+  enterFullscreenLabel,
+  exitFullscreenLabel,
 }: {
   block: Block;
   transcriptLabel: string;
   posterAlt: string;
   playLabel: string;
   pauseLabel: string;
+  enterFullscreenLabel: string;
+  exitFullscreenLabel: string;
 }) {
   switch (block.t) {
     case 'paragraph':
@@ -234,6 +244,8 @@ function BlockView({
           posterAlt={posterAlt}
           playLabel={playLabel}
           pauseLabel={pauseLabel}
+          enterFullscreenLabel={enterFullscreenLabel}
+          exitFullscreenLabel={exitFullscreenLabel}
         />
       );
     case 'videoPlaceholder':
@@ -591,6 +603,8 @@ export function EntryDetail({ entry }: { entry: JourneyEntry }) {
               posterAlt={content.coverAlt ?? ''}
               playLabel={t.play}
               pauseLabel={t.pause}
+              enterFullscreenLabel={t.fullscreen}
+              exitFullscreenLabel={t.exitFullscreen}
             />
           </div>
         </div>
@@ -647,6 +661,8 @@ export function EntryDetail({ entry }: { entry: JourneyEntry }) {
               posterAlt={content.coverAlt ?? ''}
               playLabel={t.play}
               pauseLabel={t.pause}
+              enterFullscreenLabel={t.fullscreen}
+              exitFullscreenLabel={t.exitFullscreen}
             />
           ))}
         </div>

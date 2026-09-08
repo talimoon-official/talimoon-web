@@ -996,6 +996,16 @@ body {
   }
 }
 
+/* Journey film player (components/journey/shared.tsx · FilmSurface):
+   fullscreen is a custom control on the OUTER frame, targeting the
+   <video> element. Hide the native <video> fullscreen button so it can
+   never appear anchored to the inner portrait video's edge. WebKit /
+   Blink only (Chrome, Edge, Safari, iOS); Firefox keeps its native
+   button — an accepted, minor limitation. Playback controls stay. */
+.tm-film-video::-webkit-media-controls-fullscreen-button {
+  display: none;
+}
+
 /* ── Home HAYOT gateway — three INDEPENDENT cards in one slow,
    CONTINUOUS elliptical orbit. NOT a slideshow: no active slide, no
    discrete front/side/back states, no z-index steps. A tiny JS
