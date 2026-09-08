@@ -326,27 +326,77 @@ function TimeThread({ className = "" }: { className?: string }) {
   );
 }
 
-/** A small, decorative QR-style glyph. Deliberately NOT a scannable code: a
- *  visual representation of "a private key to the memory". */
+/**
+ * A realistic QR-code rendering: three finder patterns, timing rows and a
+ * plausible data field on a 21-module grid with a one-module quiet zone, so
+ * it reads as a genuine code on the final page. Deterministic (fixed seed)
+ * so server and client output match. Decorative only (aria-hidden); it is
+ * not wired to a real link here.
+ */
+const QR_PATH = (() => {
+  const N = 21;
+  const dark: boolean[][] = Array.from({ length: N }, () => Array<boolean>(N).fill(false));
+
+  const finder = (r0: number, c0: number) => {
+    for (let r = 0; r < 7; r += 1) {
+      for (let c = 0; c < 7; c += 1) {
+        const ring = r === 0 || r === 6 || c === 0 || c === 6;
+        const core = r >= 2 && r <= 4 && c >= 2 && c <= 4;
+        dark[r0 + r][c0 + c] = ring || core;
+      }
+    }
+  };
+  finder(0, 0);
+  finder(0, N - 7);
+  finder(N - 7, 0);
+
+  for (let i = 8; i < N - 8; i += 1) {
+    dark[6][i] = i % 2 === 0;
+    dark[i][6] = i % 2 === 0;
+  }
+  dark[N - 8][8] = true; // always-dark module
+
+  const reserved = (r: number, c: number) =>
+    (r < 9 && c < 9) ||
+    (r < 9 && c > N - 9) ||
+    (r > N - 9 && c < 9) ||
+    r === 6 ||
+    c === 6;
+
+  let seed = 0x2545f491;
+  const next = () => {
+    seed ^= seed << 13;
+    seed ^= seed >>> 17;
+    seed ^= seed << 5;
+    return ((seed >>> 0) % 1000) / 1000;
+  };
+  for (let r = 0; r < N; r += 1) {
+    for (let c = 0; c < N; c += 1) {
+      if (!reserved(r, c) && next() > 0.52) dark[r][c] = true;
+    }
+  }
+
+  let d = "";
+  for (let r = 0; r < N; r += 1) {
+    for (let c = 0; c < N; c += 1) {
+      if (dark[r][c]) d += `M${c} ${r}h1v1h-1z`;
+    }
+  }
+  return d;
+})();
+
 function QrGlyph({ size = 44 }: { size?: number }) {
-  const D =
-    "M0 0h3v3H0zM4 0h1v1H4zM6 0h1v3H6zM2 2h1v1H2zM4 2h1v1H4z" +
-    "M0 4h1v1H0zM2 4h1v1H2zM3 5h1v1H3zM5 4h1v1H5zM6 5h1v1H6z" +
-    "M0 6h3v3H0zM4 6h1v1H4zM6 7h1v1H6zM2 8h1v1H2zM4 8h1v1H4zM5 6h1v1H5z";
   return (
     <svg
-      viewBox="0 0 9 9"
+      viewBox="-1 -1 23 23"
       width={size}
       height={size}
       aria-hidden="true"
       className="shrink-0"
       shapeRendering="crispEdges"
     >
-      <rect width="9" height="9" fill="#FDFBF7" />
-      <path d={D} fill="var(--text-primary)" />
-      <rect x="0.4" y="0.4" width="2.2" height="2.2" fill="none" stroke="var(--gold-mid)" strokeWidth="0.18" />
-      <rect x="6.4" y="0.4" width="2.2" height="2.2" fill="none" stroke="var(--gold-mid)" strokeWidth="0.18" />
-      <rect x="0.4" y="6.4" width="2.2" height="2.2" fill="none" stroke="var(--gold-mid)" strokeWidth="0.18" />
+      <rect x="-1" y="-1" width="23" height="23" fill="#FDFBF7" />
+      <path d={QR_PATH} fill="var(--text-primary)" />
     </svg>
   );
 }
