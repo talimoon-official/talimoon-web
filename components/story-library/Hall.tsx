@@ -18,6 +18,7 @@ import { Band } from './shared';
 import { StoryLibraryHero } from './StoryLibraryHero';
 import { FamilyStoriesWorld } from './FamilyStoriesWorld';
 import { YusufYasminaSpine } from './YusufYasminaSpine';
+import { WordsLeftPreview } from './WordsLeftPreview';
 import { MostLovedStrip } from './MostLovedStrip';
 
 export function Hall() {
@@ -39,6 +40,9 @@ export function Hall() {
           />
         ) : null}
       </Band>
+
+      {/* Self-hides until at least one Voice Memory is published. */}
+      <WordsLeftPreview />
 
       <MostLovedStrip stories={data.mostLoved} />
     </>

@@ -17,7 +17,31 @@
 
 const API_BASE = process.env.NEXT_PUBLIC_INTAKE_API_URL;
 
-export type ArtifactKind = "child_photo" | "special_photo" | "character_photo" | "receipt";
+export type ArtifactKind =
+  | "child_photo"
+  | "special_photo"
+  | "character_photo"
+  | "receipt"
+  | "final_voice";
+
+/**
+ * The STORY GIVER — the book-facing identity the personalized book is
+ * presented FROM, to the child. NOT necessarily the orderer: a parent,
+ * grandparent, aunt/uncle, sibling, family friend, etc. Mirrors
+ * talimoon-intake's `storyGiverSchema`.
+ *
+ *  - `relationshipType` reuses the order relationship taxonomy.
+ *  - `customLabel` only for `relationshipType: "other"`.
+ *  - `displayName` is a GIVEN name only (no surname) — what the child sees.
+ *  - `presentedAs`: `self` = the orderer IS the story giver; `other_person` =
+ *    the orderer is arranging the book on someone else's behalf.
+ */
+export interface StoryGiverPayload {
+  relationshipType: RelationshipPayload["type"];
+  customLabel?: string;
+  displayName: string;
+  presentedAs: "self" | "other_person";
+}
 
 /**
  * The orderer's relationship to a child, sent exactly as collected in
@@ -123,6 +147,10 @@ export interface SubmitOrderPayload {
     extraCharacters?: string;
     bookLanguage: BackendBookLanguage;
     notes?: string;
+    /** Present ONLY for a personalized book with a final page. When set, the
+     *  backend also requires `personalMessage` (the written words) and a
+     *  declared `special_photo` (the child + story giver closing photo). */
+    storyGiver?: StoryGiverPayload;
   };
   turnstileToken: string;
 }
@@ -154,7 +182,11 @@ export interface BuildSubmitPayloadArgs {
     wantsSpecialPhoto: boolean;
     characterPhotoCount: number;
     hasReceipt: boolean;
+    /** the story giver added a voice note to the final page */
+    hasFinalVoice?: boolean;
   };
+  /** book-facing identity for the personalized final page (Voice Memory) */
+  storyGiver?: StoryGiverPayload;
   orderer: { fullName: string; phone: string };
   addressText?: string;
   recipientRelationship?: RelationshipPayload;
@@ -208,6 +240,9 @@ export function buildSubmitPayload(args: BuildSubmitPayloadArgs): SubmitOrderPay
   if (args.declaredArtifacts.hasReceipt) {
     declaredArtifacts.push({ kind: "receipt", count: 1 });
   }
+  if (args.declaredArtifacts.hasFinalVoice) {
+    declaredArtifacts.push({ kind: "final_voice", count: 1 });
+  }
 
   return {
     channel: "W",
@@ -253,8 +288,25 @@ export function buildSubmitPayload(args: BuildSubmitPayloadArgs): SubmitOrderPay
       extraCharacters: args.extraCharacters,
       bookLanguage: args.bookLanguage,
       notes: args.notes,
+      storyGiver: storyGiverForPayload(args.storyGiver),
     },
     turnstileToken: args.turnstileToken,
+  };
+}
+
+/** Keep only the structured story-giver shape the contract carries. Drops a
+ *  `customLabel` unless the type is "other" and it is non-empty. Returns
+ *  `undefined` (payload omits the key) when there is no usable displayName. */
+function storyGiverForPayload(sg: StoryGiverPayload | undefined): StoryGiverPayload | undefined {
+  const displayName = (sg?.displayName ?? "").trim();
+  if (!sg || displayName.length === 0) return undefined;
+  const customLabel =
+    sg.relationshipType === "other" ? (sg.customLabel ?? "").trim() || undefined : undefined;
+  return {
+    relationshipType: sg.relationshipType,
+    displayName,
+    presentedAs: sg.presentedAs,
+    ...(customLabel ? { customLabel } : {}),
   };
 }
 
@@ -357,11 +409,18 @@ export async function uploadFile(args: {
    *  "Singlisi_Madina_01.png"). Purely cosmetic metadata. */
   characterRole?: string;
   characterName?: string;
+  /** kind=final_voice only — the client-measured recording length in seconds.
+   *  UX hint only: the intake service reads the real duration from the bytes
+   *  and enforces the 120s limit itself. */
+  durationSec?: number;
 }): Promise<void> {
   const qs = new URLSearchParams({ kind: args.kind });
   if (args.childRef) qs.set("childRef", args.childRef);
   if (args.characterRole) qs.set("characterRole", args.characterRole);
   if (args.characterName) qs.set("characterName", args.characterName);
+  if (typeof args.durationSec === "number" && Number.isFinite(args.durationSec)) {
+    qs.set("durationSec", String(Math.max(1, Math.round(args.durationSec))));
+  }
   const form = new FormData();
   form.append("file", args.file);
   const res = await fetch(apiUrl(`/v1/orders/${args.orderCode}/files?${qs.toString()}`), {

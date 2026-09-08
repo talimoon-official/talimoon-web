@@ -24,6 +24,7 @@ import {
 import {
   buildSubmitPayload,
   finalizeOrder,
+  IntakeApiError,
   isBackendBookLanguage,
   planChildPhotoUploads,
   submitOrder,
@@ -79,12 +80,15 @@ import Phase02 from "./Phase02";
 import Phase03 from "./Phase03";
 import EmotionalBridge from "./EmotionalBridge";
 import { SwitchRow } from "./Switch";
+import VoiceMemory from "./VoiceMemory";
 import { ChildWorld } from "./ChildWorld";
 import { growthFull } from "@/lib/order/phase03-copy";
 import {
   formatRespectfulName,
   relationshipLabel,
+  relationshipOptions,
   type RecipientRelationship,
+  type RelationshipType,
 } from "@/lib/order/relationship";
 import Phase01 from "./Phase01";
 import { JourneyProgress } from "./JourneyProgress";
@@ -182,11 +186,24 @@ const CHROME_EN = {
   giftFromError: "Please answer this to continue.",
   wantsPersonalMessage: "Add a personal message",
   personalMessageQ: (name: string) =>
-    `Would you like to leave ${name} a few warm words of your own at the end of the book?`,
+    `A few words for ${name}, on the last page of the book`,
   personalMessageHint:
-    "Your affection, a wish, or a short line you'd like to say to them.",
+    "Your affection, a wish, or a short line you'd like to say to them. This is printed on the final page.",
   personalMessagePlaceholder: (name: string) =>
     `For example: “${name}, I will always be proud of you. Keep your kind and brave heart. I love you very much.”`,
+  wordsRequiredError: "Please write a few words for the final page.",
+
+  storyGiverHeading: "The final page — from you to them",
+  storyGiverPresentedQ: "Whose words are these?",
+  storyGiverSelf: "Mine",
+  storyGiverOther: "Someone else's",
+  storyGiverRelationshipQ: "Their relationship to the child",
+  storyGiverCustomLabelLabel: "Describe the relationship",
+  storyGiverCustomLabelPlaceholder: "e.g. my cousin's child",
+  storyGiverNameLabel: "The name the child will see",
+  storyGiverNameHint: "A first name or the name they're called — e.g. Dada, Buvi, Aziza.",
+  storyGiverError: "Please choose a relationship and the name for the final page.",
+  voiceMemoryLead: "Some story givers also record these words in their own voice.",
   wantsCharacters: "Include other characters",
   characterRelationLabel: "Relationship or role",
   characterRelationPlaceholder: "e.g. Mother",
@@ -199,10 +216,12 @@ const CHROME_EN = {
   childPhotos: "Child photos",
   childPhotosHint: "3–5 clear, well-lit photos showing the face",
   wantsSpecialPhoto: "Add a special photo for the closing page",
-  specialPhoto: "Special photo for the closing page",
+  specialPhoto: "A photo of the child with the person giving the book",
   specialPhotoHint:
-    "This photo is used on the book's final page as it really looks — it is not turned into an anime or cartoon drawing. So choose one that's as clear and bright as possible: a family photo, or one that means a lot to you.",
-  specialPhotoNote: "The photo is used exactly as it is.",
+    "Used on the book's final page as it really looks — not turned into a cartoon. Choose one that's clear and bright, showing the child together with the person the book is from.",
+  specialPhotoNote: "The photo is used exactly as it is. This photo is required.",
+  closingPhotoRequired:
+    "A photo of the child together with the person giving the book is needed for the final page.",
   characterPhotosSection: "Photos of the additional characters",
   characterMinPhotos: "Upload at least 2 photos",
   characterPhotosMoreNeeded: (who: string) => `${who} still needs at least 2 photos`,
@@ -239,6 +258,8 @@ const CHROME_EN = {
   receiptReplace: "Replace",
   receiptError: "Please upload the payment receipt to finish.",
   submitError: "We couldn't send your order. Please try again.",
+  voiceTooLongError:
+    "The voice recording is longer than 2 minutes. Please go back and shorten it, or remove it to continue without a recording.",
   consentHeading: "Consent and electronic signature",
   consentIntro: "Before sending the order, please confirm how we may use the information and photographs you provided.",
   consentAuthority: "I am at least 18 years old and I am the child's parent/legal guardian, or I have clear authority from the parent/legal guardian to provide the child's information and photographs for this order.",
@@ -353,11 +374,24 @@ const CHROME_UZ: typeof CHROME_EN = {
   giftFromError: "Davom etish uchun bu savolga javob bering.",
   wantsPersonalMessage: "Shaxsiy xabar qo'shish",
   personalMessageQ: (name: string) =>
-    `Kitob oxirida ${name}ga o‘zingizdan bir necha iliq so‘z qoldirmoqchimisiz?`,
+    `Kitobning so'nggi sahifasida ${name}ga bir necha so'z`,
   personalMessageHint:
-    "Bu yerga mehringizni, tilagingizni yoki unga aytmoqchi bo‘lgan qisqa gapingizni yozishingiz mumkin.",
+    "Bu yerga mehringizni, tilagingizni yoki unga aytmoqchi bo‘lgan qisqa gapingizni yozing. U kitobning yakuniy sahifasiga chop etiladi.",
   personalMessagePlaceholder: (name: string) =>
     `Masalan: “${name}, sen bilan doimo faxrlanaman. Mehribon va jasur qalbingni asra. Seni juda yaxshi ko‘raman.”`,
+  wordsRequiredError: "Iltimos, yakuniy sahifa uchun bir necha so'z yozing.",
+
+  storyGiverHeading: "Yakuniy sahifa — sizdan unga",
+  storyGiverPresentedQ: "Bu so'zlar kimning nomidan?",
+  storyGiverSelf: "Meniki",
+  storyGiverOther: "Boshqa insonniki",
+  storyGiverRelationshipQ: "Uning bolaga qarindoshligi",
+  storyGiverCustomLabelLabel: "Qarindoshlikni yozing",
+  storyGiverCustomLabelPlaceholder: "masalan: amakivachchamning farzandi",
+  storyGiverNameLabel: "Bola ko'radigan ism",
+  storyGiverNameHint: "Faqat ism yoki chaqiriladigan nomi — masalan: Dada, Buvi, Aziza.",
+  storyGiverError: "Iltimos, yakuniy sahifa uchun qarindoshlik va ismni tanlang.",
+  voiceMemoryLead: "Ba'zi insonlar bu so'zlarni o'z ovozida ham yozib qoldiradi.",
   wantsCharacters: "Hikoyaga boshqa qahramonlarni qo'shish",
   characterRelationLabel: "Kimligi",
   characterRelationPlaceholder: "masalan: Ona",
@@ -371,10 +405,12 @@ const CHROME_UZ: typeof CHROME_EN = {
   childPhotos: "Farzand suratlari",
   childPhotosHint: "Yuzi aniq ko'rinadigan, yaxshi yoritilgan 3–5 ta surat",
   wantsSpecialPhoto: "Yakuniy sahifa uchun maxsus surat qo'shish",
-  specialPhoto: "Yakuniy sahifa uchun maxsus surat",
+  specialPhoto: "Bola va kitobni taqdim etayotgan insonning birgalikdagi surati",
   specialPhotoHint:
-    "Bu surat kitobning yakuniy sahifasida o'zining haqiqiy ko'rinishida ishlatiladi — anime yoki multfilm rasmiga aylantirilmaydi. Shuning uchun imkon qadar tiniq, yorug' va Siz uchun chiroyli oilaviy yoki esda qolarli surat tanlang.",
-  specialPhotoNote: "Surat qanday bo'lsa, shunday ishlatiladi.",
+    "Bu surat kitobning yakuniy sahifasida o'zining haqiqiy ko'rinishida ishlatiladi — multfilm rasmiga aylantirilmaydi. Imkon qadar tiniq va yorug', bola hamda kitob kimdan bo'lsa, o'sha inson birga tushgan suratni tanlang.",
+  specialPhotoNote: "Surat qanday bo'lsa, shunday ishlatiladi. Bu surat majburiy.",
+  closingPhotoRequired:
+    "Yakuniy sahifa uchun bola va kitobni taqdim etayotgan inson birga tushgan surat kerak.",
   characterPhotosSection: "Qo‘shimcha qahramonlar suratlari",
   characterMinPhotos: "Kamida 2 ta surat yuklang",
   characterPhotosMoreNeeded: (who: string) => `${who} uchun kamida 2 ta surat kerak`,
@@ -411,6 +447,8 @@ const CHROME_UZ: typeof CHROME_EN = {
   receiptReplace: "Almashtirish",
   receiptError: "Yakunlash uchun to‘lov chekini yuklang.",
   submitError: "Buyurtmangizni yuborishda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.",
+  voiceTooLongError:
+    "Ovozli yozuv 2 daqiqadan uzun. Orqaga qaytib uni qisqartiring yoki yozuvsiz davom etish uchun olib tashlang.",
   consentHeading: "Rozilik va elektron imzo",
   consentIntro: "Buyurtmani yuborishdan oldin taqdim etgan ma’lumot va fotosuratlaringizdan qanday foydalanishimiz mumkinligini tasdiqlang.",
   consentAuthority: "Men 18 yoshdan kattaman va bolaning ota-onasi/qonuniy vakiliman yoki ushbu buyurtma uchun bolaning ma’lumotlari va fotosuratlarini taqdim etishga ota-ona/qonuniy vakildan aniq vakolat olganman.",
@@ -524,11 +562,24 @@ const CHROME_RU: typeof CHROME_EN = {
   giftFromError: "Пожалуйста, ответьте на этот вопрос, чтобы продолжить.",
   wantsPersonalMessage: "Добавить личное послание",
   personalMessageQ: (name: string) =>
-    `Хотите оставить ${name} несколько тёплых слов от себя в конце книги?`,
+    `Несколько слов для ${name} на последней странице книги`,
   personalMessageHint:
-    "Ваша нежность, пожелание или короткая фраза, которую хочется сказать ему (ей).",
+    "Ваша нежность, пожелание или короткая фраза. Она печатается на последней странице.",
   personalMessagePlaceholder: (name: string) =>
     `Например: «${name}, я всегда буду гордиться тобой. Береги своё доброе и смелое сердце. Я очень тебя люблю».`,
+  wordsRequiredError: "Пожалуйста, напишите несколько слов для последней страницы.",
+
+  storyGiverHeading: "Последняя страница — от вас к нему (ней)",
+  storyGiverPresentedQ: "Чьи это слова?",
+  storyGiverSelf: "Мои",
+  storyGiverOther: "Другого человека",
+  storyGiverRelationshipQ: "Кем он (она) приходится ребёнку",
+  storyGiverCustomLabelLabel: "Опишите родство",
+  storyGiverCustomLabelPlaceholder: "например: ребёнок моего двоюродного брата",
+  storyGiverNameLabel: "Имя, которое увидит ребёнок",
+  storyGiverNameHint: "Только имя или то, как его называют — например: Дада, Буви, Азиза.",
+  storyGiverError: "Пожалуйста, выберите родство и имя для последней страницы.",
+  voiceMemoryLead: "Некоторые записывают эти слова и своим настоящим голосом.",
   wantsCharacters: "Добавить других персонажей",
   characterRelationLabel: "Кем приходится",
   characterRelationPlaceholder: "например: мама",
@@ -541,10 +592,12 @@ const CHROME_RU: typeof CHROME_EN = {
   childPhotos: "Фотографии ребёнка",
   childPhotosHint: "3–5 чётких, хорошо освещённых фотографий с видимым лицом",
   wantsSpecialPhoto: "Добавить особую фотографию для последней страницы",
-  specialPhoto: "Особая фотография для последней страницы",
+  specialPhoto: "Фотография ребёнка вместе с человеком, который дарит книгу",
   specialPhotoHint:
-    "Эта фотография используется на последней странице книги в своём настоящем виде: она не превращается в рисунок в стиле аниме или мультфильма. Поэтому выберите как можно более чёткий и светлый снимок: семейное фото или то, что особенно дорого Вам.",
-  specialPhotoNote: "Фотография используется в неизменном виде.",
+    "Используется на последней странице книги в своём настоящем виде — не превращается в мультфильм. Выберите чёткий и светлый снимок, где ребёнок вместе с человеком, от которого книга.",
+  specialPhotoNote: "Фотография используется в неизменном виде. Эта фотография обязательна.",
+  closingPhotoRequired:
+    "Для последней страницы нужна фотография ребёнка вместе с человеком, который дарит книгу.",
   characterPhotosSection: "Фотографии дополнительных персонажей",
   characterMinPhotos: "Загрузите минимум 2 фотографии",
   characterPhotosMoreNeeded: (who: string) => `Для «${who}» ещё нужно минимум 2 фотографии`,
@@ -581,6 +634,8 @@ const CHROME_RU: typeof CHROME_EN = {
   receiptReplace: "Заменить",
   receiptError: "Пожалуйста, загрузите чек об оплате, чтобы завершить заказ.",
   submitError: "Не удалось отправить Ваш заказ. Пожалуйста, попробуйте ещё раз.",
+  voiceTooLongError:
+    "Аудиозапись длиннее 2 минут. Вернитесь назад и сократите её или удалите, чтобы продолжить без записи.",
   consentHeading: "Согласие и электронная подпись",
   consentIntro: "Перед отправкой заказа подтвердите, как мы можем использовать предоставленные Вами сведения и фотографии.",
   consentAuthority: "Мне исполнилось 18 лет, и я являюсь родителем/законным представителем ребёнка либо имею явное разрешение родителя/законного представителя предоставить сведения и фотографии ребёнка для этого заказа.",
@@ -646,6 +701,20 @@ interface FormData {
   giftFrom: string;
   wantsPersonalMessage: boolean;
   personalMessage: string;
+  /** ── The STORY GIVER — the book-facing identity the personalized final
+   *     page is presented FROM, to the child. Not necessarily the orderer.
+   *     Established here, before the closing photo / written words / voice.
+   *     `presentedAs`: "self" = the orderer is the story giver;
+   *     "other_person" = the orderer is arranging it on someone's behalf. */
+  storyGiverPresentedAs: "self" | "other_person";
+  storyGiverRelationshipType: RelationshipType;
+  /** only meaningful for storyGiverRelationshipType === "other" */
+  storyGiverCustomLabel: string;
+  /** a GIVEN name only (no surname) — what the child sees */
+  storyGiverDisplayName: string;
+  /** optional real voice recording of the written words (max 2 min) */
+  finalVoice: File | null;
+  finalVoiceDurationSec: number | null;
   /** Toggle for the additional-characters section. When on, the customer
    *  fills one {@link AdditionalCharacter} entry per person, and the
    *  photos step then generates one upload block per named entry. */
@@ -682,11 +751,19 @@ function emptyForm(market: Market = "UZ"): FormData {
     weaknesses: "",
     extraInfo: "",
     giftFrom: "",
-    wantsPersonalMessage: false,
+    // The written words + the closing photo are REQUIRED for a personalized
+    // book — these are always-on now, not optional toggles.
+    wantsPersonalMessage: true,
     personalMessage: "",
+    storyGiverPresentedAs: "self",
+    storyGiverRelationshipType: "parent",
+    storyGiverCustomLabel: "",
+    storyGiverDisplayName: "",
+    finalVoice: null,
+    finalVoiceDurationSec: null,
     wantsCharacters: false,
     additionalCharacters: [],
-    wantsSpecialPhoto: false,
+    wantsSpecialPhoto: true,
     specialPhoto: null,
     bookLanguageCode: "",
     copies: 1,
@@ -720,7 +797,17 @@ function isStepComplete(stepId: StepId, data: FormData): boolean {
         !data.wantsCharacters ||
         (data.additionalCharacters.length > 0 &&
           data.additionalCharacters.every(additionalCharacterNamed));
-      return data.giftFrom.trim().length > 0 && charactersOk;
+      // The written words on the final page are required, and the STORY
+      // GIVER must be fully identified (a given name, and — for "other" — a
+      // relationship label) before the closing photo / voice.
+      const wordsOk = data.personalMessage.trim().length > 0;
+      const storyGiverOk =
+        data.storyGiverDisplayName.trim().length > 0 &&
+        (data.storyGiverRelationshipType !== "other" ||
+          data.storyGiverCustomLabel.trim().length > 0);
+      return (
+        data.giftFrom.trim().length > 0 && wordsOk && storyGiverOk && charactersOk
+      );
     }
     case "photos": {
       // Only photos actually accepted into state count (a rejected file
@@ -736,7 +823,9 @@ function isStepComplete(stepId: StepId, data: FormData): boolean {
         data.additionalCharacters
           .filter(additionalCharacterNamed)
           .every((c) => c.photos.length >= MIN_CHARACTER_PHOTOS);
-      return childPhotosOk && characterPhotosOk;
+      // The child + story giver closing photo is required (was optional).
+      const closingPhotoOk = data.specialPhoto != null;
+      return childPhotosOk && characterPhotosOk && closingPhotoOk;
     }
     case "review": {
       // Phone + book language + an answered delivery question. If the
@@ -879,6 +968,7 @@ export default function PersonalizedBookOrderForm({
      *  a single flat pool (see planChildPhotoUploads). */
     childPhotoDone: boolean[][];
     specialPhotoDone: boolean;
+    finalVoiceDone: boolean;
     characterPhotoDone: boolean[];
     receiptDone: boolean;
   } | null>(null);
@@ -1070,6 +1160,20 @@ export default function PersonalizedBookOrderForm({
       recipientRelationship: result.recipientRelationship,
       children: result.children,
       bookType: bookTypeForChildCount(result.children.length),
+      // Seed the STORY GIVER from Phase 01: by default the orderer IS the
+      // story giver, with the same relationship to the child they just gave.
+      // The "personal touch" step lets them change it (a grandparent's book
+      // the parent is arranging, a book from an aunt, etc.).
+      storyGiverPresentedAs: "self",
+      storyGiverRelationshipType: result.recipientRelationship.type,
+      storyGiverCustomLabel:
+        result.recipientRelationship.type === "other"
+          ? (result.recipientRelationship.customLabel ?? "")
+          : "",
+      storyGiverDisplayName:
+        prev.storyGiverDisplayName.trim() ||
+        result.ordererName.trim().split(/\s+/)[0] ||
+        "",
     }));
     setPhase01Seeded(true);
     setPhase("world");
@@ -1187,9 +1291,11 @@ export default function PersonalizedBookOrderForm({
           clientDeclaredTotal: totals.grandTotal,
           declaredArtifacts: {
             childPhotoCount: data.children.reduce((n, c) => n + (c.photos?.length ?? 0), 0),
-            wantsSpecialPhoto: data.wantsSpecialPhoto,
+            // The child + story giver closing photo is always required now.
+            wantsSpecialPhoto: true,
             characterPhotoCount,
             hasReceipt: data.receipt != null,
+            hasFinalVoice: data.finalVoice != null,
           },
           orderer: { fullName: data.orderer.name, phone: data.orderer.phone },
           addressText,
@@ -1216,7 +1322,22 @@ export default function PersonalizedBookOrderForm({
           weaknesses: data.weaknesses || undefined,
           extraInfo: orderEmotionalText(data.children, bookLoc),
           giftFrom: data.giftFrom || undefined,
-          personalMessage: data.wantsPersonalMessage ? data.personalMessage || undefined : undefined,
+          // The written words on the final page — required when a story giver
+          // is set (which is always, for a personalized book).
+          personalMessage: data.personalMessage.trim() || undefined,
+          // The book-facing identity for the private Voice Memory.
+          storyGiver: {
+            relationshipType:
+              data.storyGiverPresentedAs === "self"
+                ? data.recipientRelationship.type
+                : data.storyGiverRelationshipType,
+            customLabel:
+              data.storyGiverPresentedAs === "self"
+                ? data.recipientRelationship.customLabel
+                : data.storyGiverCustomLabel.trim() || undefined,
+            displayName: data.storyGiverDisplayName.trim(),
+            presentedAs: data.storyGiverPresentedAs,
+          },
           extraCharacters: extraCharactersText,
           bookLanguage: data.bookLanguageCode,
         consent: {
@@ -1241,6 +1362,7 @@ export default function PersonalizedBookOrderForm({
           childSlots: result.childSlots,
           childPhotoDone: data.children.map((c) => (c.photos ?? []).map(() => false)),
           specialPhotoDone: false,
+          finalVoiceDone: false,
           characterPhotoDone: namedCharacters.flatMap((c) => c.photos.map(() => false)),
           receiptDone: false,
         };
@@ -1269,9 +1391,21 @@ export default function PersonalizedBookOrderForm({
         session.childPhotoDone[task.childIndex][task.photoIndex] = true;
       }
 
-      if (data.wantsSpecialPhoto && data.specialPhoto && !session.specialPhotoDone) {
+      if (data.specialPhoto && !session.specialPhotoDone) {
         await uploadFile({ orderCode, capabilityToken, kind: "special_photo", file: data.specialPhoto });
         session.specialPhotoDone = true;
+      }
+
+      // The story giver's optional voice note for the private Voice Memory.
+      if (data.finalVoice && !session.finalVoiceDone) {
+        await uploadFile({
+          orderCode,
+          capabilityToken,
+          kind: "final_voice",
+          file: data.finalVoice,
+          durationSec: data.finalVoiceDurationSec ?? undefined,
+        });
+        session.finalVoiceDone = true;
       }
 
       let charIdx = 0;
@@ -1305,10 +1439,14 @@ export default function PersonalizedBookOrderForm({
       });
 
       setSubmitted(true);
-    } catch {
+    } catch (err) {
       // Never surface the raw error (status text, validation detail) to the
-      // customer — same "never leak internals" posture as the backend.
-      setSubmitError(t.submitError);
+      // customer — same "never leak internals" posture as the backend. The
+      // ONE exception: an over-length voice note, where a specific hint
+      // ("shorten or remove it") is actionable and not sensitive.
+      const voiceTooLong =
+        err instanceof IntakeApiError && err.code === "audio_too_long";
+      setSubmitError(voiceTooLong ? t.voiceTooLongError : t.submitError);
       setSubmitting(false);
     }
   }
@@ -1576,12 +1714,76 @@ export default function PersonalizedBookOrderForm({
                 />
               </Field>
 
-              <SwitchRow
-                label={t.wantsPersonalMessage}
-                checked={data.wantsPersonalMessage}
-                onChange={(v) => update("wantsPersonalMessage", v)}
-              />
-              {data.wantsPersonalMessage && (
+              {/* ── The STORY GIVER + the final-page words + an optional voice.
+                     The book-facing identity is established BEFORE the words
+                     and (on the next step) the closing photo. */}
+              <div className="rounded-lg border border-black/10 bg-white/50 px-4 py-4 space-y-4">
+                <p className="font-sans text-[13px] font-semibold text-text-primary">
+                  {t.storyGiverHeading}
+                </p>
+
+                <div className="space-y-2">
+                  <p className="font-sans text-[13px] font-medium text-text-primary">
+                    {t.storyGiverPresentedQ}
+                  </p>
+                  <div className="flex gap-2">
+                    {(
+                      [
+                        ["self", t.storyGiverSelf],
+                        ["other_person", t.storyGiverOther],
+                      ] as const
+                    ).map(([val, label]) => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => update("storyGiverPresentedAs", val)}
+                        className={`rounded-md border px-3 py-1.5 text-[13px] ${
+                          data.storyGiverPresentedAs === val
+                            ? "border-accent-primary bg-accent-primary/10 text-text-primary"
+                            : "border-black/15 text-text-secondary"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {data.storyGiverPresentedAs === "other_person" && (
+                  <Field label={t.storyGiverRelationshipQ}>
+                    <select
+                      className={inputClass}
+                      value={data.storyGiverRelationshipType}
+                      onChange={(e) =>
+                        update("storyGiverRelationshipType", e.target.value as RelationshipType)
+                      }
+                    >
+                      {relationshipOptions(locale).map((o) => (
+                        <option key={o.type} value={o.type}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                )}
+                {data.storyGiverPresentedAs === "other_person" &&
+                  data.storyGiverRelationshipType === "other" && (
+                    <Field label={t.storyGiverCustomLabelLabel}>
+                      <TextInput
+                        value={data.storyGiverCustomLabel}
+                        placeholder={t.storyGiverCustomLabelPlaceholder}
+                        onChange={(e) => update("storyGiverCustomLabel", e.target.value)}
+                      />
+                    </Field>
+                  )}
+
+                <Field label={t.storyGiverNameLabel} hint={t.storyGiverNameHint}>
+                  <TextInput
+                    value={data.storyGiverDisplayName}
+                    onChange={(e) => update("storyGiverDisplayName", e.target.value)}
+                  />
+                </Field>
+
                 <div className="space-y-2">
                   <p className="font-sans text-[13px] font-medium leading-[1.5] text-text-primary">
                     {t.personalMessageQ(firstChildName)}
@@ -1590,8 +1792,7 @@ export default function PersonalizedBookOrderForm({
                     {t.personalMessageHint}
                   </p>
                   {/* The example lives ONLY in the placeholder — it is
-                      never written into `personalMessage`, so it is never
-                      submitted unless the customer actually types it. */}
+                      never written into `personalMessage`. */}
                   <TextArea
                     rows={4}
                     value={data.personalMessage}
@@ -1599,7 +1800,20 @@ export default function PersonalizedBookOrderForm({
                     placeholder={t.personalMessagePlaceholder(firstChildName)}
                   />
                 </div>
-              )}
+
+                <div className="space-y-1.5">
+                  <p className="font-sans text-[12px] leading-[1.5] text-text-secondary">
+                    {t.voiceMemoryLead}
+                  </p>
+                  <VoiceMemory
+                    value={data.finalVoice}
+                    onChange={(file, durationSec) => {
+                      update("finalVoice", file);
+                      update("finalVoiceDurationSec", durationSec);
+                    }}
+                  />
+                </div>
+              </div>
 
               <SwitchRow
                 label={t.wantsCharacters}
@@ -1618,9 +1832,15 @@ export default function PersonalizedBookOrderForm({
 
               {showStepError && !canContinue() && (
                 <p role="alert" className="font-sans text-[13px] text-state-error">
-                  {data.giftFrom.trim().length > 0
-                    ? t.characterNeedsBoth
-                    : t.giftFromError}
+                  {data.giftFrom.trim().length === 0
+                    ? t.giftFromError
+                    : data.personalMessage.trim().length === 0
+                      ? t.wordsRequiredError
+                      : data.storyGiverDisplayName.trim().length === 0 ||
+                          (data.storyGiverRelationshipType === "other" &&
+                            data.storyGiverCustomLabel.trim().length === 0)
+                        ? t.storyGiverError
+                        : t.characterNeedsBoth}
                 </p>
               )}
             </>
@@ -1677,30 +1897,25 @@ export default function PersonalizedBookOrderForm({
                 </div>
               )}
 
-              <SwitchRow
-                label={t.wantsSpecialPhoto}
-                checked={data.wantsSpecialPhoto}
-                onChange={(v) => update("wantsSpecialPhoto", v)}
-              />
-              {data.wantsSpecialPhoto && (
-                <div className="space-y-2">
-                  <PhotoUpload
-                    label={t.specialPhoto}
-                    hint={t.specialPhotoHint}
-                    removeLabel={t.removePhoto}
-                    atLeastLabel={t.atLeastPhotos}
-                    tooLargeLabel={t.photoTooLarge}
-                    notImageLabel={t.photoNotImage}
-                    brokenLabel={t.photoBroken}
-                    files={data.specialPhoto ? [data.specialPhoto] : []}
-                    max={1}
-                    onChange={(files) => update("specialPhoto", files[0] ?? null)}
-                  />
-                  <p className="font-sans text-[12px] text-text-secondary">
-                    {t.specialPhotoNote}
-                  </p>
-                </div>
-              )}
+              {/* The child + story giver closing photo — REQUIRED for the
+                  personalized final page (no longer an optional toggle). */}
+              <div className="space-y-2">
+                <PhotoUpload
+                  label={t.specialPhoto}
+                  hint={t.specialPhotoHint}
+                  removeLabel={t.removePhoto}
+                  atLeastLabel={t.atLeastPhotos}
+                  tooLargeLabel={t.photoTooLarge}
+                  notImageLabel={t.photoNotImage}
+                  brokenLabel={t.photoBroken}
+                  files={data.specialPhoto ? [data.specialPhoto] : []}
+                  max={1}
+                  onChange={(files) => update("specialPhoto", files[0] ?? null)}
+                />
+                <p className="font-sans text-[12px] text-text-secondary">
+                  {t.specialPhotoNote}
+                </p>
+              </div>
 
               {/* One upload block per NAMED additional character — the
                   section is generated straight from `additionalCharacters`
@@ -1730,9 +1945,13 @@ export default function PersonalizedBookOrderForm({
                     const shortCharacter = data.additionalCharacters
                       .filter(additionalCharacterNamed)
                       .find((c) => c.photos.length < MIN_CHARACTER_PHOTOS);
-                    return shortCharacter
-                      ? t.characterPhotosMoreNeeded(additionalCharacterLabel(shortCharacter))
-                      : t.photosMoreNeeded(0);
+                    if (shortCharacter) {
+                      return t.characterPhotosMoreNeeded(
+                        additionalCharacterLabel(shortCharacter),
+                      );
+                    }
+                    if (data.specialPhoto == null) return t.closingPhotoRequired;
+                    return t.photosMoreNeeded(0);
                   })()}
                 </p>
               )}

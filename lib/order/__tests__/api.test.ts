@@ -202,6 +202,81 @@ describe("buildSubmitPayload", () => {
     expect(payload.delivery.location).toBeUndefined();
   });
 
+  it("forwards a structured story giver + a final_voice declared artifact", () => {
+    const payload = buildSubmitPayload({
+      ...BASE,
+      declaredArtifacts: {
+        childPhotoCount: 1,
+        wantsSpecialPhoto: true,
+        characterPhotoCount: 0,
+        hasReceipt: false,
+        hasFinalVoice: true,
+      },
+      personalMessage: "Sen bizning eng katta baxtimizsan.",
+      storyGiver: {
+        relationshipType: "grandparent",
+        displayName: "Buvijon",
+        presentedAs: "other_person",
+      },
+    });
+    expect(payload.profile.storyGiver).toEqual({
+      relationshipType: "grandparent",
+      displayName: "Buvijon",
+      presentedAs: "other_person",
+    });
+    expect(payload.declaredArtifacts).toEqual(
+      expect.arrayContaining([
+        { kind: "special_photo", count: 1 },
+        { kind: "final_voice", count: 1 },
+      ]),
+    );
+    expect(payload.profile.personalMessage).toBe("Sen bizning eng katta baxtimizsan.");
+  });
+
+  it("keeps a story giver customLabel only for type 'other', trims the given name", () => {
+    const other = buildSubmitPayload({
+      ...BASE,
+      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: true, characterPhotoCount: 0, hasReceipt: false },
+      storyGiver: {
+        relationshipType: "other",
+        customLabel: "  my cousin's child  ",
+        displayName: "  Aziza  ",
+        presentedAs: "self",
+      },
+    });
+    expect(other.profile.storyGiver).toEqual({
+      relationshipType: "other",
+      displayName: "Aziza",
+      presentedAs: "self",
+      customLabel: "my cousin's child",
+    });
+
+    const parent = buildSubmitPayload({
+      ...BASE,
+      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: true, characterPhotoCount: 0, hasReceipt: false },
+      storyGiver: {
+        relationshipType: "parent",
+        customLabel: "ignored",
+        displayName: "Dada",
+        presentedAs: "self",
+      },
+    });
+    expect(parent.profile.storyGiver).toEqual({
+      relationshipType: "parent",
+      displayName: "Dada",
+      presentedAs: "self",
+    });
+  });
+
+  it("omits storyGiver entirely when no given name was provided", () => {
+    const payload = buildSubmitPayload({
+      ...BASE,
+      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: false, characterPhotoCount: 0, hasReceipt: false },
+      storyGiver: { relationshipType: "parent", displayName: "   ", presentedAs: "self" },
+    });
+    expect(payload.profile.storyGiver).toBeUndefined();
+  });
+
   it("omits location entirely when the customer set no pin", () => {
     const payload = buildSubmitPayload({
       ...BASE,

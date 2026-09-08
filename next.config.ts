@@ -54,9 +54,13 @@ const securityHeaders = [
   { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
   {
+    // microphone=(self): the personalized-book order form lets the STORY
+    // GIVER record their own voice note for the private Voice Memory
+    // (components/begin/VoiceMemory.tsx, MediaRecorder). Same-origin only;
+    // every other powerful feature stays disabled.
     key: "Permissions-Policy",
     value:
-      "camera=(), microphone=(), geolocation=(self), payment=(), usb=(), serial=(), bluetooth=(), browsing-topics=()",
+      "camera=(), microphone=(self), geolocation=(self), payment=(), usb=(), serial=(), bluetooth=(), browsing-topics=()",
   },
 ];
 
