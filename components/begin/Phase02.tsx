@@ -524,15 +524,20 @@ export default function Phase02({
 
           {/* The portrait */}
           {worldOnly ? (
+            // A quiet milestone beat between children / phases — an
+            // affirming line and the "Davom etish" action only. The
+            // full ChildWorld portrait that used to sit here was removed
+            // (2026-09-09): it re-showed the exact profile fields the
+            // customer had just entered, lengthening the flow with a
+            // review card that adds nothing before the real final review
+            // in PersonalizedBookOrderForm. No data or navigation
+            // changed — only this presentational card is gone.
             <motion.div key={`done-${idx}`} {...enter}>
               <Heading headingRef={headingRef} size="xl">
                 {isLastChild
                   ? c.milestoneHeading(child.name)
                   : c.nextChildLead(child.name)}
               </Heading>
-              <div className="mt-6">
-                <ChildWorld child={child} locale={locale} variant="full" />
-              </div>
               <Supporting>
                 {isLastChild
                   ? c.milestoneBridge(child.name)
