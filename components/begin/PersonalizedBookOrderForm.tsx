@@ -43,6 +43,7 @@ import Turnstile, { type TurnstileHandle } from "./Turnstile";
 import { PaymentAccount } from "./PaymentAccount";
 import { MapLocationPicker } from "./MapLocationPicker";
 import { setMarketPreference, useMarketPreference, marketFromLocation } from "@/lib/order/market";
+import { normalizeOrderPhone } from "@/lib/order/phone";
 import { useFlowScroll } from "@/lib/order/useFlowScroll";
 import {
   additionalCharacterLabel,
@@ -133,6 +134,21 @@ const CHROME_EN = {
   years: (age: number | null) => (age == null ? "" : `, ${age}`),
 
   phone: "Phone number",
+  // Contact number — the label, helper and validation adapt to the order
+  // market: an Uzbekistan order collects a phone reached by SMS; an
+  // international order collects a WhatsApp number entered with its
+  // country code.
+  phoneUz: "Your phone number",
+  phoneIntl: "Your WhatsApp number",
+  phoneHelpUz: "Order updates are sent to this number.",
+  phoneHelpIntl:
+    "Order updates and any clarifications are sent to this number. Please enter a WhatsApp-enabled international number with its country code.",
+  phonePlaceholderIntl: "+974 55 123 456",
+  phoneInvalidUz: "Please enter a valid Uzbekistan number.",
+  phoneInvalidIntl:
+    "Enter a valid international number with its country code, for example +974 …",
+  phoneNotUz:
+    "That does not look like an Uzbekistan number. For an international order, choose International above.",
   // Delivery
   deliveryQ: "Would you like us to deliver your book?",
   deliveryYes: "Yes, I need delivery",
@@ -325,6 +341,17 @@ const CHROME_UZ: typeof CHROME_EN = {
   years: (age: number | null) => (age == null ? "" : `, ${age} yosh`),
 
   phone: "Telefon raqami",
+  phoneUz: "Telefon raqamingiz",
+  phoneIntl: "WhatsApp raqamingiz",
+  phoneHelpUz: "Buyurtma bo‘yicha xabarlar shu raqam orqali yuboriladi.",
+  phoneHelpIntl:
+    "Buyurtma bo‘yicha xabarlar va aniqlashtirishlar shu raqam orqali yuboriladi. Iltimos, WhatsApp ishlaydigan xalqaro raqamingizni mamlakat kodi bilan kiriting.",
+  phonePlaceholderIntl: "+974 55 123 456",
+  phoneInvalidUz: "Iltimos, to‘g‘ri O‘zbekiston raqamini kiriting.",
+  phoneInvalidIntl:
+    "Mamlakat kodi bilan to‘g‘ri xalqaro raqam kiriting, masalan +974 …",
+  phoneNotUz:
+    "Bu O‘zbekiston raqamiga o‘xshamaydi. Xalqaro buyurtma uchun yuqoridan “Xalqaro”ni tanlang.",
   deliveryQ: "Kitobni Sizga yetkazib beraylikmi?",
   deliveryYes: "Ha, yetkazib berish kerak",
   deliveryNo: "Yo‘q, o‘zim olib ketaman",
@@ -518,6 +545,17 @@ const CHROME_RU: typeof CHROME_EN = {
   years: (age: number | null) => (age == null ? "" : `, ${age} лет`),
 
   phone: "Номер телефона",
+  phoneUz: "Ваш номер телефона",
+  phoneIntl: "Ваш номер WhatsApp",
+  phoneHelpUz: "Уведомления по заказу придут на этот номер.",
+  phoneHelpIntl:
+    "Уведомления и уточнения по заказу придут на этот номер. Укажите международный номер с кодом страны, на котором работает WhatsApp.",
+  phonePlaceholderIntl: "+974 55 123 456",
+  phoneInvalidUz: "Введите корректный номер Узбекистана.",
+  phoneInvalidIntl:
+    "Введите корректный международный номер с кодом страны, например +974 …",
+  phoneNotUz:
+    "Это не похоже на номер Узбекистана. Для международного заказа выберите «Международный» выше.",
   deliveryQ: "Нужна ли Вам доставка книги?",
   deliveryYes: "Да, нужна доставка",
   deliveryNo: "Нет, заберу самостоятельно",
@@ -858,9 +896,13 @@ function isStepComplete(stepId: StepId, data: FormData): boolean {
         !wantsDel ||
         data.market === "UZ" ||
         data.orderer.deliveryAddress.countryCode.trim().length > 0;
+      // ONE canonical contact number, validated for the selected market:
+      // an Uzbekistan order needs a valid +998 number; an international
+      // order needs a valid country-coded international number.
+      const phoneOk = normalizeOrderPhone(data.orderer.phone, data.market).ok;
       return (
         data.bookLanguageCode.length > 0 &&
-        data.orderer.phone.trim().length > 5 &&
+        phoneOk &&
         countryOk &&
         isDeliveryComplete(data.orderer.deliveryAddress, data.market)
       );
@@ -1029,6 +1071,13 @@ export default function PersonalizedBookOrderForm({
   // every price, the delivery rules AND any stale delivery/address
   // state for the other market change together. Nothing is left that
   // could still feed the total.
+  //
+  // The contact number is deliberately NOT rewritten here: the typed
+  // string is preserved and simply re-validated against the new market
+  // on the next render (`normalizeOrderPhone(phone, data.market)` is a
+  // pure derivation). So a bare Uzbek number stops being "valid" the
+  // moment the order becomes International, and the Review gate asks for
+  // a country-coded number — never a silent reinterpretation.
   function changeMarket(next: Market) {
     setMarketTouched(true);
     setMarketPreference(next);
@@ -1335,6 +1384,14 @@ export default function PersonalizedBookOrderForm({
 
       const namedCharacters = data.additionalCharacters.filter(additionalCharacterNamed);
 
+      // The ONE canonical contact number for this order, in `+E.164` form.
+      // Same value goes to `orderer.phone` and `notify.phone`; the raw
+      // typed value is only a fallback (the Review step already blocks an
+      // invalid number). No separate WhatsApp field — the market decides
+      // how this single number is reached.
+      const canonicalPhone =
+        normalizeOrderPhone(data.orderer.phone, data.market).e164 ?? data.orderer.phone.trim();
+
       let session = orderSessionRef.current;
       if (!session) {
         if (!isBackendBookLanguage(data.bookLanguageCode)) {
@@ -1378,7 +1435,7 @@ export default function PersonalizedBookOrderForm({
             // earlier "Ha" that was switched back to "Yo'q" is never sent.
             hasFinalVoice: data.keepsakeWantsVoice === true && data.finalVoice != null,
           },
-          orderer: { fullName: data.orderer.name, phone: data.orderer.phone },
+          orderer: { fullName: data.orderer.name, phone: canonicalPhone },
           addressText,
           // Structured relationship of the orderer to the child(ren) —
           // collected in Phase 01, sent as-is (type + optional custom
@@ -1528,7 +1585,7 @@ export default function PersonalizedBookOrderForm({
       await finalizeOrder({
         orderCode,
         capabilityToken,
-        notify: { customerName: data.orderer.name, phone: data.orderer.phone },
+        notify: { customerName: data.orderer.name, phone: canonicalPhone },
       });
 
       setSubmitted(true);
@@ -2131,17 +2188,48 @@ export default function PersonalizedBookOrderForm({
                 </div>
               </Field>
 
-              {/* Contact number — the order's point of contact, needed
-                  whether or not there is delivery. */}
-              <Field label={t.phone}>
-                <TextInput
-                  type="tel"
-                  autoComplete="tel"
-                  value={data.orderer.phone}
-                  onChange={(e) => updateOrderer("phone", e.target.value)}
-                  placeholder="+998 90 123 45 67"
-                />
-              </Field>
+              {/* Contact number — the ONE point of contact for the order,
+                  needed whether or not there is delivery. Label, helper,
+                  placeholder and validation follow the order market: an
+                  Uzbekistan order asks for a phone (reached later by SMS);
+                  an international order asks for a WhatsApp number entered
+                  with its country code (reached later on WhatsApp). */}
+              {(() => {
+                const intl = data.market === "INTERNATIONAL";
+                const check = normalizeOrderPhone(data.orderer.phone, data.market);
+                const typed = data.orderer.phone.trim().length > 0;
+                const showPhoneError = showStepError && typed && !check.ok;
+                const errorText =
+                  check.validity === "not-uz"
+                    ? t.phoneNotUz
+                    : intl
+                      ? t.phoneInvalidIntl
+                      : t.phoneInvalidUz;
+                return (
+                  <Field
+                    label={intl ? t.phoneIntl : t.phoneUz}
+                    hint={showPhoneError ? undefined : intl ? t.phoneHelpIntl : t.phoneHelpUz}
+                  >
+                    <TextInput
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      aria-invalid={showPhoneError || undefined}
+                      value={data.orderer.phone}
+                      onChange={(e) => updateOrderer("phone", e.target.value)}
+                      placeholder={intl ? t.phonePlaceholderIntl : "+998 90 123 45 67"}
+                    />
+                    {showPhoneError && (
+                      <span
+                        role="alert"
+                        className="mt-1.5 block font-sans text-[12px] text-state-error"
+                      >
+                        {errorText}
+                      </span>
+                    )}
+                  </Field>
+                );
+              })()}
 
               {/* Order region — the commercial market (spec §13, §16,
                   §44). Doubles as the destination question for a direct

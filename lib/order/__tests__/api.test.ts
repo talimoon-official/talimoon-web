@@ -373,6 +373,18 @@ describe("buildSubmitPayload", () => {
     });
     expect(payload.delivery.location).toBeUndefined();
   });
+
+  it("forwards ONE canonical contact number as orderer.phone — no separate whatsappNumber field", () => {
+    const payload = buildSubmitPayload({
+      ...BASE,
+      orderer: { fullName: "Test Orderer", phone: "+97430528703" },
+      declaredArtifacts: NO_ART,
+    });
+    expect(payload.profile.orderer).toEqual({ fullName: "Test Orderer", phone: "+97430528703" });
+    const flat = JSON.stringify(payload).toLowerCase();
+    expect(flat).not.toContain("whatsappnumber");
+    expect(flat).not.toContain("whatsapp");
+  });
 });
 
 describe("planChildPhotoUploads", () => {
