@@ -72,8 +72,7 @@ import {
   TextInput,
 } from "./formPrimitives";
 import {
-  AdditionalCharacterFields,
-  AdditionalCharacterPhotos,
+  AdditionalCharacterCards,
   type AdditionalCharacterCopy,
 } from "./AdditionalCharacters";
 import Phase02 from "./Phase02";
@@ -211,19 +210,27 @@ const CHROME_EN = {
   esdalikRelationshipError: "Please choose their relationship to the child.",
   esdalikVoiceError: "Please choose whether to add a voice keepsake.",
   esdalikPhotoError: "A real photo of the child with the keepsake author is required.",
-  wantsCharacters: "Include other characters",
-  characterRelationLabel: "Relationship or role",
-  characterRelationPlaceholder: "e.g. Mother",
+  charactersTitle: "Add people who appear in the story",
+  charactersExplain1: (multi: boolean): string =>
+    multi
+      ? "Add close people you'd like to appear in the story alongside your children — for example a father, mother, older brother or sister, grandfather, grandmother, or another loved one."
+      : "Add close people you'd like to appear in the story alongside your child — for example a father, mother, older brother or sister, grandfather, grandmother, or another loved one.",
+  charactersExplain2:
+    "We'll need their relationship, name and photos so they can be drawn as characters in the story.",
+  charactersToggle: "I'd like to add people to the story",
+  characterRelationLabel: "Relationship",
+  characterRelationPlaceholder: "e.g. Father",
   characterNameLabel: "Name",
-  characterNamePlaceholder: "e.g. Dilnoza",
-  addCharacter: "+ Add another character",
+  characterNamePlaceholder: "e.g. Sherzodbek",
+  charactersPhotosLabel: "Their photos",
+  charactersPhotoHint:
+    "Upload at least 2 clear, good-quality photos so this person can be drawn in the story.",
+  addCharacter: "+ Add another person",
   removeCharacter: "Remove",
-  characterNeedsBoth: "Add a relationship and a name for each character, or remove the entry.",
+  characterNeedsBoth: "Add a relationship and a name for each person, or remove the entry.",
 
   childPhotos: "Child photos",
   childPhotosHint: "3–5 clear, well-lit photos showing the face",
-  characterPhotosSection: "Photos of the additional characters",
-  characterMinPhotos: "Upload at least 2 photos",
   characterPhotosMoreNeeded: (who: string) => `${who} still needs at least 2 photos`,
   atLeastPhotos: (min: number) => `At least ${min} photos required`,
   photosEnough: (n: number) => `${n} photo${n === 1 ? "" : "s"} — enough`,
@@ -395,20 +402,28 @@ const CHROME_UZ: typeof CHROME_EN = {
   esdalikRelationshipError: "Iltimos, bolaga kim bo‘lishini tanlang.",
   esdalikVoiceError: "Iltimos, ovozli esdalik qoldirish yoki qoldirmaslikni tanlang.",
   esdalikPhotoError: "Bola va esdalik so‘zlari egasi birga tushgan haqiqiy surat majburiy.",
-  wantsCharacters: "Hikoyaga boshqa qahramonlarni qo'shish",
+  charactersTitle: "Hikoyaga qo‘shimcha qahramonlar qo‘shish",
+  charactersExplain1: (multi: boolean): string =>
+    multi
+      ? "Bu yerda hikoyada farzandlaringiz bilan birga qatnashishini istagan yaqin insonlarni qo‘shishingiz mumkin. Masalan: ota, ona, aka, opa, bobo, buvi yoki boshqa yaqin insonlar."
+      : "Bu yerda hikoyada farzandingiz bilan birga qatnashishini istagan yaqin insonlarni qo‘shishingiz mumkin. Masalan: ota, ona, aka, opa, bobo, buvi yoki boshqa yaqin insonlar.",
+  charactersExplain2:
+    "Ular hikoyada qahramon sifatida tasvirlanishi uchun kimligi, ismi va suratlari kerak bo‘ladi.",
+  charactersToggle: "Qo‘shimcha qahramonlar qo‘shmoqchiman",
   characterRelationLabel: "Kimligi",
-  characterRelationPlaceholder: "masalan: Ona",
+  characterRelationPlaceholder: "Masalan: Otasi",
   characterNameLabel: "Ismi",
-  characterNamePlaceholder: "masalan: Dilnoza",
+  characterNamePlaceholder: "Masalan: Sherzodbek",
+  charactersPhotosLabel: "Suratlari",
+  charactersPhotoHint:
+    "Ushbu inson hikoyada tasvirlanishi uchun kamida 2 ta aniq va sifatli surat yuklang.",
   addCharacter: "+ Qo‘shimcha qahramon qo‘shish",
   removeCharacter: "O‘chirish",
   characterNeedsBoth:
-    "Har bir qahramon uchun kimligi va ismini yozing yoki qatorni o‘chiring.",
+    "Har bir inson uchun kimligi va ismini yozing yoki qatorni o‘chiring.",
 
   childPhotos: "Farzand suratlari",
   childPhotosHint: "Yuzi aniq ko'rinadigan, yaxshi yoritilgan 3–5 ta surat",
-  characterPhotosSection: "Qo‘shimcha qahramonlar suratlari",
-  characterMinPhotos: "Kamida 2 ta surat yuklang",
   characterPhotosMoreNeeded: (who: string) => `${who} uchun kamida 2 ta surat kerak`,
   atLeastPhotos: (min: number) => `Kamida ${min} ta surat kerak`,
   photosEnough: (n: number) => `${n} ta surat — yetarli`,
@@ -579,19 +594,27 @@ const CHROME_RU: typeof CHROME_EN = {
   esdalikRelationshipError: "Пожалуйста, выберите, кем он (она) приходится ребёнку.",
   esdalikVoiceError: "Пожалуйста, выберите, оставлять ли голосовую память.",
   esdalikPhotoError: "Настоящая фотография ребёнка с автором памяти обязательна.",
-  wantsCharacters: "Добавить других персонажей",
+  charactersTitle: "Добавить людей, которые появятся в истории",
+  charactersExplain1: (multi: boolean): string =>
+    multi
+      ? "Здесь вы можете добавить близких людей, которых хотите видеть в истории рядом с вашими детьми — например, отца, мать, старшего брата или сестру, дедушку, бабушку или другого близкого человека."
+      : "Здесь вы можете добавить близких людей, которых хотите видеть в истории рядом с вашим ребёнком — например, отца, мать, старшего брата или сестру, дедушку, бабушку или другого близкого человека.",
+  charactersExplain2:
+    "Нам понадобятся их роль, имя и фотографии, чтобы они были нарисованы как персонажи истории.",
+  charactersToggle: "Хочу добавить людей в историю",
   characterRelationLabel: "Кем приходится",
-  characterRelationPlaceholder: "например: мама",
+  characterRelationPlaceholder: "Например: отец",
   characterNameLabel: "Имя",
-  characterNamePlaceholder: "например: Дилноза",
-  addCharacter: "+ Добавить ещё персонажа",
+  characterNamePlaceholder: "Например: Шерзодбек",
+  charactersPhotosLabel: "Их фотографии",
+  charactersPhotoHint:
+    "Загрузите минимум 2 чётких, качественных фотографии, чтобы этого человека можно было нарисовать в истории.",
+  addCharacter: "+ Добавить ещё человека",
   removeCharacter: "Удалить",
-  characterNeedsBoth: "Укажите, кем приходится каждый персонаж, и его имя, либо удалите запись.",
+  characterNeedsBoth: "Укажите, кем приходится каждый человек, и его имя, либо удалите запись.",
 
   childPhotos: "Фотографии ребёнка",
   childPhotosHint: "3–5 чётких, хорошо освещённых фотографий с видимым лицом",
-  characterPhotosSection: "Фотографии дополнительных персонажей",
-  characterMinPhotos: "Загрузите минимум 2 фотографии",
   characterPhotosMoreNeeded: (who: string) => `Для «${who}» ещё нужно минимум 2 фотографии`,
   atLeastPhotos: (min: number) => `Требуется минимум ${min} фотографии`,
   photosEnough: (n: number) => `${n} фото — достаточно`,
@@ -792,18 +815,8 @@ const MAX_CHILD_PHOTOS = 5;
 function isStepComplete(stepId: StepId, data: FormData): boolean {
   switch (stepId) {
     case "personal-touch": {
-      // Every additional-character entry the customer started must be
-      // fully named (relationship + name) or removed — a half-filled
-      // entry can't generate a usable photo block later.
-      const charactersOk =
-        !data.wantsCharacters ||
-        (data.additionalCharacters.length > 0 &&
-          data.additionalCharacters.every(additionalCharacterNamed));
-      // "Esdalik sahifasi": the keepsake words are required, and the author
-      // must be fully identified — the fine-grained "Bolaga kim bo'ladi?"
-      // relationship (with a written label when "Boshqa"), a given name,
-      // an explicit voice yes/no answer, and the real keepsake photo (moved
-      // here from the old photos step).
+      // "Esdalik sahifasi" only. Additional characters moved to the photo
+      // step — `giftFrom` is no longer collected on the web.
       const wordsOk = data.personalMessage.trim().length > 0;
       const keepsakeAuthorOk =
         data.keepsakeRelationship !== "" &&
@@ -812,25 +825,28 @@ function isStepComplete(stepId: StepId, data: FormData): boolean {
         data.storyGiverDisplayName.trim().length > 0;
       const voiceAnswered = data.keepsakeWantsVoice !== null;
       const keepsakePhotoOk = data.specialPhoto != null;
-      // `giftFrom` is no longer collected on the web — not a completion gate.
-      return wordsOk && keepsakeAuthorOk && voiceAnswered && keepsakePhotoOk && charactersOk;
+      return wordsOk && keepsakeAuthorOk && voiceAnswered && keepsakePhotoOk;
     }
     case "photos": {
       // Only photos actually accepted into state count (a rejected file
       // never reaches state). EVERY child needs its OWN at least
-      // MIN_CHILD_PHOTOS — a shared/pooled count is not enough once there
-      // is more than one child. Each named additional character needs at
-      // least MIN_CHARACTER_PHOTOS before the step can advance. (The real
-      // keepsake photo now lives on the Esdalik step, not here.)
+      // MIN_CHILD_PHOTOS. Additional characters ("Qo'shimcha qahramonlar")
+      // now live here, directly after the child photos: every started
+      // entry must be fully named AND carry at least MIN_CHARACTER_PHOTOS.
+      // (The real keepsake photo lives on the Esdalik step, not here.)
       const childPhotosOk = data.children.every(
         (c) => (c.photos?.length ?? 0) >= MIN_CHILD_PHOTOS,
       );
+      const charactersNamedOk =
+        !data.wantsCharacters ||
+        (data.additionalCharacters.length > 0 &&
+          data.additionalCharacters.every(additionalCharacterNamed));
       const characterPhotosOk =
         !data.wantsCharacters ||
         data.additionalCharacters
           .filter(additionalCharacterNamed)
           .every((c) => c.photos.length >= MIN_CHARACTER_PHOTOS);
-      return childPhotosOk && characterPhotosOk;
+      return childPhotosOk && charactersNamedOk && characterPhotosOk;
     }
     case "review": {
       // Phone + book language + an answered delivery question. If the
@@ -907,10 +923,10 @@ export default function PersonalizedBookOrderForm({
     relationPlaceholder: t.characterRelationPlaceholder,
     nameLabel: t.characterNameLabel,
     namePlaceholder: t.characterNamePlaceholder,
+    photosLabel: t.charactersPhotosLabel,
+    photoHint: t.charactersPhotoHint,
     addLabel: t.addCharacter,
     removeLabel: t.removeCharacter,
-    photosSectionLabel: t.characterPhotosSection,
-    minPhotosHint: t.characterMinPhotos,
     removePhotoLabel: t.removePhoto,
     atLeastPhotos: t.atLeastPhotos,
     photosEnough: t.photosEnough,
@@ -1817,20 +1833,9 @@ export default function PersonalizedBookOrderForm({
                 )}
               />
 
-              <SwitchRow
-                label={t.wantsCharacters}
-                checked={data.wantsCharacters}
-                onChange={toggleWantsCharacters}
-              />
-              {data.wantsCharacters && (
-                <AdditionalCharacterFields
-                  characters={data.additionalCharacters}
-                  copy={characterCopy}
-                  onPatch={patchAdditionalCharacter}
-                  onAdd={addAdditionalCharacter}
-                  onRemove={removeAdditionalCharacter}
-                />
-              )}
+              {/* "Qo'shimcha qahramonlar" now lives on the photo step,
+                  directly after "Farzandingiz suratlari" — not here in
+                  the Esdalik section. */}
 
               {showStepError && !canContinue() && (
                 <p role="alert" className="font-sans text-[13px] text-state-error">
@@ -1846,7 +1851,7 @@ export default function PersonalizedBookOrderForm({
                           ? t.esdalikVoiceError
                           : data.specialPhoto == null
                             ? t.esdalikPhotoError
-                            : t.characterNeedsBoth}
+                            : ""}
                 </p>
               )}
             </>
@@ -1903,22 +1908,41 @@ export default function PersonalizedBookOrderForm({
                 </div>
               )}
 
-              {/* The real keepsake photo is collected in the "Esdalik
-                  sahifasi" section on the personal-touch step, together with
-                  the keepsake author and words — not here. */}
+              {/* The real keepsake photo ("Esdalik surati") is collected in
+                  the Esdalik section on the personal-touch step, not here. */}
 
-              {/* One upload block per NAMED additional character — the
-                  section is generated straight from `additionalCharacters`
-                  and disappears entirely when none are named. */}
-              {data.wantsCharacters && (
-                <AdditionalCharacterPhotos
-                  characters={data.additionalCharacters}
-                  copy={characterCopy}
-                  onPatchPhotos={(id, photos) =>
-                    patchAdditionalCharacter(id, { photos })
-                  }
+              {/* ── QO'SHIMCHA QAHRAMONLAR — real people to appear INSIDE
+                     the story, directly after "Farzandingiz suratlari".
+                     Relocated here from the Esdalik section; the only
+                     additional-characters block in the form. Each person is
+                     one card: Kimligi + Ismi + that person's own photos. */}
+              <div className="space-y-3 border-t border-border-subtle pt-6">
+                <div className="space-y-1.5">
+                  <p className="font-sans text-[13px] font-semibold text-text-primary">
+                    {t.charactersTitle}
+                  </p>
+                  <p className="font-sans text-[12px] leading-[1.5] text-text-secondary">
+                    {t.charactersExplain1(data.children.length > 1)}
+                  </p>
+                  <p className="font-sans text-[12px] leading-[1.5] text-text-secondary">
+                    {t.charactersExplain2}
+                  </p>
+                </div>
+                <SwitchRow
+                  label={t.charactersToggle}
+                  checked={data.wantsCharacters}
+                  onChange={toggleWantsCharacters}
                 />
-              )}
+                {data.wantsCharacters && (
+                  <AdditionalCharacterCards
+                    characters={data.additionalCharacters}
+                    copy={characterCopy}
+                    onPatch={patchAdditionalCharacter}
+                    onAdd={addAdditionalCharacter}
+                    onRemove={removeAdditionalCharacter}
+                  />
+                )}
+              </div>
 
               {showStepError && !canContinue() && (
                 <p role="alert" className="font-sans text-[13px] text-state-error">
@@ -1931,6 +1955,14 @@ export default function PersonalizedBookOrderForm({
                       return data.children.length <= 1
                         ? t.photosMoreNeeded(MIN_CHILD_PHOTOS - have)
                         : t.childPhotosMoreNeeded(shortChild.name.trim() || t.childPhotos);
+                    }
+                    // a started additional-character entry left half-filled
+                    if (
+                      data.wantsCharacters &&
+                      (data.additionalCharacters.length === 0 ||
+                        !data.additionalCharacters.every(additionalCharacterNamed))
+                    ) {
+                      return t.characterNeedsBoth;
                     }
                     const shortCharacter = data.additionalCharacters
                       .filter(additionalCharacterNamed)
