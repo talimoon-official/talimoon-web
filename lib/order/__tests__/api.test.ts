@@ -277,6 +277,94 @@ describe("buildSubmitPayload", () => {
     expect(payload.profile.storyGiver).toBeUndefined();
   });
 
+  it("forwards the fine-grained keepsakeRelationship + voiceRequested alongside the coarse type", () => {
+    const payload = buildSubmitPayload({
+      ...BASE,
+      declaredArtifacts: {
+        childPhotoCount: 1,
+        wantsSpecialPhoto: true,
+        characterPhotoCount: 0,
+        hasReceipt: false,
+        hasFinalVoice: true,
+      },
+      personalMessage: "Esdalik so'zlari",
+      storyGiver: {
+        relationshipType: "aunt-uncle",
+        keepsakeRelationship: "paternal_uncle",
+        displayName: "Amakijon",
+        presentedAs: "other_person",
+        voiceRequested: true,
+      },
+    });
+    expect(payload.profile.storyGiver).toEqual({
+      relationshipType: "aunt-uncle",
+      keepsakeRelationship: "paternal_uncle",
+      displayName: "Amakijon",
+      presentedAs: "other_person",
+      voiceRequested: true,
+    });
+  });
+
+  it("keeps the keepsake customLabel for the fine-grained 'other' code, drops it otherwise", () => {
+    const other = buildSubmitPayload({
+      ...BASE,
+      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: true, characterPhotoCount: 0, hasReceipt: false },
+      storyGiver: {
+        relationshipType: "other",
+        keepsakeRelationship: "other",
+        customLabel: "  amakivachcham  ",
+        displayName: "Aziza",
+        presentedAs: "other_person",
+        voiceRequested: false,
+      },
+    });
+    expect(other.profile.storyGiver).toEqual({
+      relationshipType: "other",
+      keepsakeRelationship: "other",
+      displayName: "Aziza",
+      presentedAs: "other_person",
+      customLabel: "amakivachcham",
+      voiceRequested: false,
+    });
+
+    const uncle = buildSubmitPayload({
+      ...BASE,
+      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: true, characterPhotoCount: 0, hasReceipt: false },
+      storyGiver: {
+        relationshipType: "aunt-uncle",
+        keepsakeRelationship: "maternal_uncle",
+        customLabel: "ignored",
+        displayName: "Tog'ajon",
+        presentedAs: "other_person",
+      },
+    });
+    expect(uncle.profile.storyGiver).toEqual({
+      relationshipType: "aunt-uncle",
+      keepsakeRelationship: "maternal_uncle",
+      displayName: "Tog'ajon",
+      presentedAs: "other_person",
+    });
+  });
+
+  it("ignores an invalid keepsakeRelationship value (keeps only the coarse type)", () => {
+    const payload = buildSubmitPayload({
+      ...BASE,
+      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: true, characterPhotoCount: 0, hasReceipt: false },
+      storyGiver: {
+        relationshipType: "parent",
+        // @ts-expect-error — deliberately invalid to prove it is filtered out
+        keepsakeRelationship: "uncle",
+        displayName: "Dada",
+        presentedAs: "self",
+      },
+    });
+    expect(payload.profile.storyGiver).toEqual({
+      relationshipType: "parent",
+      displayName: "Dada",
+      presentedAs: "self",
+    });
+  });
+
   it("omits location entirely when the customer set no pin", () => {
     const payload = buildSubmitPayload({
       ...BASE,

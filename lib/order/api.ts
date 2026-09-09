@@ -15,6 +15,11 @@
  *    preflight before it ever reached the server.
  */
 
+import {
+  isKeepsakeRelationship,
+  type KeepsakeRelationship,
+} from "@/lib/order/keepsakeRelationship";
+
 const API_BASE = process.env.NEXT_PUBLIC_INTAKE_API_URL;
 
 export type ArtifactKind =
@@ -38,9 +43,19 @@ export type ArtifactKind =
  */
 export interface StoryGiverPayload {
   relationshipType: RelationshipPayload["type"];
+  /**
+   * The NEW fine-grained, child-relative canonical keepsake relationship
+   * ("Esdalik sahifasi"). Optional in the contract for legacy / bot
+   * channels; the website always sends it. `relationshipType` above stays
+   * the coarse legacy bucket (a deterministic downcast of this), never
+   * reinterpreted. See `lib/order/keepsakeRelationship.ts`.
+   */
+  keepsakeRelationship?: KeepsakeRelationship;
   customLabel?: string;
   displayName: string;
   presentedAs: "self" | "other_person";
+  /** the customer's explicit "record it in your own voice?" answer */
+  voiceRequested?: boolean;
 }
 
 /**
@@ -295,18 +310,25 @@ export function buildSubmitPayload(args: BuildSubmitPayloadArgs): SubmitOrderPay
 }
 
 /** Keep only the structured story-giver shape the contract carries. Drops a
- *  `customLabel` unless the type is "other" and it is non-empty. Returns
- *  `undefined` (payload omits the key) when there is no usable displayName. */
+ *  `customLabel` unless the relationship is "other" and it is non-empty.
+ *  Returns `undefined` (payload omits the key) when there is no usable
+ *  displayName. The fine-grained `keepsakeRelationship` is passed through
+ *  when valid; `voiceRequested` only when it is an explicit boolean. */
 function storyGiverForPayload(sg: StoryGiverPayload | undefined): StoryGiverPayload | undefined {
   const displayName = (sg?.displayName ?? "").trim();
   if (!sg || displayName.length === 0) return undefined;
-  const customLabel =
-    sg.relationshipType === "other" ? (sg.customLabel ?? "").trim() || undefined : undefined;
+  const isOther =
+    sg.relationshipType === "other" || sg.keepsakeRelationship === "other";
+  const customLabel = isOther ? (sg.customLabel ?? "").trim() || undefined : undefined;
   return {
     relationshipType: sg.relationshipType,
     displayName,
     presentedAs: sg.presentedAs,
+    ...(isKeepsakeRelationship(sg.keepsakeRelationship)
+      ? { keepsakeRelationship: sg.keepsakeRelationship }
+      : {}),
     ...(customLabel ? { customLabel } : {}),
+    ...(typeof sg.voiceRequested === "boolean" ? { voiceRequested: sg.voiceRequested } : {}),
   };
 }
 
