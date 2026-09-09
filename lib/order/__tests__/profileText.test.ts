@@ -48,8 +48,9 @@ const FULL = child({
   desiredValues: ["patience", "gratitude"],
   emotionalBridge: {
     privateContext: "otasi ish tufayli uzoqda",
-    intendedFeeling: "sevib turishini his qilsin",
-    heartMessage: "Seni juda sog'indim",
+    childExperience: "menimcha, ba'zan meni sog'inadi",
+    intendedFeeling: "mehrim kamaymaganini his qilsin",
+    sensitivities: "ajralish haqida ochiq gapirilmasin",
   },
 });
 
@@ -114,24 +115,58 @@ describe("profileText — order-level serialisers", () => {
     expect(orderDesiredValueLabels([child()], "uz")).toBeUndefined();
   });
 
-  it("emotional bridge: single child — all three parts, no name header", () => {
+  it("Ko'ngil so'zlari: the four numbered parts under the header + standing note", () => {
     const out = orderEmotionalText([FULL], "uz")!;
-    expect(out).toContain("otasi ish tufayli uzoqda");
-    expect(out).toContain("sevib turishini his qilsin");
-    expect(out).toContain("Seni juda sog'indim");
-    expect(out.startsWith("Madinabonu:")).toBe(false);
+    // production-facing header + "not copied into the book" note, once
+    expect(out).toContain("NOZIK VAZIYAT / HISSIY KONTEKST");
+    expect(out).toContain("kitobga so'zma-so'z ko'chirilmaydi");
+    // the four psychologically distinct pieces, numbered, verbatim
+    expect(out).toContain("1. Vaziyat: otasi ish tufayli uzoqda");
+    expect(out).toContain(
+      "2. Bolaning holati haqidagi ota-ona / buyurtmachi kuzatuvi: menimcha, ba'zan meni sog'inadi",
+    );
+    expect(out).toContain("3. Istalgan hissiy yo'nalish: mehrim kamaymaganini his qilsin");
+    expect(out).toContain(
+      "4. Ehtiyotkor yondashiladigan mavzular: ajralish haqida ochiq gapirilmasin",
+    );
+    // Step 2's LABEL is a parent observation, never "the child's mental state"
+    expect(out).toContain("ota-ona / buyurtmachi kuzatuvi");
+    expect(out).not.toContain("Bolaning ruhiy holati");
+    // no direct quote to the child, no "one sentence from your heart" leftover
+    expect(out).not.toContain("Yurakdan");
   });
 
-  it("emotional bridge: multi-child — each child's context is name-attributed", () => {
-    const a = child({ id: "a", name: "Madinabonu", emotionalBridge: { heartMessage: "A gap" } });
-    const b = child({ id: "b", name: "Sherzod", emotionalBridge: { heartMessage: "B gap" } });
+  it("Ko'ngil so'zlari: a single filled step still serialises (no forced problem)", () => {
+    const happy = child({ emotionalBridge: { intendedFeeling: "mehr va yaqinlik" } });
+    const out = orderEmotionalText([happy], "uz")!;
+    expect(out).toContain("3. Istalgan hissiy yo'nalish: mehr va yaqinlik");
+    expect(out).not.toContain("1. Vaziyat:");
+  });
+
+  it("Ko'ngil so'zlari: multi-child — each child's context is name-attributed, in order", () => {
+    const a = child({ id: "a", name: "Madinabonu", emotionalBridge: { privateContext: "A vaziyat" } });
+    const b = child({ id: "b", name: "Sherzod", emotionalBridge: { privateContext: "B vaziyat" } });
     const out = orderEmotionalText([a, b], "uz")!;
     expect(out).toContain("Madinabonu:");
     expect(out).toContain("Sherzod:");
-    expect(out.indexOf("A gap")).toBeLessThan(out.indexOf("Sherzod:"));
+    expect(out.indexOf("A vaziyat")).toBeLessThan(out.indexOf("Sherzod:"));
   });
 
-  it("emotional bridge: undefined when no child filled it", () => {
+  it("Ko'ngil so'zlari: undefined when no child filled any of the four fields", () => {
     expect(orderEmotionalText([child()], "uz")).toBeUndefined();
+    expect(orderEmotionalText([child({ emotionalBridge: { done: true } })], "uz")).toBeUndefined();
+  });
+
+  it("Ko'ngil so'zlari: EN and RU carry the same four distinctions", () => {
+    const en = orderEmotionalText([FULL], "en")!;
+    expect(en).toContain("SENSITIVE SITUATION / EMOTIONAL CONTEXT");
+    expect(en).toContain("1. Situation:");
+    expect(en).toContain("2. Parent's / buyer's observation about the child:");
+    expect(en).toContain("3. Desired emotional direction:");
+    expect(en).toContain("4. Themes to approach with care:");
+    const ru = orderEmotionalText([FULL], "ru")!;
+    expect(ru).toContain("ДЕЛИКАТНАЯ СИТУАЦИЯ / ЭМОЦИОНАЛЬНЫЙ КОНТЕКСТ");
+    expect(ru).toContain("1. Ситуация:");
+    expect(ru).toContain("4. Темы, требующие бережного подхода:");
   });
 });

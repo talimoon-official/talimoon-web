@@ -244,24 +244,33 @@ export function setGrowthItemContext(
 }
 
 /**
- * "Yuragingizda qolgan gaplar" — the emotional bridge. Three
- * conceptually separate pieces, gathered per child, every one
- * optional.
+ * "Ko'ngil so'zlari" — the private emotional-context bridge. FOUR
+ * psychologically distinct pieces, gathered per child, every one
+ * optional. This is NOT therapy, NOT a diagnosis, and NOT a message to
+ * the child (that is Esdalik Sahifasi).
  *
- * `privateContext` may be a difficult adult account (distance, an
- * argument, a delicate family matter). It stays PRIVATE: it is never
- * shown to the child in the form and never copied into the story.
- * It is used only to understand the safe feeling to convey — and
- * never to blame a caregiver, take a side, or press the child to
- * forgive or love someone.
+ * Everything here stays PRIVATE: it is never shown to the child in the
+ * form and never copied into the story. It is used only to choose the
+ * story's emotional tone with care — never to blame a caregiver, take a
+ * side, assert what the child "definitely" thinks, or press the child to
+ * forgive or love someone. The four fields serialise into
+ * `profile.extraInfo` (a single free-text field) via
+ * `orderEmotionalText` — the backend contract is unchanged.
  */
 export interface EmotionalBridge {
-  /** Q1 — the real situation, in the adult's words. Private context. */
+  /** Step 1 — the real situation, in the adult's own words. */
   privateContext?: string;
-  /** Q2 — what the adult hopes the child feels from the story. */
+  /** Step 2 — the ADULT'S OBSERVATION of how the child might be
+   *  experiencing the situation. A possibility ("Sizningcha…", "menimcha…"),
+   *  never asserted as the child's inner state. */
+  childExperience?: string;
+  /** Step 3 — the emotional direction the adult hopes the story supports
+   *  (warmth, closeness, reassurance, pride, belonging…). Not a sentence
+   *  or a message addressed to the child. */
   intendedFeeling?: string;
-  /** Q3 — one sentence the adult would say from the heart. */
-  heartMessage?: string;
+  /** Step 4 — themes TALIMOON should avoid stating openly or handle with
+   *  extra care. */
+  sensitivities?: string;
   /** True once this child's section has been seen through to the end.
    *  The section is optional, so this can be true with every field
    *  left blank. */

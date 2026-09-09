@@ -1,20 +1,28 @@
 "use client";
 
 /**
- * TALIMOON — ORDER — "Yuragingizda qolgan gaplar" (the emotional bridge).
+ * TALIMOON — ORDER — "KO‘NGIL SO‘ZLARI" (the private emotional-context flow).
  * ----------------------------------------------------------------------
- * Sits between "a personal touch" and the photo upload. Quieter and
- * more intimate than the selection-heavy phases: one narrow column,
- * generous whitespace, comfortable textareas, restrained motion, no
- * portrait card, no icons. Every field is optional and the whole
- * section can be walked straight through.
+ * Sits between "a personal touch" and the photo upload. Quiet and
+ * intimate: one narrow column, generous whitespace, one question per
+ * screen, no portrait card, no icons. Every field is optional and the
+ * whole section can be walked straight through.
  *
- * The adult may privately describe a real, sometimes difficult
- * situation. TALIMOON keeps it as CONTEXT ONLY — never shown to the
- * child here, never copied into the story. The future story carries
- * only the safe emotional meaning: love, longing, reassurance, pride,
- * gratitude, hope, connection. Never blame, never sides. Stored per
- * child; one child's private context is never shown against another.
+ * This is NOT therapy, NOT a diagnosis, and NOT a message to the child
+ * (that is Esdalik Sahifasi). Four psychologically distinct stages:
+ *
+ *   1. VAZIYAT — what is happening
+ *   2. BOLANING HIS QILISHI MUMKIN BO‘LGAN HOLAT — the ADULT'S OBSERVATION
+ *      of how the child might be experiencing it (a possibility, never
+ *      stated as fact)
+ *   3. ISTALGAN HISSIY YO‘NALISH — the emotional direction the story
+ *      should support
+ *   4. NIMAGA EHTIYOTKOR YONDASHAYLIK — themes to handle carefully
+ *
+ * The four answers are kept private, serialised into `profile.extraInfo`
+ * (a single free-text field — the backend contract is unchanged) and are
+ * never copied into the story or shown to the child. One child's context
+ * is never shown against another.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -23,31 +31,26 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { toLocale, directionFor } from "@/lib/journey/types";
 import type { ChildProfile, EmotionalBridge as Bridge } from "@/lib/order/types";
-import type { Honorific, RecipientRelationship } from "@/lib/order/relationship";
-import {
-  caregiverSelfRef,
-  emotionalBridgeCopy,
-  type Locale,
-} from "@/lib/order/emotional-bridge-copy";
+import type { RecipientRelationship } from "@/lib/order/relationship";
+import { emotionalBridgeCopy, type Locale } from "@/lib/order/emotional-bridge-copy";
 import { useFlowScroll } from "@/lib/order/useFlowScroll";
 import { JourneyProgress } from "./JourneyProgress";
 
-type Screen = "intro" | "situation" | "feeling" | "message" | "done";
+type Screen = "intro" | "situation" | "experience" | "feeling" | "sensitivity" | "done";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 export default function EmotionalBridge({
   childrenIn,
-  recipientRelationship,
-  ordererHonorific,
   entry = "start",
   onPatchChild,
   onComplete,
   onBack,
 }: {
   childrenIn: ChildProfile[];
-  recipientRelationship: RecipientRelationship;
-  ordererHonorific: Honorific | null;
+  /** kept for call-site compatibility — no longer used for copy */
+  recipientRelationship?: RecipientRelationship;
+  ordererHonorific?: unknown;
   /** "start" for the normal forward entry; "end" when the customer
    *  steps back into the section from the photo upload, so they land
    *  on the last child's acknowledgement and can walk back to edit. */
@@ -57,8 +60,9 @@ export default function EmotionalBridge({
   onBack: () => void;
 }) {
   const { language } = useLanguage();
-  const locale: Locale = toLocale(language) === "uz" ? "uz" : "en";
-  const dir = directionFor(toLocale(language));
+  const raw = toLocale(language);
+  const locale: Locale = raw === "uz" ? "uz" : raw === "ru" ? "ru" : "en";
+  const dir = directionFor(raw);
   const c = emotionalBridgeCopy(locale);
   const reduced = useReducedMotion();
 
@@ -73,8 +77,6 @@ export default function EmotionalBridge({
   const bridge: Bridge = child.emotionalBridge ?? {};
   const setBridge = (p: Partial<Bridge>) =>
     onPatchChild(child.id, { emotionalBridge: { ...bridge, ...p } });
-
-  const selfRef = caregiverSelfRef(recipientRelationship, ordererHonorific, locale);
 
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
@@ -94,12 +96,15 @@ export default function EmotionalBridge({
         setScreen("situation");
         break;
       case "situation":
+        setScreen("experience");
+        break;
+      case "experience":
         setScreen("feeling");
         break;
       case "feeling":
-        setScreen("message");
+        setScreen("sensitivity");
         break;
-      case "message":
+      case "sensitivity":
         setBridge({ done: true });
         setScreen("done");
         break;
@@ -124,14 +129,17 @@ export default function EmotionalBridge({
       case "situation":
         setScreen("intro");
         break;
-      case "feeling":
+      case "experience":
         setScreen("situation");
         break;
-      case "message":
+      case "feeling":
+        setScreen("experience");
+        break;
+      case "sensitivity":
         setScreen("feeling");
         break;
       case "done":
-        setScreen("message");
+        setScreen("sensitivity");
         break;
     }
   }
@@ -164,7 +172,7 @@ export default function EmotionalBridge({
             <ArrowLeft size={14} strokeWidth={1.75} className="rtl:-scale-x-100" />
             {c.back}
           </button>
-          <JourneyProgress locale={toLocale(language)} current={3} />
+          <JourneyProgress locale={raw} current={3} />
         </div>
 
         <p className="mb-5 font-sans text-[11.5px] font-semibold uppercase tracking-[0.18em] text-accent-primary">
@@ -186,90 +194,92 @@ export default function EmotionalBridge({
                     </p>
                   ))}
                 </div>
-                <div className="mt-9 space-y-3 border-t border-border-subtle pt-6">
-                  {c.trustNote.map((p, i) => (
-                    <p
-                      key={i}
-                      className="max-w-[54ch] font-sans text-[12.5px] leading-[1.7] text-text-muted"
-                    >
-                      {p}
-                    </p>
-                  ))}
+                <div className="mt-9 border-t border-border-subtle pt-6">
+                  <p className="max-w-[54ch] font-sans text-[12.5px] leading-[1.7] text-text-muted">
+                    {c.trustNote}
+                  </p>
                 </div>
               </div>
             ) : (
               <Heading headingRef={headingRef}>{c.nextChildLead(name)}</Heading>
             ))}
 
+          {/* Step 1 — VAZIYAT */}
           {screen === "situation" && (
             <div>
-              <Heading headingRef={headingRef}>{c.q1(name, multi)}</Heading>
-              <Help>{c.q1Help}</Help>
+              <Heading headingRef={headingRef}>{c.s1Q(name, multi)}</Heading>
+              <Help>{c.s1Help}</Help>
               <div className="mt-6">
                 <textarea
                   rows={4}
                   value={bridge.privateContext ?? ""}
                   onChange={(e) => setBridge({ privateContext: e.target.value })}
-                  placeholder={c.q1Placeholder}
+                  placeholder={c.s1Placeholder(name)}
                   className={box}
                 />
               </div>
-              <button type="button" onClick={() => setScreen("feeling")} className={skipClass}>
-                {c.q1Skip}
-                <ArrowRight size={13} strokeWidth={1.75} className="rtl:-scale-x-100" />
-              </button>
+              <SkipButton onClick={goNext}>{c.s1Skip}</SkipButton>
             </div>
           )}
 
+          {/* Step 2 — the child's POSSIBLE experience (parent observation) */}
+          {screen === "experience" && (
+            <div>
+              <Heading headingRef={headingRef}>{c.s2Q(name, multi)}</Heading>
+              <Help>{c.s2Help}</Help>
+              <div className="mt-6">
+                <textarea
+                  rows={4}
+                  value={bridge.childExperience ?? ""}
+                  onChange={(e) => setBridge({ childExperience: e.target.value })}
+                  placeholder={c.s2Placeholder}
+                  className={box}
+                />
+              </div>
+              <SkipButton onClick={goNext}>{c.s2Skip}</SkipButton>
+            </div>
+          )}
+
+          {/* Step 3 — desired emotional direction */}
           {screen === "feeling" && (
             <div>
-              <Heading headingRef={headingRef}>{c.q2(name, multi)}</Heading>
-              <Help>{c.q2Help}</Help>
+              <Heading headingRef={headingRef}>{c.s3Q(name, multi)}</Heading>
+              <Help>{c.s3Help}</Help>
               <div className="mt-6">
                 <textarea
                   rows={4}
                   value={bridge.intendedFeeling ?? ""}
                   onChange={(e) => setBridge({ intendedFeeling: e.target.value })}
-                  placeholder={c.q2Placeholder}
+                  placeholder={c.s3Placeholder}
                   className={box}
                 />
               </div>
             </div>
           )}
 
-          {screen === "message" && (
+          {/* Step 4 — sensitivity / boundaries */}
+          {screen === "sensitivity" && (
             <div>
-              <Heading headingRef={headingRef}>{c.q3(name, multi)}</Heading>
-              <Help>{c.q3Help}</Help>
-              <ul className="mt-5 space-y-1.5">
-                {c.q3Examples(selfRef).map((ex, i) => (
-                  <li
-                    key={i}
-                    className="font-serif text-[14px] italic leading-[1.6] text-text-muted"
-                  >
-                    {"“"}
-                    {ex}
-                    {"”"}
-                  </li>
-                ))}
-              </ul>
+              <Heading headingRef={headingRef}>{c.s4Q}</Heading>
+              <Help>{c.s4Help}</Help>
               <div className="mt-6">
                 <textarea
-                  rows={3}
-                  value={bridge.heartMessage ?? ""}
-                  onChange={(e) => setBridge({ heartMessage: e.target.value })}
-                  placeholder={c.q3Placeholder}
+                  rows={4}
+                  value={bridge.sensitivities ?? ""}
+                  onChange={(e) => setBridge({ sensitivities: e.target.value })}
+                  placeholder={c.s4Placeholder}
                   className={box}
                 />
               </div>
+              <SkipButton onClick={goNext}>{c.s4Skip}</SkipButton>
             </div>
           )}
 
           {screen === "done" && (
             <div>
               <Heading headingRef={headingRef}>{c.ackHeading}</Heading>
-              <p className="mt-5 max-w-[50ch] font-sans text-[15px] leading-[1.72] text-text-secondary">
-                {c.ackBody}
+              <p className="mt-6 max-w-[52ch] border-t border-border-subtle pt-6 font-sans text-[13px] leading-[1.72] text-text-muted">
+                {c.privacyExplanation}
               </p>
             </div>
           )}
@@ -316,6 +326,15 @@ function Help({ children }: { children: React.ReactNode }) {
     <p className="mt-3 max-w-[54ch] font-sans text-[13px] leading-[1.6] text-text-secondary">
       {children}
     </p>
+  );
+}
+
+function SkipButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button type="button" onClick={onClick} className={skipClass}>
+      {children}
+      <ArrowRight size={13} strokeWidth={1.75} className="rtl:-scale-x-100" />
+    </button>
   );
 }
 

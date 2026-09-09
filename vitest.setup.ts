@@ -12,3 +12,18 @@ if (typeof u.createObjectURL !== "function") {
 if (typeof u.revokeObjectURL !== "function") {
   u.revokeObjectURL = () => {};
 }
+
+// jsdom has no matchMedia — order-flow phases use it via useFlowScroll for
+// the fixed-navbar clearance. A minimal, always-"no-match" stub is enough.
+if (typeof window !== "undefined" && typeof window.matchMedia !== "function") {
+  window.matchMedia = ((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia;
+}

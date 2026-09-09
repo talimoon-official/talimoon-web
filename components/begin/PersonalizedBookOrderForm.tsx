@@ -1647,8 +1647,6 @@ export default function PersonalizedBookOrderForm({
     return (
       <EmotionalBridge
         childrenIn={data.children}
-        recipientRelationship={data.recipientRelationship}
-        ordererHonorific={data.orderer.honorific}
         entry={heartEntry}
         onPatchChild={patchChild}
         onBack={() => {
@@ -1982,9 +1980,12 @@ export default function PersonalizedBookOrderForm({
                 const eb = ch.emotionalBridge;
                 const hasPrivate =
                   !!eb &&
-                  [eb.privateContext, eb.intendedFeeling, eb.heartMessage].some(
-                    (s) => (s ?? "").trim().length > 0,
-                  );
+                  [
+                    eb.privateContext,
+                    eb.childExperience,
+                    eb.intendedFeeling,
+                    eb.sensitivities,
+                  ].some((s) => (s ?? "").trim().length > 0);
                 return (
                   <div key={ch.id} className="space-y-3">
                     <ChildWorld
@@ -2023,11 +2024,14 @@ export default function PersonalizedBookOrderForm({
                           {(eb?.privateContext ?? "").trim() && (
                             <p>{eb!.privateContext!.trim()}</p>
                           )}
+                          {(eb?.childExperience ?? "").trim() && (
+                            <p>{eb!.childExperience!.trim()}</p>
+                          )}
                           {(eb?.intendedFeeling ?? "").trim() && (
                             <p>{eb!.intendedFeeling!.trim()}</p>
                           )}
-                          {(eb?.heartMessage ?? "").trim() && (
-                            <p>“{eb!.heartMessage!.trim()}”</p>
+                          {(eb?.sensitivities ?? "").trim() && (
+                            <p>{eb!.sensitivities!.trim()}</p>
                           )}
                         </div>
                       </details>

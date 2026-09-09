@@ -113,11 +113,13 @@ export function childGrowthText(child: ChildProfile, locale: Locale): string | u
 }
 
 /**
- * "Hissiy bog'lanish" — this child's emotional bridge: the private
- * situation, the feeling the story should carry, and the one line from the
- * heart. All three are the adult's own words. Prefixed with the child's
- * name only in a multi-child order so one child's context is never read
- * against another.
+ * "Ko'ngil so'zlari" — this child's private emotional context, as four
+ * psychologically distinct pieces: the situation, the ADULT'S OBSERVATION
+ * of how the child may be experiencing it, the emotional direction the
+ * adult hopes the story supports, and the themes to handle with care. All
+ * are the adult's own words, kept verbatim, and archive-only. Prefixed
+ * with the child's name only in a multi-child order so one child's context
+ * is never read against another. Nothing here is a message to the child.
  */
 export function childEmotionalText(
   child: ChildProfile,
@@ -128,15 +130,21 @@ export function childEmotionalText(
   if (!eb) return undefined;
   const c = emotionalLabels(locale);
   const body = joinLines([
-    clean(eb.privateContext) ? `${c.context}: ${clean(eb.privateContext)}` : undefined,
-    clean(eb.intendedFeeling) ? `${c.feeling}: ${clean(eb.intendedFeeling)}` : undefined,
-    clean(eb.heartMessage) ? `${c.heart}: “${clean(eb.heartMessage)}”` : undefined,
+    clean(eb.privateContext) ? `1. ${c.situation}: ${clean(eb.privateContext)}` : undefined,
+    clean(eb.childExperience) ? `2. ${c.observation}: ${clean(eb.childExperience)}` : undefined,
+    clean(eb.intendedFeeling) ? `3. ${c.direction}: ${clean(eb.intendedFeeling)}` : undefined,
+    clean(eb.sensitivities) ? `4. ${c.sensitivity}: ${clean(eb.sensitivities)}` : undefined,
   ]);
   if (!body) return undefined;
   return withName && clean(child.name) ? `${clean(child.name)}:\n${body}` : body;
 }
 
-/** Order-level "Hissiy bog'lanish" — every child's bridge, in child order. */
+/**
+ * Order-level "Ko'ngil so'zlari" — every child's private context, in child
+ * order, under one clear production-facing header + a standing note that
+ * this text is context only and is never copied into the book verbatim.
+ * `undefined` when no child filled any of the four fields.
+ */
 export function orderEmotionalText(
   children: ChildProfile[],
   locale: Locale,
@@ -145,7 +153,9 @@ export function orderEmotionalText(
   const parts = children
     .map((ch) => childEmotionalText(ch, locale, multi))
     .filter((p): p is string => !!p);
-  return parts.length > 0 ? parts.join("\n\n") : undefined;
+  if (parts.length === 0) return undefined;
+  const c = emotionalLabels(locale);
+  return `${c.header}\n(${c.note})\n\n${parts.join("\n\n")}`;
 }
 
 /**
@@ -173,12 +183,50 @@ export function orderDesiredValueLabels(
   return out.length > 0 ? out : undefined;
 }
 
-function emotionalLabels(locale: Locale): { context: string; feeling: string; heart: string } {
+interface EmotionalLabels {
+  header: string;
+  note: string;
+  situation: string;
+  /** Step 2 label — a PARENT OBSERVATION, deliberately not "the child's
+   *  emotional state" / anything clinical. */
+  observation: string;
+  direction: string;
+  sensitivity: string;
+}
+
+function emotionalLabels(locale: Locale): EmotionalLabels {
   if (locale === "uz") {
-    return { context: "Vaziyat", feeling: "His qilishini istaydi", heart: "Yurakdan" };
+    return {
+      header: "NOZIK VAZIYAT / HISSIY KONTEKST",
+      note:
+        "Bu ma'lumotlar kitobga so'zma-so'z ko'chirilmaydi. Hikoyaning hissiy " +
+        "yondashuvini tanlash uchun kontekst. Ota-ona kuzatuvi klinik xulosa emas.",
+      situation: "Vaziyat",
+      observation: "Bolaning holati haqidagi ota-ona / buyurtmachi kuzatuvi",
+      direction: "Istalgan hissiy yo'nalish",
+      sensitivity: "Ehtiyotkor yondashiladigan mavzular",
+    };
   }
   if (locale === "ru") {
-    return { context: "Ситуация", feeling: "Что должен почувствовать", heart: "От сердца" };
+    return {
+      header: "ДЕЛИКАТНАЯ СИТУАЦИЯ / ЭМОЦИОНАЛЬНЫЙ КОНТЕКСТ",
+      note:
+        "Эта информация не переносится в книгу дословно. Это контекст для выбора " +
+        "эмоционального подхода истории. Наблюдение родителя — не клинический вывод.",
+      situation: "Ситуация",
+      observation: "Наблюдение родителя / заказчика о состоянии ребёнка",
+      direction: "Желаемое эмоциональное направление",
+      sensitivity: "Темы, требующие бережного подхода",
+    };
   }
-  return { context: "Situation", feeling: "Feeling to carry", heart: "From the heart" };
+  return {
+    header: "SENSITIVE SITUATION / EMOTIONAL CONTEXT",
+    note:
+      "This information is not copied into the book word for word. It is context " +
+      "for choosing the story's emotional approach. The parent's observation is not a clinical assessment.",
+    situation: "Situation",
+    observation: "Parent's / buyer's observation about the child",
+    direction: "Desired emotional direction",
+    sensitivity: "Themes to approach with care",
+  };
 }
