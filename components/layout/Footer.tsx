@@ -32,6 +32,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useT } from "@/lib/i18n/LanguageContext";
 import { SOCIAL, CONTACT } from "@/lib/site/social";
+import { isOrderFunnelPath } from "@/lib/site/order-funnel";
 
 // Mirrors Navbar's PERSONALIZED_BOOKS_PATH check — that page's CTA
 // reads "Create Your Story" instead of the site-wide "Order Now".
@@ -189,6 +190,11 @@ export function Footer({
   const t = useT(FOOTER_EN, FOOTER_UZ, FOOTER_RU);
   const pathname = usePathname();
   const ctaLabel = pathname === PERSONALIZED_BOOKS_PATH ? t.ctaCreateStory : t.ctaOrderNow;
+  // Inside the order funnel (`/begin`, `/begin/*`) the visitor is already
+  // ordering, so the redundant gold "Buyurtma bering" CTA is dropped —
+  // the wordmark, tagline and every informational column stay. Every
+  // other page keeps the CTA.
+  const showOrderCta = !isOrderFunnelPath(pathname);
   const exploreLinks = showHowItWorksLink
     ? EXPLORE_LINKS
     : EXPLORE_LINKS.filter((link) => link.key !== "howItWorks");
@@ -215,7 +221,7 @@ export function Footer({
               </p>
             </div>
 
-            {showTopCtaButton && (
+            {showTopCtaButton && showOrderCta && (
               <Link
                 href={ctaHref}
                 className="tm-cta-gold inline-flex h-11 shrink-0 items-center justify-center whitespace-nowrap px-4 text-[13px] font-medium tracking-[0.015em]"

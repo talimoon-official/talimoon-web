@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useLanguage, useT } from "@/lib/i18n/LanguageContext";
 import { SOCIAL } from "@/lib/site/social";
+import { isOrderFunnelPath } from "@/lib/site/order-funnel";
 
 // The personalized-books product page is the one place the CTA reads
 // "Create Your Story" instead of the site-wide "Order Now" — see
@@ -210,6 +211,10 @@ export default function Navbar({ ctaHref = "/begin" }: NavbarProps) {
   // has one committed product in view, so the general "could be any of
   // the three products" phrasing doesn't fit.
   const ctaLabel = pathname === PERSONALIZED_BOOKS_PATH ? t.ctaCreateStory : t.ctaOrderNow;
+  // Inside the order funnel (`/begin`, `/begin/*`) the visitor is already
+  // ordering, so the redundant gold "Buyurtma bering" CTA is dropped from
+  // both the desktop bar and the mobile drawer. Every other page keeps it.
+  const showOrderCta = !isOrderFunnelPath(pathname);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > SCROLL_THRESHOLD);
@@ -799,31 +804,32 @@ export default function Navbar({ ctaHref = "/begin" }: NavbarProps) {
             </Link>
           )}
 
-          {ctaHref.startsWith("#") ? (
-            <a
-              href={ctaHref}
-              className={[
-                "tm-cta-gold",
-                "inline-flex h-11 shrink-0 items-center justify-center",
-                "whitespace-nowrap px-4",
-                "text-[13px] font-medium tracking-[0.015em]",
-              ].join(" ")}
-            >
-              {ctaLabel}
-            </a>
-          ) : (
-            <Link
-              href={ctaHref}
-              className={[
-                "tm-cta-gold",
-                "inline-flex h-11 shrink-0 items-center justify-center",
-                "whitespace-nowrap px-4",
-                "text-[13px] font-medium tracking-[0.015em]",
-              ].join(" ")}
-            >
-              {ctaLabel}
-            </Link>
-          )}
+          {showOrderCta &&
+            (ctaHref.startsWith("#") ? (
+              <a
+                href={ctaHref}
+                className={[
+                  "tm-cta-gold",
+                  "inline-flex h-11 shrink-0 items-center justify-center",
+                  "whitespace-nowrap px-4",
+                  "text-[13px] font-medium tracking-[0.015em]",
+                ].join(" ")}
+              >
+                {ctaLabel}
+              </a>
+            ) : (
+              <Link
+                href={ctaHref}
+                className={[
+                  "tm-cta-gold",
+                  "inline-flex h-11 shrink-0 items-center justify-center",
+                  "whitespace-nowrap px-4",
+                  "text-[13px] font-medium tracking-[0.015em]",
+                ].join(" ")}
+              >
+                {ctaLabel}
+              </Link>
+            ))}
 
           <div ref={languageContainerRef} className="relative -ml-2">
             <button
@@ -1258,33 +1264,35 @@ export default function Navbar({ ctaHref = "/begin" }: NavbarProps) {
               </ul>
             </nav>
 
-            <div className="shrink-0 border-t border-[var(--border-subtle,rgba(42,36,29,0.12))] px-5 py-4">
-              {ctaHref.startsWith("#") ? (
-                <a
-                  href={ctaHref}
-                  onClick={closeMenu}
-                  className={[
-                    "tm-cta-gold",
-                    "flex h-12 w-full items-center justify-center",
-                    "text-[14px] font-medium tracking-[0.02em]",
-                  ].join(" ")}
-                >
-                  {ctaLabel}
-                </a>
-              ) : (
-                <Link
-                  href={ctaHref}
-                  onClick={closeMenu}
-                  className={[
-                    "tm-cta-gold",
-                    "flex h-12 w-full items-center justify-center",
-                    "text-[14px] font-medium tracking-[0.02em]",
-                  ].join(" ")}
-                >
-                  {ctaLabel}
-                </Link>
-              )}
-            </div>
+            {showOrderCta && (
+              <div className="shrink-0 border-t border-[var(--border-subtle,rgba(42,36,29,0.12))] px-5 py-4">
+                {ctaHref.startsWith("#") ? (
+                  <a
+                    href={ctaHref}
+                    onClick={closeMenu}
+                    className={[
+                      "tm-cta-gold",
+                      "flex h-12 w-full items-center justify-center",
+                      "text-[14px] font-medium tracking-[0.02em]",
+                    ].join(" ")}
+                  >
+                    {ctaLabel}
+                  </a>
+                ) : (
+                  <Link
+                    href={ctaHref}
+                    onClick={closeMenu}
+                    className={[
+                      "tm-cta-gold",
+                      "flex h-12 w-full items-center justify-center",
+                      "text-[14px] font-medium tracking-[0.02em]",
+                    ].join(" ")}
+                  >
+                    {ctaLabel}
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
         </>
       )}
