@@ -146,7 +146,7 @@ export function JourneyPremiere() {
       onFocusCapture={() => setInteracting(true)}
       onBlurCapture={() => setInteracting(false)}
     >
-      <div className="relative mx-auto min-h-[clamp(362px,93vw,426px)] max-w-[1600px] overflow-hidden sm:min-h-[680px] lg:min-h-[720px]">
+      <div className="relative mx-auto min-h-[clamp(308px,79vw,362px)] max-w-[1600px] overflow-hidden sm:min-h-[680px] lg:min-h-[720px]">
         <AnimatePresence mode="sync" initial={false}>
           <motion.div
             key={slide.world}
@@ -217,7 +217,7 @@ export function JourneyPremiere() {
           className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[var(--surface-contrast)]/55 to-transparent"
         />
 
-        <div className="relative z-10 flex min-h-[clamp(362px,93vw,426px)] flex-col justify-end px-6 pb-[4.25rem] pt-14 sm:min-h-[680px] sm:px-10 sm:pb-32 sm:pt-36 lg:min-h-[720px] lg:justify-center lg:px-16 lg:pb-24 lg:pt-28 xl:px-24">
+        <div className="relative z-10 flex min-h-[clamp(308px,79vw,362px)] flex-col justify-end px-6 pb-[4.25rem] pt-14 sm:min-h-[680px] sm:px-10 sm:pb-32 sm:pt-36 lg:min-h-[720px] lg:justify-center lg:px-16 lg:pb-24 lg:pt-28 xl:px-24">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={`${slide.world}-copy`}
