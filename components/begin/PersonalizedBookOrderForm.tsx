@@ -81,6 +81,7 @@ import Phase03 from "./Phase03";
 import EmotionalBridge from "./EmotionalBridge";
 import { SwitchRow } from "./Switch";
 import VoiceMemory from "./VoiceMemory";
+import EsdalikSection, { type EsdalikCopy } from "./EsdalikSection";
 import { ChildWorld } from "./ChildWorld";
 import { growthFull } from "@/lib/order/phase03-copy";
 import {
@@ -184,46 +185,27 @@ const CHROME_EN = {
     "Optional — habits or behaviors you'd like the story to address.",
   extraInfo: "Anything else that makes the story more personal?",
 
-  giftFrom: "Who is this gift from?",
-  giftFromHint: "Name and relationship — e.g. Mom, Nilufar",
-  giftFromError: "Please answer this to continue.",
-  wantsPersonalMessage: "Add a personal message",
-  personalMessageQ: (name: string) =>
-    `A few words for ${name}, on the last page of the book`,
-  personalMessageHint:
-    "Your affection, a wish, or a short line you'd like to say to them. This is printed on the final page.",
-  personalMessagePlaceholder: (name: string) =>
-    `For example: “${name}, I will always be proud of you. Keep your kind and brave heart. I love you very much.”`,
-  wordsRequiredError: "Please write a few words for the final page.",
-
-  storyGiverHeading: "The final page — from you to them",
-  storyGiverPresentedQ: "Whose words are these?",
-  storyGiverSelf: "Mine",
-  storyGiverOther: "Someone else's",
-  storyGiverRelationshipQ: "Their relationship to the child",
+  wordsRequiredError: "Please write the keepsake words.",
   storyGiverCustomLabelLabel: "Describe the relationship",
   storyGiverCustomLabelPlaceholder: "e.g. my cousin's child",
-  storyGiverNameLabel: "The name the child will see",
-  storyGiverNameHint: "A first name or the name they're called — e.g. Dada, Buvi, Aziza.",
-  storyGiverError: "Please choose a relationship and the name for the final page.",
-  voiceMemoryLead: "Some story givers also record these words in their own voice.",
 
   esdalikHeading: "Keepsake page",
   esdalikIntro:
     "We create a dedicated keepsake page in the book for your child. It holds the special words of someone close to them, and a real photo of the two of them together.",
   esdalikExplain:
-    "The keepsake can be from you, or from another person close to the child — for example their father, mother, grandfather or grandmother.",
+    "The keepsake can be from you, or from another person close to the child, such as their father, mother, grandfather or grandmother.",
   esdalikFromWhoQ: "Who is the keepsake from?",
   esdalikFromSelf: "From me",
   esdalikFromOther: "From another close person",
   esdalikRelationshipQ: "Their relationship to the child",
   esdalikRelationshipPlaceholder: "Choose…",
+  esdalikNameLabel: "Name",
+  esdalikNamePlaceholder: "For example: Sherzodbek",
+  esdalikNameError: "Please enter the name for the keepsake.",
   esdalikVoiceQ: "Would you like to keep these words in their own voice too?",
   esdalikVoiceYes: "Yes, add a voice keepsake",
   esdalikVoiceNo: "No, text only",
   esdalikPhotoLabel: "Photo for the keepsake",
-  esdalikPhotoHelp:
-    "Upload a real photo of the child together with the keepsake author.",
   esdalikPhotoNotIllustration:
     "This photo is not turned into an illustration. It is placed on the book's keepsake page exactly as it is.",
   esdalikRelationshipError: "Please choose their relationship to the child.",
@@ -240,13 +222,6 @@ const CHROME_EN = {
 
   childPhotos: "Child photos",
   childPhotosHint: "3–5 clear, well-lit photos showing the face",
-  wantsSpecialPhoto: "Add a special photo for the closing page",
-  specialPhoto: "A photo of the child with the person giving the book",
-  specialPhotoHint:
-    "Used on the book's final page as it really looks — not turned into a cartoon. Choose one that's clear and bright, showing the child together with the person the book is from.",
-  specialPhotoNote: "The photo is used exactly as it is. This photo is required.",
-  closingPhotoRequired:
-    "A photo of the child together with the person giving the book is needed for the final page.",
   characterPhotosSection: "Photos of the additional characters",
   characterMinPhotos: "Upload at least 2 photos",
   characterPhotosMoreNeeded: (who: string) => `${who} still needs at least 2 photos`,
@@ -394,29 +369,9 @@ const CHROME_UZ: typeof CHROME_EN = {
     "Ixtiyoriy — hikoya orqali yumshoq ishora qilinishini istagan odat yoki xatti-harakat.",
   extraInfo: "Hikoyani yanada shaxsiy qiladigan boshqa narsa bormi?",
 
-  giftFrom: "Bu sovg'a kimdan?",
-  giftFromHint: "Ism va qarindoshlik — masalan: Onasi, Nilufar",
-  giftFromError: "Davom etish uchun bu savolga javob bering.",
-  wantsPersonalMessage: "Shaxsiy xabar qo'shish",
-  personalMessageQ: (name: string) =>
-    `Kitobning so'nggi sahifasida ${name}ga bir necha so'z`,
-  personalMessageHint:
-    "Bu yerga mehringizni, tilagingizni yoki unga aytmoqchi bo‘lgan qisqa gapingizni yozing. U kitobning yakuniy sahifasiga chop etiladi.",
-  personalMessagePlaceholder: (name: string) =>
-    `Masalan: “${name}, sen bilan doimo faxrlanaman. Mehribon va jasur qalbingni asra. Seni juda yaxshi ko‘raman.”`,
-  wordsRequiredError: "Iltimos, yakuniy sahifa uchun bir necha so'z yozing.",
-
-  storyGiverHeading: "Yakuniy sahifa — sizdan unga",
-  storyGiverPresentedQ: "Bu so'zlar kimning nomidan?",
-  storyGiverSelf: "Meniki",
-  storyGiverOther: "Boshqa insonniki",
-  storyGiverRelationshipQ: "Uning bolaga qarindoshligi",
+  wordsRequiredError: "Iltimos, esdalik so‘zlarini yozing.",
   storyGiverCustomLabelLabel: "Qarindoshlikni yozing",
   storyGiverCustomLabelPlaceholder: "masalan: amakivachchamning farzandi",
-  storyGiverNameLabel: "Bola ko'radigan ism",
-  storyGiverNameHint: "Faqat ism yoki chaqiriladigan nomi — masalan: Dada, Buvi, Aziza.",
-  storyGiverError: "Iltimos, yakuniy sahifa uchun qarindoshlik va ismni tanlang.",
-  voiceMemoryLead: "Ba'zi insonlar bu so'zlarni o'z ovozida ham yozib qoldiradi.",
 
   esdalikHeading: "Esdalik sahifasi",
   esdalikIntro:
@@ -428,12 +383,13 @@ const CHROME_UZ: typeof CHROME_EN = {
   esdalikFromOther: "Boshqa yaqin inson nomidan",
   esdalikRelationshipQ: "Bolaga kim bo‘ladi?",
   esdalikRelationshipPlaceholder: "Tanlang…",
+  esdalikNameLabel: "Ismi",
+  esdalikNamePlaceholder: "Masalan: Sherzodbek",
+  esdalikNameError: "Iltimos, esdalik uchun ismni kiriting.",
   esdalikVoiceQ: "Bu so‘zlarni o‘z ovozida ham saqlab qolishni xohlaysizmi?",
   esdalikVoiceYes: "Ha, ovozli esdalik qoldiramiz",
   esdalikVoiceNo: "Yo‘q, faqat matn",
   esdalikPhotoLabel: "Esdalik uchun surat",
-  esdalikPhotoHelp:
-    "Bola bilan esdalik so‘zlari egasi birga tushgan haqiqiy suratni yuklang.",
   esdalikPhotoNotIllustration:
     "Bu surat illyustratsiyaga aylantirilmaydi. U kitobning esdalik sahifasida asl holatida joylashtiriladi.",
   esdalikRelationshipError: "Iltimos, bolaga kim bo‘lishini tanlang.",
@@ -451,13 +407,6 @@ const CHROME_UZ: typeof CHROME_EN = {
 
   childPhotos: "Farzand suratlari",
   childPhotosHint: "Yuzi aniq ko'rinadigan, yaxshi yoritilgan 3–5 ta surat",
-  wantsSpecialPhoto: "Yakuniy sahifa uchun maxsus surat qo'shish",
-  specialPhoto: "Bola va kitobni taqdim etayotgan insonning birgalikdagi surati",
-  specialPhotoHint:
-    "Bu surat kitobning yakuniy sahifasida o'zining haqiqiy ko'rinishida ishlatiladi — multfilm rasmiga aylantirilmaydi. Imkon qadar tiniq va yorug', bola hamda kitob kimdan bo'lsa, o'sha inson birga tushgan suratni tanlang.",
-  specialPhotoNote: "Surat qanday bo'lsa, shunday ishlatiladi. Bu surat majburiy.",
-  closingPhotoRequired:
-    "Yakuniy sahifa uchun bola va kitobni taqdim etayotgan inson birga tushgan surat kerak.",
   characterPhotosSection: "Qo‘shimcha qahramonlar suratlari",
   characterMinPhotos: "Kamida 2 ta surat yuklang",
   characterPhotosMoreNeeded: (who: string) => `${who} uchun kamida 2 ta surat kerak`,
@@ -604,46 +553,27 @@ const CHROME_RU: typeof CHROME_EN = {
     "Необязательно: привычки или поведение, на которые хотелось бы деликатно обратить внимание в истории.",
   extraInfo: "Что ещё сделает историю более личной?",
 
-  giftFrom: "От кого этот подарок?",
-  giftFromHint: "Имя и степень родства, например: мама, Нилуфар",
-  giftFromError: "Пожалуйста, ответьте на этот вопрос, чтобы продолжить.",
-  wantsPersonalMessage: "Добавить личное послание",
-  personalMessageQ: (name: string) =>
-    `Несколько слов для ${name} на последней странице книги`,
-  personalMessageHint:
-    "Ваша нежность, пожелание или короткая фраза. Она печатается на последней странице.",
-  personalMessagePlaceholder: (name: string) =>
-    `Например: «${name}, я всегда буду гордиться тобой. Береги своё доброе и смелое сердце. Я очень тебя люблю».`,
-  wordsRequiredError: "Пожалуйста, напишите несколько слов для последней страницы.",
-
-  storyGiverHeading: "Последняя страница — от вас к нему (ней)",
-  storyGiverPresentedQ: "Чьи это слова?",
-  storyGiverSelf: "Мои",
-  storyGiverOther: "Другого человека",
-  storyGiverRelationshipQ: "Кем он (она) приходится ребёнку",
+  wordsRequiredError: "Пожалуйста, напишите слова-память.",
   storyGiverCustomLabelLabel: "Опишите родство",
   storyGiverCustomLabelPlaceholder: "например: ребёнок моего двоюродного брата",
-  storyGiverNameLabel: "Имя, которое увидит ребёнок",
-  storyGiverNameHint: "Только имя или то, как его называют — например: Дада, Буви, Азиза.",
-  storyGiverError: "Пожалуйста, выберите родство и имя для последней страницы.",
-  voiceMemoryLead: "Некоторые записывают эти слова и своим настоящим голосом.",
 
   esdalikHeading: "Страница-память",
   esdalikIntro:
     "Мы создаём в книге отдельную страницу-память для вашего ребёнка. На ней — особые слова близкого человека и настоящая фотография, где они вместе.",
   esdalikExplain:
-    "Память может быть от вас или от другого близкого ребёнку человека — например, отца, матери, дедушки или бабушки.",
+    "Память может быть от вас или от другого близкого ребёнку человека, например: отца, матери, дедушки или бабушки.",
   esdalikFromWhoQ: "От кого эта память?",
   esdalikFromSelf: "От меня",
   esdalikFromOther: "От другого близкого человека",
   esdalikRelationshipQ: "Кем он (она) приходится ребёнку?",
   esdalikRelationshipPlaceholder: "Выберите…",
+  esdalikNameLabel: "Имя",
+  esdalikNamePlaceholder: "Например: Шерзодбек",
+  esdalikNameError: "Пожалуйста, укажите имя для страницы-памяти.",
   esdalikVoiceQ: "Хотите сохранить эти слова ещё и своим голосом?",
   esdalikVoiceYes: "Да, оставим голосовую память",
   esdalikVoiceNo: "Нет, только текст",
   esdalikPhotoLabel: "Фотография для страницы-памяти",
-  esdalikPhotoHelp:
-    "Загрузите настоящую фотографию ребёнка вместе с автором памяти.",
   esdalikPhotoNotIllustration:
     "Эта фотография не превращается в иллюстрацию. Она размещается на странице-памяти книги в неизменном виде.",
   esdalikRelationshipError: "Пожалуйста, выберите, кем он (она) приходится ребёнку.",
@@ -660,13 +590,6 @@ const CHROME_RU: typeof CHROME_EN = {
 
   childPhotos: "Фотографии ребёнка",
   childPhotosHint: "3–5 чётких, хорошо освещённых фотографий с видимым лицом",
-  wantsSpecialPhoto: "Добавить особую фотографию для последней страницы",
-  specialPhoto: "Фотография ребёнка вместе с человеком, который дарит книгу",
-  specialPhotoHint:
-    "Используется на последней странице книги в своём настоящем виде — не превращается в мультфильм. Выберите чёткий и светлый снимок, где ребёнок вместе с человеком, от которого книга.",
-  specialPhotoNote: "Фотография используется в неизменном виде. Эта фотография обязательна.",
-  closingPhotoRequired:
-    "Для последней страницы нужна фотография ребёнка вместе с человеком, который дарит книгу.",
   characterPhotosSection: "Фотографии дополнительных персонажей",
   characterMinPhotos: "Загрузите минимум 2 фотографии",
   characterPhotosMoreNeeded: (who: string) => `Для «${who}» ещё нужно минимум 2 фотографии`,
@@ -767,8 +690,11 @@ interface FormData {
   traits: TraitId[];
   weaknesses: string;
   extraInfo: string;
+  /** "Who is presenting the BOOK" — a DISTINCT concept from the Esdalik
+   *  author (whose words are on the keepsake page). No longer collected in
+   *  the web form; kept so the intake `giftFrom` contract stays intact and
+   *  is simply omitted (never fabricated, never copied from the author). */
   giftFrom: string;
-  wantsPersonalMessage: boolean;
   personalMessage: string;
   /** ── The STORY GIVER — the book-facing identity the personalized final
    *     page is presented FROM, to the child. Not necessarily the orderer.
@@ -800,7 +726,8 @@ interface FormData {
   additionalCharacters: AdditionalCharacter[];
   // Child photos live on each ChildProfile (`children[i].photos`) — one
   // upload block per child on the photos step, not a shared pool.
-  wantsSpecialPhoto: boolean;
+  /** the REAL keepsake photo (child + keepsake author), collected in the
+   *  Esdalik section; uploaded as `kind=special_photo`. */
   specialPhoto: File | null;
   /** Stable machine code (spec §41) — "" until chosen. */
   bookLanguageCode: BookLanguageCode | "";
@@ -829,9 +756,6 @@ function emptyForm(market: Market = "UZ"): FormData {
     weaknesses: "",
     extraInfo: "",
     giftFrom: "",
-    // The written words + the closing photo are REQUIRED for a personalized
-    // book — these are always-on now, not optional toggles.
-    wantsPersonalMessage: true,
     personalMessage: "",
     storyGiverPresentedAs: "self",
     keepsakeRelationship: "",
@@ -842,7 +766,6 @@ function emptyForm(market: Market = "UZ"): FormData {
     finalVoiceDurationSec: null,
     wantsCharacters: false,
     additionalCharacters: [],
-    wantsSpecialPhoto: true,
     specialPhoto: null,
     bookLanguageCode: "",
     copies: 1,
@@ -889,14 +812,8 @@ function isStepComplete(stepId: StepId, data: FormData): boolean {
         data.storyGiverDisplayName.trim().length > 0;
       const voiceAnswered = data.keepsakeWantsVoice !== null;
       const keepsakePhotoOk = data.specialPhoto != null;
-      return (
-        data.giftFrom.trim().length > 0 &&
-        wordsOk &&
-        keepsakeAuthorOk &&
-        voiceAnswered &&
-        keepsakePhotoOk &&
-        charactersOk
-      );
+      // `giftFrom` is no longer collected on the web — not a completion gate.
+      return wordsOk && keepsakeAuthorOk && voiceAnswered && keepsakePhotoOk && charactersOk;
     }
     case "photos": {
       // Only photos actually accepted into state count (a rejected file
@@ -1001,6 +918,37 @@ export default function PersonalizedBookOrderForm({
     photoTooLarge: t.photoTooLarge,
     photoNotImage: t.photoNotImage,
     photoBroken: t.photoBroken,
+  };
+
+  /** Localised static copy for <EsdalikSection> (dynamic sentences come
+   *  from lib/order/keepsakePhrase). Display language drives it, coerced
+   *  to the uz|en|ru the phrase helpers understand. */
+  const keepsakePhraseLocale: "uz" | "en" | "ru" =
+    locale === "uz" || locale === "ru" ? locale : "en";
+  const esdalikCopy: EsdalikCopy = {
+    heading: t.esdalikHeading,
+    intro: t.esdalikIntro,
+    explain: t.esdalikExplain,
+    fromWhoQ: t.esdalikFromWhoQ,
+    fromSelf: t.esdalikFromSelf,
+    fromOther: t.esdalikFromOther,
+    relationshipQ: t.esdalikRelationshipQ,
+    relationshipPlaceholder: t.esdalikRelationshipPlaceholder,
+    customLabelLabel: t.storyGiverCustomLabelLabel,
+    customLabelPlaceholder: t.storyGiverCustomLabelPlaceholder,
+    nameLabel: t.esdalikNameLabel,
+    namePlaceholder: t.esdalikNamePlaceholder,
+    voiceQ: t.esdalikVoiceQ,
+    voiceYes: t.esdalikVoiceYes,
+    voiceNo: t.esdalikVoiceNo,
+    photoLabel: t.esdalikPhotoLabel,
+    photoNotIllustration: t.esdalikPhotoNotIllustration,
+    removePhoto: t.removePhoto,
+    atLeastPhotos: t.atLeastPhotos,
+    photoTooLarge: t.photoTooLarge,
+    photoNotImage: t.photoNotImage,
+    photoBroken: t.photoBroken,
+    relationshipOptions: keepsakeRelationshipOptions(locale),
   };
 
   // ── Market resolution (spec §11–12). Priority: the explicit market
@@ -1175,6 +1123,19 @@ export default function PersonalizedBookOrderForm({
       keepsakeWantsVoice: v,
       ...(v ? {} : { finalVoice: null, finalVoiceDurationSec: null }),
     }));
+    setShowStepError(false);
+  }
+
+  /** Merge one or more Esdalik-section fields into FormData. Never touches
+   *  `giftFrom` — the keepsake author is a distinct concept. */
+  function patchEsdalik(patch: {
+    storyGiverPresentedAs?: "self" | "other_person";
+    keepsakeRelationship?: KeepsakeRelationship | "";
+    storyGiverCustomLabel?: string;
+    storyGiverDisplayName?: string;
+    personalMessage?: string;
+  }) {
+    setData((prev) => ({ ...prev, ...patch }));
     setShowStepError(false);
   }
 
@@ -1742,11 +1703,11 @@ export default function PersonalizedBookOrderForm({
     data.orderer.honorific,
     data.orderer.name,
   );
-  /** Used to personalise the "personal touch" / personal-message copy.
-   *  Falls back to a warm generic when no name is entered yet. */
-  const firstChildName =
-    data.children[0]?.name.trim() ||
-    (bookLoc === "uz" ? "farzandingiz" : bookLoc === "ru" ? "Вашего ребёнка" : "your child");
+  /** Trimmed, non-empty child first names, in order — for the Esdalik
+   *  section's name-aware message + photo copy. */
+  const esdalikChildNames = data.children
+    .map((c) => c.name.trim())
+    .filter((n) => n.length > 0);
 
   return (
     <section
@@ -1823,173 +1784,40 @@ export default function PersonalizedBookOrderForm({
 
           {step.id === "personal-touch" && (
             <>
-              <Field label={t.giftFrom} hint={t.giftFromHint}>
-                <TextInput
-                  value={data.giftFrom}
-                  onChange={(e) => update("giftFrom", e.target.value)}
-                />
-              </Field>
+              {/* "Bu sovg'a kimdan?" (giftFrom) is no longer collected here —
+                  it duplicated the Esdalik author question. The backend
+                  `giftFrom` contract is untouched (it stays optional and
+                  simply unset for web orders); it is never fabricated or
+                  copied from the Esdalik author. */}
 
-              {/* ── ESDALIK SAHIFASI — the keepsake page. One coherent
-                     section: who it is from, their exact relationship to the
-                     child, their name, the keepsake words, an optional voice
-                     recording, and the REAL keepsake photo (moved here from
-                     the old separate photos step — not duplicated). */}
-              <div className="rounded-lg border border-black/10 bg-white/50 px-4 py-4 space-y-4">
-                <div className="space-y-1.5">
-                  <p className="font-sans text-[13px] font-semibold text-text-primary">
-                    {t.esdalikHeading}
-                  </p>
-                  <p className="font-sans text-[12px] leading-[1.5] text-text-secondary">
-                    {t.esdalikIntro}
-                  </p>
-                  <p className="font-sans text-[12px] leading-[1.5] text-text-secondary">
-                    {t.esdalikExplain}
-                  </p>
-                </div>
-
-                {/* 1 — Esdalik kimning nomidan? */}
-                <div className="space-y-2">
-                  <p className="font-sans text-[13px] font-medium text-text-primary">
-                    {t.esdalikFromWhoQ}
-                  </p>
-                  <div className="flex gap-2">
-                    {(
-                      [
-                        ["self", t.esdalikFromSelf],
-                        ["other_person", t.esdalikFromOther],
-                      ] as const
-                    ).map(([val, label]) => (
-                      <button
-                        key={val}
-                        type="button"
-                        onClick={() => update("storyGiverPresentedAs", val)}
-                        className={`rounded-md border px-3 py-1.5 text-[13px] ${
-                          data.storyGiverPresentedAs === val
-                            ? "border-accent-primary bg-accent-primary/10 text-text-primary"
-                            : "border-black/15 text-text-secondary"
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 2 — Bolaga kim bo'ladi? Always asked (never inferred). */}
-                <Field label={t.esdalikRelationshipQ}>
-                  <select
-                    className={inputClass}
-                    value={data.keepsakeRelationship}
-                    onChange={(e) =>
-                      update(
-                        "keepsakeRelationship",
-                        e.target.value as KeepsakeRelationship | "",
-                      )
-                    }
-                  >
-                    <option value="" disabled>
-                      {t.esdalikRelationshipPlaceholder}
-                    </option>
-                    {keepsakeRelationshipOptions(locale).map((o) => (
-                      <option key={o.code} value={o.code}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                {data.keepsakeRelationship === "other" && (
-                  <Field label={t.storyGiverCustomLabelLabel}>
-                    <TextInput
-                      value={data.storyGiverCustomLabel}
-                      placeholder={t.storyGiverCustomLabelPlaceholder}
-                      onChange={(e) => update("storyGiverCustomLabel", e.target.value)}
-                    />
-                  </Field>
+              {/* ── ESDALIK SAHIFASI — the keepsake page, in one calm
+                     top-to-bottom flow. Extracted into <EsdalikSection> so
+                     the dynamic photo instruction + message example live in
+                     one tested place and the section is compact on mobile. */}
+              <EsdalikSection
+                copy={esdalikCopy}
+                locale={keepsakePhraseLocale}
+                childNames={esdalikChildNames}
+                presentedAs={data.storyGiverPresentedAs}
+                keepsakeRelationship={data.keepsakeRelationship}
+                customLabel={data.storyGiverCustomLabel}
+                displayName={data.storyGiverDisplayName}
+                personalMessage={data.personalMessage}
+                wantsVoice={data.keepsakeWantsVoice}
+                specialPhoto={data.specialPhoto}
+                onPatch={patchEsdalik}
+                onSetWantsVoice={setKeepsakeWantsVoice}
+                onSpecialPhotoChange={(file) => update("specialPhoto", file)}
+                renderVoice={() => (
+                  <VoiceMemory
+                    value={data.finalVoice}
+                    onChange={(file, durationSec) => {
+                      update("finalVoice", file);
+                      update("finalVoiceDurationSec", durationSec);
+                    }}
+                  />
                 )}
-
-                {/* 3 — Ismi (prefilled from the buyer's given name for "self") */}
-                <Field label={t.storyGiverNameLabel} hint={t.storyGiverNameHint}>
-                  <TextInput
-                    value={data.storyGiverDisplayName}
-                    onChange={(e) => update("storyGiverDisplayName", e.target.value)}
-                  />
-                </Field>
-
-                {/* 4 — {childName} uchun maxsus esdalik so'zlari */}
-                <div className="space-y-2">
-                  <p className="font-sans text-[13px] font-medium leading-[1.5] text-text-primary">
-                    {t.personalMessageQ(firstChildName)}
-                  </p>
-                  <p className="font-sans text-[12px] leading-[1.5] text-text-secondary">
-                    {t.personalMessageHint}
-                  </p>
-                  {/* The example lives ONLY in the placeholder — it is
-                      never written into `personalMessage`. */}
-                  <TextArea
-                    rows={4}
-                    value={data.personalMessage}
-                    onChange={(e) => update("personalMessage", e.target.value)}
-                    placeholder={t.personalMessagePlaceholder(firstChildName)}
-                  />
-                </div>
-
-                {/* 5 — Ovozli esdalik? Only "Ha" reveals the audio controls. */}
-                <div className="space-y-2">
-                  <p className="font-sans text-[13px] font-medium leading-[1.5] text-text-primary">
-                    {t.esdalikVoiceQ}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {(
-                      [
-                        [true, t.esdalikVoiceYes],
-                        [false, t.esdalikVoiceNo],
-                      ] as const
-                    ).map(([val, label]) => (
-                      <button
-                        key={String(val)}
-                        type="button"
-                        onClick={() => setKeepsakeWantsVoice(val)}
-                        className={`rounded-md border px-3 py-1.5 text-[13px] ${
-                          data.keepsakeWantsVoice === val
-                            ? "border-accent-primary bg-accent-primary/10 text-text-primary"
-                            : "border-black/15 text-text-secondary"
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                  {data.keepsakeWantsVoice === true && (
-                    <VoiceMemory
-                      value={data.finalVoice}
-                      onChange={(file, durationSec) => {
-                        update("finalVoice", file);
-                        update("finalVoiceDurationSec", durationSec);
-                      }}
-                    />
-                  )}
-                </div>
-
-                {/* 6 — Esdalik uchun surat (moved here from the photos step) */}
-                <div className="space-y-2">
-                  <PhotoUpload
-                    label={t.esdalikPhotoLabel}
-                    hint={t.esdalikPhotoHelp}
-                    removeLabel={t.removePhoto}
-                    atLeastLabel={t.atLeastPhotos}
-                    tooLargeLabel={t.photoTooLarge}
-                    notImageLabel={t.photoNotImage}
-                    brokenLabel={t.photoBroken}
-                    files={data.specialPhoto ? [data.specialPhoto] : []}
-                    max={1}
-                    onChange={(files) => update("specialPhoto", files[0] ?? null)}
-                  />
-                  <p className="font-sans text-[12px] leading-[1.5] text-text-secondary">
-                    {t.esdalikPhotoNotIllustration}
-                  </p>
-                </div>
-              </div>
+              />
 
               <SwitchRow
                 label={t.wantsCharacters}
@@ -2008,21 +1836,19 @@ export default function PersonalizedBookOrderForm({
 
               {showStepError && !canContinue() && (
                 <p role="alert" className="font-sans text-[13px] text-state-error">
-                  {data.giftFrom.trim().length === 0
-                    ? t.giftFromError
-                    : data.keepsakeRelationship === "" ||
-                        (data.keepsakeRelationship === "other" &&
-                          data.storyGiverCustomLabel.trim().length === 0)
-                      ? t.esdalikRelationshipError
-                      : data.storyGiverDisplayName.trim().length === 0
-                        ? t.storyGiverError
-                        : data.personalMessage.trim().length === 0
-                          ? t.wordsRequiredError
-                          : data.keepsakeWantsVoice === null
-                            ? t.esdalikVoiceError
-                            : data.specialPhoto == null
-                              ? t.esdalikPhotoError
-                              : t.characterNeedsBoth}
+                  {data.keepsakeRelationship === "" ||
+                  (data.keepsakeRelationship === "other" &&
+                    data.storyGiverCustomLabel.trim().length === 0)
+                    ? t.esdalikRelationshipError
+                    : data.storyGiverDisplayName.trim().length === 0
+                      ? t.esdalikNameError
+                      : data.personalMessage.trim().length === 0
+                        ? t.wordsRequiredError
+                        : data.keepsakeWantsVoice === null
+                          ? t.esdalikVoiceError
+                          : data.specialPhoto == null
+                            ? t.esdalikPhotoError
+                            : t.characterNeedsBoth}
                 </p>
               )}
             </>
