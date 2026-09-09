@@ -31,6 +31,8 @@ const COPY: AdditionalCharacterCopy = {
   photoTooLarge: "Juda katta",
   photoNotImage: "Rasm tanlang",
   photoBroken: "O‘qib bo‘lmadi",
+  compactGuide: "Old va yon tomondan, yuz aniq ko‘rinsin.",
+  compactGuideThumbAlt: "Surat bo‘yicha qo‘llanma",
 };
 
 function char(id: string, relation: string, name: string, photos: File[] = []): AdditionalCharacter {
@@ -209,6 +211,21 @@ describe("AdditionalCharacterCards — one card per person (role + name + own ph
     );
     expect(screen.getByText("2 ta surat — yetarli")).toBeInTheDocument();
     expect(screen.getByText("Yana 1 ta rasm yuklang")).toBeInTheDocument();
+  });
+
+  it("each card carries the compact photo reminder (not the full guide plate)", () => {
+    const { container } = render(
+      <AdditionalCharacterCards
+        characters={[char("a", "Otasi", "Sherzodbek"), char("b", "Buvisi", "Nilufar")]}
+        copy={COPY}
+        onPatch={vi.fn()}
+        onAdd={vi.fn()}
+        onRemove={vi.fn()}
+      />,
+    );
+    for (const cardEl of cards(container)) {
+      expect(within(cardEl).getByText(COPY.compactGuide)).toBeInTheDocument();
+    }
   });
 
   it("the illustration-reference hint is shown (NOT the Esdalik 'not an illustration' line)", () => {

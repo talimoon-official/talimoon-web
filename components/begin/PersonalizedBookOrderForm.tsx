@@ -76,6 +76,7 @@ import {
   AdditionalCharacterCards,
   type AdditionalCharacterCopy,
 } from "./AdditionalCharacters";
+import { PhotoGuidePanel, type PhotoGuideCopy } from "./PhotoGuide";
 import Phase02 from "./Phase02";
 import Phase03 from "./Phase03";
 import EmotionalBridge from "./EmotionalBridge";
@@ -257,6 +258,29 @@ const CHROME_EN = {
   photoTooLarge: "That photo is too large. Please choose one under 15 MB.",
   photoNotImage: "Please choose an image file.",
   photoBroken: "This image couldn't be read. Please choose another.",
+
+  // ── Photo guidance ("SURAT BO‘YICHA QO‘LLANMA") — the editorial block
+  //    at the top of the photos step. The supplied guide image carries no
+  //    baked-in text, so these strings are the only localised copy.
+  photoGuideEyebrow: "PHOTO GUIDE",
+  photoGuideHeading: "Help us keep your child recognizable in the book",
+  photoGuideBody:
+    "Clear photos taken from a few different angles help us preserve your child's features throughout the story.",
+  photoGuideSupport:
+    "Where you can, choose bright, filter-free photos in which the face is clearly visible.",
+  photoGuideReq1: "From the front",
+  photoGuideReq2: "From the side or 3/4",
+  photoGuideReq3: "Face clearly visible",
+  photoGuideImageAlt:
+    "Reference-photo guide: front and side angles with the face clearly visible, shown next to photos that are too dark, blurred or heavily filtered to use.",
+  photoGuideThumbAlt: "Reference-photo guide",
+  photoUploadHeading: "Upload the photos",
+  photoSlot1: "From the front",
+  photoSlot2: "Side / 3/4",
+  photoSlot3: "One more photo",
+  charactersGuideReminder:
+    "For every additional character, please also upload front and side photos with the face clearly visible.",
+  characterCompactGuide: "Front and side, with the face clearly visible.",
 
   bookLanguageQ: "Which language would you like the book in?",
   languageSoon: "Coming soon",
@@ -461,6 +485,29 @@ const CHROME_UZ: typeof CHROME_EN = {
   photoNotImage: "Iltimos, rasm faylini tanlang.",
   photoBroken: "Bu suratni o'qib bo'lmadi. Iltimos, boshqasini tanlang.",
 
+  // ── "SURAT BO‘YICHA QO‘LLANMA" — suratlar bosqichi tepasidagi qo‘llanma
+  //    bloki. Namunaviy rasmda matn yo‘q, shu sabab tarjima faqat shu yerda.
+  photoGuideEyebrow: "SURAT BO‘YICHA QO‘LLANMA",
+  photoGuideHeading:
+    "Farzandingizni kitobda o‘ziga o‘xshatishimizga yordam bering",
+  photoGuideBody:
+    "Aniq va turli burchaklardan olingan suratlar farzandingizning yuz xususiyatlarini yaxshiroq saqlashimizga yordam beradi.",
+  photoGuideSupport:
+    "Imkon qadar yuz aniq ko‘rinadigan, yorug‘ va filtrsiz suratlarni tanlang.",
+  photoGuideReq1: "Old tomondan",
+  photoGuideReq2: "Yon yoki 3/4 tomondan",
+  photoGuideReq3: "Yuz aniq ko‘rinadigan surat",
+  photoGuideImageAlt:
+    "Surat bo‘yicha qo‘llanma: yuz aniq ko‘rinadigan old va yon burchaklar hamda juda qorong‘i, xira yoki filtrli, yaroqsiz suratlar yonma-yon.",
+  photoGuideThumbAlt: "Surat bo‘yicha qo‘llanma",
+  photoUploadHeading: "Suratlarni yuklang",
+  photoSlot1: "Old tomondan",
+  photoSlot2: "Yon / 3/4 tomondan",
+  photoSlot3: "Qo‘shimcha surat",
+  charactersGuideReminder:
+    "Har bir qo‘shimcha qahramon uchun ham yuz aniq ko‘rinadigan old va yon tomondan suratlar yuklang.",
+  characterCompactGuide: "Old va yon tomondan, yuz aniq ko‘rinsin.",
+
   bookLanguageQ: "Kitob qaysi tilda bo'lishini xohlaysiz?",
   languageSoon: "Tez orada",
   numberOfCopies: "Nusxalar soni",
@@ -663,6 +710,28 @@ const CHROME_RU: typeof CHROME_EN = {
   photoTooLarge: "Эта фотография слишком большая. Пожалуйста, выберите файл до 15 МБ.",
   photoNotImage: "Пожалуйста, выберите файл изображения.",
   photoBroken: "Не удалось прочитать это изображение. Пожалуйста, выберите другое.",
+
+  // ── «РУКОВОДСТВО ПО ФОТО» — редакционный блок в начале шага с фото.
+  //    На изображении-руководстве нет текста, поэтому перевод только здесь.
+  photoGuideEyebrow: "РУКОВОДСТВО ПО ФОТО",
+  photoGuideHeading: "Помогите нам сохранить сходство ребёнка в книге",
+  photoGuideBody:
+    "Чёткие фотографии с нескольких разных ракурсов помогают нам сохранить черты лица вашего ребёнка на протяжении всей истории.",
+  photoGuideSupport:
+    "По возможности выбирайте светлые фотографии без фильтров, на которых хорошо видно лицо.",
+  photoGuideReq1: "Анфас",
+  photoGuideReq2: "Сбоку или в 3/4",
+  photoGuideReq3: "Лицо хорошо видно",
+  photoGuideImageAlt:
+    "Руководство по референс-фото: ракурсы анфас и сбоку с хорошо видимым лицом рядом с фотографиями, которые слишком тёмные, размытые или с сильными фильтрами.",
+  photoGuideThumbAlt: "Руководство по референс-фото",
+  photoUploadHeading: "Загрузите фотографии",
+  photoSlot1: "Анфас",
+  photoSlot2: "Сбоку / 3/4",
+  photoSlot3: "Ещё одна фотография",
+  charactersGuideReminder:
+    "Для каждого дополнительного персонажа также загрузите фотографии анфас и сбоку, на которых хорошо видно лицо.",
+  characterCompactGuide: "Анфас и сбоку, лицо хорошо видно.",
 
   bookLanguageQ: "На каком языке Вы хотите получить книгу?",
   languageSoon: "Скоро будет доступно",
@@ -976,6 +1045,20 @@ export default function PersonalizedBookOrderForm({
     photoTooLarge: t.photoTooLarge,
     photoNotImage: t.photoNotImage,
     photoBroken: t.photoBroken,
+    compactGuide: t.characterCompactGuide,
+    compactGuideThumbAlt: t.photoGuideThumbAlt,
+  };
+
+  /** "SURAT BO‘YICHA QO‘LLANMA" — the editorial guidance shown once, above
+   *  the child photo upload. Kept out of LanguageContext (like the pieces
+   *  above) so <PhotoGuidePanel> stays trivially testable. */
+  const photoGuideCopy: PhotoGuideCopy = {
+    eyebrow: t.photoGuideEyebrow,
+    heading: t.photoGuideHeading,
+    body: t.photoGuideBody,
+    support: t.photoGuideSupport,
+    requirements: [t.photoGuideReq1, t.photoGuideReq2, t.photoGuideReq3],
+    imageAlt: t.photoGuideImageAlt,
   };
 
   /** Localised static copy for <EsdalikSection> (dynamic sentences come
@@ -1916,6 +1999,33 @@ export default function PersonalizedBookOrderForm({
 
           {step.id === "photos" && (
             <>
+              {/* ── SURAT BO‘YICHA QO‘LLANMA — the premium guidance block,
+                     always ABOVE the upload fields so the customer grasps
+                     the requirement before opening their photo library. */}
+              <PhotoGuidePanel copy={photoGuideCopy} />
+
+              {/* Transition straight from guidance into uploading — a quiet
+                  heading and the three recommended angles, no divider, so
+                  guide and upload never read as two separate cards. */}
+              <div className="space-y-3">
+                <p className="font-sans text-[13px] font-semibold text-text-primary">
+                  {t.photoUploadHeading}
+                </p>
+                <ol className="grid gap-x-4 gap-y-1.5 sm:grid-cols-3">
+                  {[t.photoSlot1, t.photoSlot2, t.photoSlot3].map((label, i) => (
+                    <li
+                      key={label}
+                      className="flex items-baseline gap-2 font-sans text-[12px] leading-[1.5] text-text-secondary"
+                    >
+                      <span className="font-sans text-[11px] font-semibold tracking-[0.14em] text-text-muted">
+                        {`0${i + 1}`}
+                      </span>
+                      {label}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
               {/* One child ⇒ exactly the same single block as before (spec:
                   single-child UX unchanged). 2+ children ⇒ one block PER
                   CHILD, named, so it's unambiguous which photos belong to
@@ -1983,6 +2093,9 @@ export default function PersonalizedBookOrderForm({
                   </p>
                   <p className="font-sans text-[12px] leading-[1.5] text-text-secondary">
                     {t.charactersExplain2}
+                  </p>
+                  <p className="font-sans text-[12px] leading-[1.5] text-text-muted">
+                    {t.charactersGuideReminder}
                   </p>
                 </div>
                 <SwitchRow

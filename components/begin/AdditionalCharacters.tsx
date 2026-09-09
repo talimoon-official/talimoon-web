@@ -22,6 +22,7 @@ import {
   type AdditionalCharacter,
 } from "@/lib/order/types";
 import { Field, PhotoUpload, TextInput } from "./formPrimitives";
+import { PhotoGuideReminder } from "./PhotoGuide";
 
 export interface AdditionalCharacterCopy {
   relationLabel: string;
@@ -41,6 +42,10 @@ export interface AdditionalCharacterCopy {
   photoTooLarge: string;
   photoNotImage: string;
   photoBroken: string;
+  /** One-line photo reminder shown once per card — never the full guide. */
+  compactGuide: string;
+  /** Alt text for the small guide thumbnail in that reminder. */
+  compactGuideThumbAlt: string;
 }
 
 /**
@@ -100,7 +105,10 @@ export function AdditionalCharacterCards({
           </div>
 
           {/* This person's own reference photos — inside their card, never
-              a shared bucket below all characters. */}
+              a shared bucket below all characters. The compact reminder
+              (not the full guide plate) keeps a multi-character form from
+              repeating the same large image over and over. */}
+          <PhotoGuideReminder text={copy.compactGuide} thumbAlt={copy.compactGuideThumbAlt} />
           <PhotoUpload
             label={copy.photosLabel}
             hint={copy.photoHint}
