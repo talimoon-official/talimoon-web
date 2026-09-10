@@ -23,9 +23,10 @@ const BASE = {
     drawnSignature: "[[[0.1,0.2],[0.2,0.3],[0.3,0.2],[0.4,0.4]]]",
     adultAndChildAuthority: true as const,
     privacyAccepted: true as const,
-    privacyVersion: "2026-09-06",
+    privacyVersion: "2026-09-07",
     termsAccepted: true as const,
-    termsVersion: "2026-09-06",
+    termsVersion: "2026-09-07",
+    contractTemplateVersion: "2026-09-07",
     marketingConsent: false as const,
   },
 };

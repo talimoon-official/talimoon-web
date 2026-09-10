@@ -120,13 +120,19 @@ export interface SubmitOrderPayload {
     schema: "talimoon-order-consent-v1";
     acceptedAt: string;
     locale: "uz" | "en" | "ru";
+    /** the orderer's typed full name — the signature of record */
     electronicSignature: string;
+    /** the customer's ACTUAL drawn signature (canonical logical stroke JSON),
+     *  kept separate from the typed identity (spec §3) */
     drawnSignature: string;
     adultAndChildAuthority: true;
     privacyAccepted: true;
     privacyVersion: string;
     termsAccepted: true;
     termsVersion: string;
+    /** which immutable server-side contract template the accepted consent
+     *  text corresponds to; the backend fails closed on an unknown value */
+    contractTemplateVersion: string;
     marketingConsent: false;
   };
   profile: {

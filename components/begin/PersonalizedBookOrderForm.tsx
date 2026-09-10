@@ -97,8 +97,8 @@ import {
 } from "@/lib/order/keepsakeRelationship";
 import Phase01 from "./Phase01";
 import { JourneyProgress } from "./JourneyProgress";
-import { CheckRow } from "./CheckRow";
 import { OrderConsent, type OrderConsentCopy } from "./OrderConsent";
+import { signatureHasInk } from "@/lib/order/signaturePad";
 
 /** Where "Yuragingizda qolgan gaplar" (its own quiet screen, not a
  *  wizard step) slots in: after "a personal touch", before the photos. */
@@ -106,6 +106,11 @@ const PERSONAL_TOUCH_STEP = STEPS.findIndex((s) => s.id === "personal-touch");
 const PHOTOS_STEP = STEPS.findIndex((s) => s.id === "photos");
 const PRIVACY_POLICY_VERSION = "2026-09-07";
 const TERMS_VERSION = "2026-09-07";
+// Which IMMUTABLE server-side contract template the accepted consent text
+// corresponds to (talimoon-intake `src/contract/templates`). Sent with the
+// consent so the signed-contract PDF is rendered from the exact version the
+// customer saw; the backend fails closed on an unknown value.
+const CONTRACT_TEMPLATE_VERSION = "2026-09-07";
 const CONSENT_COPY: Record<"uz" | "en" | "ru", OrderConsentCopy> = {
   uz: { heading:"Buyurtma roziligi", summary:"Bitta tasdiq va qo‘lda elektron imzo — ma’lumotlaringiz faqat buyurtmani tayyorlash uchun ishlatiladi.", details:"Batafsil shartnomani o‘qish", documentTitle:"TALIMOON buyurtma va maxfiylik shartnomasi", documentBody:["Men 18 yoshdan kattaman hamda bolaning ota-onasi yoki qonuniy vakiliman yoxud ulardan ushbu buyurtma uchun aniq vakolat olganman.","TALIMOON men bergan aloqa ma’lumotlari, bola haqidagi ma’lumotlar va fotosuratlardan faqat shaxsiylashtirilgan kitobni yaratish, ishlab chiqarish, yetkazish va buyurtmani qo‘llab-quvvatlash uchun foydalanishiga roziman.","Yuborgan fotosuratlarim reklama yoki ommaviy targ‘ibotda alohida roziligimsiz ishlatilmaydi. Ushbu tasdiq meni marketing xabarlariga obuna qilmaydi.","Men Maxfiylik siyosati va Foydalanish shartlarini o‘qidim va qabul qilaman. Elektron imzo, rozilik vaqti, til va hujjat versiyalari buyurtma bilan qayd etiladi; IP-manzil imzoga biriktirilmaydi."], close:"Tushundim", accept:"Shartnomani o‘qidim, tushundim va barcha shartlarga roziman.", sign:"Elektron imzo qo‘yish", signatureTitle:"Elektron imzo", signatureHelp:"Oq maydonga barmoq yoki sichqoncha bilan imzo qo‘ying.", clear:"Tozalash", save:"Imzoni tasdiqlash", signed:"Imzo qo‘yildi — o‘zgartirish", links:"Maxfiylik siyosati · Foydalanish shartlari" },
   en: { heading:"Order consent", summary:"One confirmation and a handwritten electronic signature — your data is used only to fulfil the order.", details:"Read the detailed agreement", documentTitle:"TALIMOON Order and Privacy Agreement", documentBody:["I am at least 18 and I am the child's parent or legal guardian, or I have their clear authority for this order.","I consent to TALIMOON using the contact details, child information, and photographs I provide only to create, produce, deliver, and support the personalized book.","My photographs will not be used in advertising or public promotion without separate permission. This confirmation does not subscribe me to marketing.","I have read and accept the Privacy Policy and Terms of Service. The signature, acceptance time, language, and document versions are recorded with the order; no IP address is attached to the signature."], close:"I understand", accept:"I have read and understood the agreement and accept all its terms.", sign:"Add electronic signature", signatureTitle:"Electronic signature", signatureHelp:"Sign in the white area with your finger or mouse.", clear:"Clear", save:"Confirm signature", signed:"Signed — change", links:"Privacy Policy · Terms of Service" },
@@ -867,7 +872,7 @@ interface FormData {
   consentAuthority: boolean;
   consentPrivacy: boolean;
   consentTerms: boolean;
-  consentSignature: string;
+  consentDrawnSignature: string;
 }
 
 function emptyForm(market: Market = "UZ"): FormData {
@@ -903,7 +908,7 @@ function emptyForm(market: Market = "UZ"): FormData {
     consentAuthority: false,
     consentPrivacy: false,
     consentTerms: false,
-    consentSignature: "",
+    consentDrawnSignature: "",
   };
 }
 
@@ -985,7 +990,9 @@ function isStepComplete(stepId: StepId, data: FormData): boolean {
         data.consentAuthority &&
         data.consentPrivacy &&
         data.consentTerms &&
-        data.consentSignature.length > 20
+        // a real drawn signature — parsed + ink-measured, never a raw length
+        // check (an empty-canvas payload is still a long-ish string)
+        signatureHasInk(data.consentDrawnSignature)
       );
     default:
       return true;
@@ -1571,12 +1578,13 @@ export default function PersonalizedBookOrderForm({
               acceptedAt: consentAcceptedAtRef.current,
               locale: bookLoc,
               electronicSignature: data.orderer.name.trim(),
-              drawnSignature: data.consentSignature,
+              drawnSignature: data.consentDrawnSignature,
               adultAndChildAuthority: true,
               privacyAccepted: true,
               privacyVersion: PRIVACY_POLICY_VERSION,
               termsAccepted: true,
               termsVersion: TERMS_VERSION,
+              contractTemplateVersion: CONTRACT_TEMPLATE_VERSION,
               marketingConsent: false,
         },
         });
@@ -2829,87 +2837,19 @@ export default function PersonalizedBookOrderForm({
                 </p>
               )}
 
-              <div className="hidden" aria-hidden="true"><CheckRow id="unused-consent" checked={false} onChange={()=>undefined} label="" /></div>
               <OrderConsent
                 copy={CONSENT_COPY[bookLoc]}
                 accepted={data.consentAuthority && data.consentPrivacy && data.consentTerms}
-                signature={data.consentSignature}
+                signature={data.consentDrawnSignature}
                 onAccepted={(checked) => setData(prev => ({...prev, consentAuthority:checked, consentPrivacy:checked, consentTerms:checked}))}
-                onSignature={(value) => update("consentSignature", value)}
+                onSignature={(value) => update("consentDrawnSignature", value)}
               />
 
-              <section
-                aria-labelledby="order-consent-heading"
-                className="hidden"
-              >
-                <div className="border-b border-border-subtle pb-4">
-                  <h3
-                    id="order-consent-heading"
-                    className="font-display text-[24px] leading-tight text-text-primary"
-                  >
-                    {t.consentHeading}
-                  </h3>
-                  <p className="mt-2 font-sans text-[13.5px] leading-[1.65] text-text-secondary">
-                    {t.consentIntro}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 font-sans text-[13px] font-semibold">
-                    <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-accent-primary underline underline-offset-4">
-                      {t.privacyLink}
-                    </a>
-                    <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-accent-primary underline underline-offset-4">
-                      {t.termsLink}
-                    </a>
-                  </div>
-                </div>
-
-                <div className="mt-5 space-y-3">
-                  <CheckRow
-                    id="consent-authority"
-                    checked={data.consentAuthority}
-                    onChange={(checked) => update("consentAuthority", checked)}
-                    label={t.consentAuthority}
-                  />
-                  <CheckRow
-                    id="consent-privacy"
-                    checked={data.consentPrivacy}
-                    onChange={(checked) => update("consentPrivacy", checked)}
-                    label={t.consentPrivacy}
-                  />
-                  <CheckRow
-                    id="consent-terms"
-                    checked={data.consentTerms}
-                    onChange={(checked) => update("consentTerms", checked)}
-                    label={t.consentTerms}
-                  />
-                </div>
-
-                <div className="mt-5">
-                  <label htmlFor="consent-signature" className="font-sans text-[14px] font-semibold text-text-primary">
-                    {t.signatureLabel}
-                  </label>
-                  <input
-                    id="consent-signature"
-                    type="text"
-                    autoComplete="name"
-                    value={data.consentSignature}
-                    onChange={(event) => update("consentSignature", event.target.value)}
-                    className={`${inputClass} mt-2`}
-                  />
-                  <p className="mt-2 font-sans text-[12.5px] leading-[1.6] text-text-secondary">
-                    {t.signatureHint}
-                  </p>
-                </div>
-
-                <p className="mt-4 border-t border-border-subtle pt-4 font-sans text-[12.5px] leading-[1.6] text-text-muted">
-                  {t.consentNoMarketing}
+              {showStepError && data.receipt != null && !canContinue() && (
+                <p role="alert" className="mt-4 font-sans text-[13px] text-state-error">
+                  {t.consentError}
                 </p>
-
-                {showStepError && data.receipt != null && !canContinue() && (
-                  <p role="alert" className="mt-4 font-sans text-[13px] text-state-error">
-                    {t.consentError}
-                  </p>
-                )}
-              </section>
+              )}
             </>
           )}
 
