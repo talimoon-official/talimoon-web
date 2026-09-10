@@ -57,8 +57,8 @@ export function OrderConsent({ copy, accepted, signature, onAccepted, onSignatur
         <button type="button" onClick={()=>setSignatureOpen(true)} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#162338] px-5 font-sans text-[13px] font-bold text-white">
           <PenLine size={16}/>{hasSignature?copy.signed:copy.sign}
         </button>
-        {hasSignature&&<span className="inline-flex items-center gap-2 font-sans text-[13px] font-semibold text-accent-primary">
-          <Check size={15}/>{copy.save}
+        {hasSignature&&<span className="inline-flex items-center gap-2 font-sans text-[13px] font-semibold text-accent-primary" aria-label="Imzo qo‘yildi">
+          <Check size={15}/>
           <SignaturePreview payload={signature} className="h-8 w-24 rounded-md border border-border-subtle bg-white" />
         </span>}
       </div>}

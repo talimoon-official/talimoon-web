@@ -91,17 +91,21 @@ export function SignaturePad({
     const wrap = wrapRef.current;
     const canvas = canvasRef.current;
     if (!wrap || !canvas) return;
-    const rect = wrap.getBoundingClientRect();
+    // Measure the canvas box itself (it tracks the wrapper via `inset-0`),
+    // so the backing store matches exactly what is painted — not the
+    // wrapper's border-box, which is a couple of px larger.
+    const rect = canvas.getBoundingClientRect();
     const cssW = Math.max(1, Math.round(rect.width));
     const cssH = Math.max(1, Math.round(rect.height));
     const dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
     sizeRef.current = { w: cssW, h: cssH };
     dprRef.current = dpr;
-    canvas.style.width = `${cssW}px`;
-    canvas.style.height = `${cssH}px`;
-    // backing store in device pixels; logical drawing stays in CSS px
-    canvas.width = Math.round(cssW * dpr);
-    canvas.height = Math.round(cssH * dpr);
+    // CSS already sizes the canvas (absolute inset-0); only the backing store
+    // needs setting — in device pixels, with logical drawing kept in CSS px.
+    const bw = Math.round(cssW * dpr);
+    const bh = Math.round(cssH * dpr);
+    if (canvas.width !== bw) canvas.width = bw;
+    if (canvas.height !== bh) canvas.height = bh;
     redraw(); // resize/orientation never loses the signature (spec §17)
   }, [redraw]);
 
@@ -112,18 +116,27 @@ export function SignaturePad({
       setInkOk(modelRef.current.hasMeaningfulInk());
     }
     resize();
+    // one more pass after layout has fully settled (fonts, flex, scrollbars)
+    const raf = requestAnimationFrame(resize);
+    // coalesce ResizeObserver ticks through rAF so a sub-pixel oscillation
+    // can never spin
+    let pending = 0;
     const ro =
       typeof ResizeObserver !== 'undefined'
-        ? new ResizeObserver(() => resize())
+        ? new ResizeObserver(() => {
+            cancelAnimationFrame(pending);
+            pending = requestAnimationFrame(resize);
+          })
         : null;
     if (ro && wrapRef.current) ro.observe(wrapRef.current);
     window.addEventListener('resize', resize);
-    const mq = window.matchMedia?.(`(resolution: ${window.devicePixelRatio || 1}dppx)`);
-    mq?.addEventListener?.('change', resize);
+    window.addEventListener('orientationchange', resize);
     return () => {
+      cancelAnimationFrame(raf);
+      cancelAnimationFrame(pending);
       ro?.disconnect();
       window.removeEventListener('resize', resize);
-      mq?.removeEventListener?.('change', resize);
+      window.removeEventListener('orientationchange', resize);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -203,7 +216,9 @@ export function SignaturePad({
       <p className="font-sans text-[13px] leading-5 text-[#6d6860]">{copy.help}</p>
       <div
         ref={wrapRef}
-        className="relative min-h-[220px] flex-1 overflow-hidden rounded-2xl border border-[#b8935b]/45 bg-[#fffdf9]"
+        // ring instead of a border so the canvas (absolute inset-0) fills the
+        // wrapper exactly — no 1px layout offset between measured and painted
+        className="relative min-h-[220px] flex-1 overflow-hidden rounded-2xl bg-[#fffdf9] shadow-[inset_0_0_0_1px_rgba(184,147,91,0.45)]"
       >
         {/* baseline guide */}
         <div
