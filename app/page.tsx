@@ -1,4 +1,5 @@
 import Navbar from "@/components/layout/Navbar";
+import { HomeIntroExperience } from "@/components/intro/HomeIntroExperience";
 import { HeroSlider } from "@/components/hero/Hero";
 import { BrandValues } from "@/components/values/BrandValues";
 import { FourDoorsSection } from "@/components/our-products/FourDoorsSection";
@@ -12,6 +13,7 @@ import Footer from "@/components/layout/Footer";
 export default function Home() {
   return (
     <>
+      <HomeIntroExperience />
       <Navbar />
 
       <main>
