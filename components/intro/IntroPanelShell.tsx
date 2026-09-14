@@ -22,9 +22,12 @@
  * radius, shadow, padding, responsive sizing and reveal/layout motion
  * stay byte-identical between variants, so this is still one shared
  * shell, not a duplicated one. "dark" is the deep-navy ceremonial
- * Language Gate surface (cream text, gold accents); "light" (default)
- * is the approved warm-ivory intro-screen surface, unchanged from
- * before this prop existed.
+ * Language Gate surface (`bg-surface-contrast`, `#1C2A3A`) with a 1px
+ * TALIMOON-gold perimeter (`border-accent-primary`, `#B8935B`) — the
+ * `border` utility already on the panel below sets the width, so this
+ * only supplies the dark variant's border color; "light" (default) is
+ * the approved warm-ivory intro-screen surface, unchanged from before
+ * this prop existed.
  */
 
 import type { ReactNode } from "react";
@@ -50,7 +53,7 @@ export function IntroPanelShell({
 
   const surfaceClasses =
     variant === "dark"
-      ? "border-white/10 bg-surface-contrast"
+      ? "border-accent-primary bg-surface-contrast"
       : "border-border-subtle bg-surface-raised";
 
   return (
