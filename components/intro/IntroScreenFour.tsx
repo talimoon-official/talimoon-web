@@ -19,6 +19,9 @@
  * per its own warmer composition) and, on this closing screen, reads
  * as inviting the visitor in: same open-hand gesture, same bare
  * transparent asset, no container.
+ *
+ * MOBILE CORRECTION (2026-09-14, same day): see IntroScreenTwo.tsx —
+ * same `self-center`-below-`sm`/right-gap treatment.
  */
 
 import { useT } from "@/lib/i18n/LanguageContext";
@@ -26,7 +29,8 @@ import { IntroProgress } from "./IntroProgress";
 import { IntroCharacterMedia } from "./IntroCharacterMedia";
 import { introScreenFourCopy } from "@/lib/intro/introCopy";
 
-const CHARACTER_ZONE_WIDTH = "w-[150px] md:w-[190px] lg:w-[230px]";
+const CHARACTER_ZONE_WIDTH = "w-[130px] sm:w-[150px] md:w-[190px] lg:w-[230px]";
+const CHARACTER_RIGHT_GAP = "sm:mr-5 md:mr-7 lg:mr-9";
 
 export function IntroScreenFour({ onAdvance }: { onAdvance: () => void }) {
   const t = useT(introScreenFourCopy.en, introScreenFourCopy.uz, introScreenFourCopy.ru);
@@ -64,13 +68,13 @@ export function IntroScreenFour({ onAdvance }: { onAdvance: () => void }) {
             every other screen (see IntroCharacterMedia). */}
         <div
           aria-hidden="true"
-          className={`aspect-[2/3] shrink-0 self-end ${CHARACTER_ZONE_WIDTH}`}
+          className={`aspect-[2/3] shrink-0 self-center sm:self-end ${CHARACTER_ZONE_WIDTH} ${CHARACTER_RIGHT_GAP}`}
         >
           <IntroCharacterMedia />
         </div>
       </div>
 
-      <div className="mt-7">
+      <div className="mt-5">
         <button
           type="button"
           onClick={onAdvance}

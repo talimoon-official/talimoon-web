@@ -18,12 +18,23 @@
  * stacks (`flex-col`): text first, then the character block, still at
  * a deliberate size — not a shrunk-to-fit corner icon.
  *
- * `self-end` on the character wrapper does double duty across the
- * layout's two axes: in the stacked mobile column its cross-axis is
- * horizontal, so it right-aligns her under the text (keeping her on
- * the same side as the desktop composition); once `sm:flex-row` flips
- * the cross-axis to vertical, the same class bottom-aligns her with
- * the text baseline — grounded, not floating between top and bottom.
+ * MOBILE CORRECTION (2026-09-14, same day as the composition rebuild
+ * above): the first pass reused `self-end` (right-aligned) and the
+ * sm+ width scale unmodified below `sm` too, which on a real phone
+ * (390-430px, no `sm:` variant active) made her large AND pinned to
+ * the right — reading as oversized and disconnected from the
+ * left-aligned text above. Below `sm` she is now `self-center`
+ * (horizontally centered under the text, not right-aligned) at a
+ * smaller base width; `sm:self-end` + the original sm/md/lg widths
+ * take back over at real tablet/desktop sizes, unchanged.
+ *
+ * On sm+ she also gets a fixed right margin (`CHARACTER_RIGHT_GAP`)
+ * so her visible artwork (the asset is ~98% opaque within its own
+ * canvas — confirmed via a pixel-alpha scan, not eyeballed) sits
+ * clear of the panel's inner edge instead of flush against it; the
+ * two-zone width/height system itself (`CHARACTER_ZONE_WIDTH`) is
+ * unchanged from the original composition rebuild.
+ *
  * No card/circle/gradient/shadow behind her — the bare transparent
  * asset only (see IntroCharacterMedia).
  *
@@ -39,7 +50,8 @@ import { IntroProgress } from "./IntroProgress";
 import { IntroCharacterMedia } from "./IntroCharacterMedia";
 import { introScreenTwoCopy } from "@/lib/intro/introCopy";
 
-const CHARACTER_ZONE_WIDTH = "w-[150px] md:w-[190px] lg:w-[230px]";
+const CHARACTER_ZONE_WIDTH = "w-[130px] sm:w-[150px] md:w-[190px] lg:w-[230px]";
+const CHARACTER_RIGHT_GAP = "sm:mr-5 md:mr-7 lg:mr-9";
 
 export function IntroScreenTwo({ onAdvance }: { onAdvance: () => void }) {
   const t = useT(introScreenTwoCopy.en, introScreenTwoCopy.uz, introScreenTwoCopy.ru);
@@ -78,13 +90,13 @@ export function IntroScreenTwo({ onAdvance }: { onAdvance: () => void }) {
             directly on the ivory panel. */}
         <div
           aria-hidden="true"
-          className={`aspect-[2/3] shrink-0 self-end ${CHARACTER_ZONE_WIDTH}`}
+          className={`aspect-[2/3] shrink-0 self-center sm:self-end ${CHARACTER_ZONE_WIDTH} ${CHARACTER_RIGHT_GAP}`}
         >
           <IntroCharacterMedia />
         </div>
       </div>
 
-      <div className="mt-6">
+      <div className="mt-5">
         <button
           type="button"
           onClick={onAdvance}

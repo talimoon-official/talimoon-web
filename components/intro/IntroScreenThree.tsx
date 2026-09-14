@@ -16,6 +16,10 @@
  * presenting the wider TALIMOON world alongside the closing sentence
  * ("farzandingiz" at the center of it all), which keeps its restrained
  * typographic emphasis rather than a new color chip.
+ *
+ * MOBILE CORRECTION (2026-09-14, same day): see IntroScreenTwo.tsx —
+ * same `self-center`-below-`sm`/right-gap treatment, this screen's own
+ * (slightly larger) width constants unchanged.
  */
 
 import { useT } from "@/lib/i18n/LanguageContext";
@@ -23,7 +27,8 @@ import { IntroProgress } from "./IntroProgress";
 import { IntroCharacterMedia } from "./IntroCharacterMedia";
 import { introScreenThreeCopy } from "@/lib/intro/introCopy";
 
-const CHARACTER_ZONE_WIDTH = "w-[165px] md:w-[210px] lg:w-[255px]";
+const CHARACTER_ZONE_WIDTH = "w-[140px] sm:w-[165px] md:w-[210px] lg:w-[255px]";
+const CHARACTER_RIGHT_GAP = "sm:mr-5 md:mr-7 lg:mr-9";
 
 export function IntroScreenThree({ onAdvance }: { onAdvance: () => void }) {
   const t = useT(introScreenThreeCopy.en, introScreenThreeCopy.uz, introScreenThreeCopy.ru);
@@ -64,13 +69,13 @@ export function IntroScreenThree({ onAdvance }: { onAdvance: () => void }) {
             present composition. */}
         <div
           aria-hidden="true"
-          className={`aspect-[2/3] shrink-0 self-end ${CHARACTER_ZONE_WIDTH}`}
+          className={`aspect-[2/3] shrink-0 self-center sm:self-end ${CHARACTER_ZONE_WIDTH} ${CHARACTER_RIGHT_GAP}`}
         >
           <IntroCharacterMedia />
         </div>
       </div>
 
-      <div className="mt-6">
+      <div className="mt-5">
         <button
           type="button"
           onClick={onAdvance}
