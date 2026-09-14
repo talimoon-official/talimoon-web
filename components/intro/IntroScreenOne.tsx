@@ -35,10 +35,18 @@
  * children by HomeIntroExperience. Extracting that shell reproduced
  * this file's veil/panel classes exactly, so Screen 01 stays visually
  * identical to its locked, approved state.
+ *
+ * Copy is read via `useT` from lib/intro/introCopy.ts (the same
+ * pattern every other localized TALIMOON component uses) instead of
+ * being hard-coded, now that the intro is production-multilingual —
+ * for the active language = UZ, the rendered text is byte-identical to
+ * the original locked strings.
  */
 
 import { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import { useT } from "@/lib/i18n/LanguageContext";
+import { introScreenOneCopy } from "@/lib/intro/introCopy";
 import { IntroProgress } from "./IntroProgress";
 import { IntroCharacterMedia } from "./IntroCharacterMedia";
 
@@ -57,6 +65,7 @@ const REVEAL = {
 export function IntroScreenOne({ onAdvance }: { onAdvance: () => void }) {
   const reduced = useReducedMotion();
   const [animationDone, setAnimationDone] = useState(false);
+  const t = useT(introScreenOneCopy.en, introScreenOneCopy.uz, introScreenOneCopy.ru);
 
   // Under reduced motion the CTA's own reveal `motion.div` never
   // animates (it mounts straight into its end state via `initial:
@@ -108,13 +117,13 @@ export function IntroScreenOne({ onAdvance }: { onAdvance: () => void }) {
               className="block text-[30px] font-bold md:text-[34px] lg:text-[38px]"
               {...reveal(REVEAL.line1)}
             >
-              BIR LAHZA
+              {t.headlineLine1}
             </motion.span>
             <motion.span
               className="block text-[30px] font-extrabold md:text-[34px] lg:text-[38px]"
               {...reveal(REVEAL.line2, 6)}
             >
-              TO‘XTANG.
+              {t.headlineLine2}
             </motion.span>
           </h1>
 
@@ -124,8 +133,8 @@ export function IntroScreenOne({ onAdvance }: { onAdvance: () => void }) {
           className="mt-3 font-display text-[22px] leading-[1.32] text-text-primary md:pr-[190px] md:text-[25px] lg:pr-[250px] lg:text-[28px]"
           {...reveal(REVEAL.question)}
         >
-          Farzandingizni qanchalik
-          <br /> yaxshi bilasiz?
+          {t.questionLine1}
+          <br /> {t.questionLine2}
         </motion.p>
 
         {/* CTA — outside the reservation: compact and left-aligned,
@@ -138,7 +147,7 @@ export function IntroScreenOne({ onAdvance }: { onAdvance: () => void }) {
             disabled={!ctaReady}
             className="group inline-flex h-11 items-center gap-2 rounded-[8px] bg-surface-contrast px-5 font-sans text-[13.5px] font-semibold tracking-[0.01em] text-text-inverse transition-opacity duration-200 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-primary disabled:pointer-events-none"
           >
-            Birga bilib olamiz
+            {t.cta}
             <span
               aria-hidden="true"
               className="inline-block transition-transform duration-200 group-hover:translate-x-1"

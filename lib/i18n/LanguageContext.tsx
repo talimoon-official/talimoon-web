@@ -31,6 +31,19 @@
  * call site, so TypeScript itself fails a build that forgets one
  * (see `useT` below) rather than silently serving English or Uzbek
  * copy to a Russian-language visitor.
+ *
+ * `hasChosenLanguage`: a second, independent boolean persisted
+ * alongside the language value itself. `currentLanguage` always
+ * resolves to a real `Language` (defaulting unset storage to "UZ" so
+ * every existing consumer keeps rendering something sane before any
+ * choice exists) — which means the stored VALUE alone can never
+ * distinguish "visitor explicitly chose Uzbek" from "no one has chosen
+ * anything yet". The Language Gate (components/intro/LanguageGate.tsx)
+ * needs exactly that distinction to decide whether it should appear at
+ * all, so `setStoredLanguage` also stamps a `talimoon-language-chosen`
+ * flag on every call (Gate selection AND a later Navbar switch both
+ * count as an explicit choice). This is metadata about the one
+ * language store, not a second competing language source.
  */
 
 import { createContext, useContext, useSyncExternalStore, type ReactNode } from "react";
@@ -38,16 +51,23 @@ import { createContext, useContext, useSyncExternalStore, type ReactNode } from 
 export type Language = "UZ" | "EN" | "RU" | "AR";
 
 const STORAGE_KEY = "talimoon-language";
+const CHOSEN_KEY = "talimoon-language-chosen";
 const VALID_LANGUAGES: readonly Language[] = ["UZ", "EN", "RU", "AR"];
 
 type Listener = () => void;
 let listeners: Listener[] = [];
 let currentLanguage: Language = readStoredLanguage();
+let currentHasChosenLanguage: boolean = readHasChosenLanguage();
 
 function readStoredLanguage(): Language {
   if (typeof window === "undefined") return "UZ";
   const stored = window.localStorage.getItem(STORAGE_KEY);
   return stored && (VALID_LANGUAGES as string[]).includes(stored) ? (stored as Language) : "UZ";
+}
+
+function readHasChosenLanguage(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(CHOSEN_KEY) === "1";
 }
 
 function subscribe(listener: Listener): () => void {
@@ -65,9 +85,19 @@ function getServerSnapshot(): Language {
   return "UZ";
 }
 
+function getChosenSnapshot(): boolean {
+  return currentHasChosenLanguage;
+}
+
+function getChosenServerSnapshot(): boolean {
+  return false;
+}
+
 function setStoredLanguage(next: Language): void {
   currentLanguage = next;
+  currentHasChosenLanguage = true;
   window.localStorage.setItem(STORAGE_KEY, next);
+  window.localStorage.setItem(CHOSEN_KEY, "1");
   listeners.forEach((listener) => listener());
 }
 
@@ -94,6 +124,17 @@ export function useLanguage() {
     throw new Error("useLanguage must be used within a LanguageProvider");
   }
   return ctx;
+}
+
+/**
+ * Whether this browser has ever made an explicit language choice
+ * (Language Gate selection or a Navbar switch) — independent of
+ * `useLanguage()`'s `language` value, which always defaults to "UZ"
+ * for unset storage. Used only to decide whether the Language Gate
+ * should appear (components/intro/FirstVisitExperience.tsx).
+ */
+export function useHasChosenLanguage(): boolean {
+  return useSyncExternalStore(subscribe, getChosenSnapshot, getChosenServerSnapshot);
 }
 
 /**

@@ -12,11 +12,14 @@
  * color only, no glow).
  */
 
+import { useT } from "@/lib/i18n/LanguageContext";
 import { IntroProgress } from "./IntroProgress";
 import { IntroCharacterMedia } from "./IntroCharacterMedia";
-import { introScreenFourCopy as copy } from "@/lib/intro/introCopy";
+import { introScreenFourCopy } from "@/lib/intro/introCopy";
 
 export function IntroScreenFour({ onAdvance }: { onAdvance: () => void }) {
+  const t = useT(introScreenFourCopy.en, introScreenFourCopy.uz, introScreenFourCopy.ru);
+
   return (
     <div className="relative">
       {/* Character — quietest presence of the four: small, bottom-right,
@@ -36,22 +39,20 @@ export function IntroScreenFour({ onAdvance }: { onAdvance: () => void }) {
           tabIndex={-1}
           className="mt-5 font-sans text-[26px] font-extrabold uppercase leading-[1.15] tracking-[-0.01em] text-surface-contrast outline-none sm:text-[28px] md:text-[32px] lg:text-[36px]"
         >
-          <span className="block">{copy.headlineLine1.uz}</span>
-          <span className="block">
-            {copy.headlineLine2Prefix.uz}{" "}
-            <span className="text-accent-primary">{copy.headlineLine2Emphasis.uz}</span>
-          </span>
+          {t.headlineBefore}
+          <span className="text-accent-primary">{t.headlineEmphasis}</span>
+          {t.headlineAfter}
         </h1>
 
         <div className="mt-5 space-y-2 pr-[45px] sm:pr-[48px] md:pr-[85px] lg:pr-[100px]">
           <p className="font-display text-[17px] leading-[1.5] text-text-primary md:text-[19px]">
-            {copy.bodyLine1.uz}
+            {t.bodyLine1}
           </p>
           <p className="font-display text-[17px] leading-[1.5] text-text-primary md:text-[19px]">
-            {copy.bodyLine2.uz}
+            {t.bodyLine2}
           </p>
           <p className="font-display text-[17px] leading-[1.5] text-text-primary md:text-[19px]">
-            {copy.bodyLine3.uz}
+            {t.bodyLine3}
           </p>
         </div>
 
@@ -61,7 +62,7 @@ export function IntroScreenFour({ onAdvance }: { onAdvance: () => void }) {
             onClick={onAdvance}
             className="group inline-flex h-11 items-center gap-2 rounded-[8px] bg-surface-contrast px-5 font-sans text-[13.5px] font-semibold tracking-[0.01em] text-text-inverse transition-opacity duration-200 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-primary"
           >
-            {copy.cta.uz}
+            {t.cta}
             <span
               aria-hidden="true"
               className="inline-block transition-transform duration-200 group-hover:translate-x-1"

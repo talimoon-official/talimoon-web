@@ -14,11 +14,14 @@
  * paragraphs, no icons or cards (spec §19/§52).
  */
 
+import { useT } from "@/lib/i18n/LanguageContext";
 import { IntroProgress } from "./IntroProgress";
 import { IntroCharacterMedia } from "./IntroCharacterMedia";
-import { introScreenThreeCopy as copy } from "@/lib/intro/introCopy";
+import { introScreenThreeCopy } from "@/lib/intro/introCopy";
 
 export function IntroScreenThree({ onAdvance }: { onAdvance: () => void }) {
+  const t = useT(introScreenThreeCopy.en, introScreenThreeCopy.uz, introScreenThreeCopy.ru);
+
   return (
     <div className="relative">
       {/* Character — same approved asset, warmer/larger than Screen 02,
@@ -38,22 +41,22 @@ export function IntroScreenThree({ onAdvance }: { onAdvance: () => void }) {
           tabIndex={-1}
           className="mt-4 font-sans text-[28px] font-extrabold uppercase leading-[1.1] tracking-[-0.01em] text-surface-contrast outline-none sm:text-[30px] md:text-[34px] lg:text-[38px]"
         >
-          {copy.headline.uz}
+          {t.headline}
         </h1>
 
         <div className="mt-4 space-y-2 pr-[70px] sm:pr-[75px] md:pr-[130px] lg:pr-[150px]">
           <p className="font-display text-[17px] leading-[1.45] text-text-primary md:text-[19px]">
-            {copy.bodyChild.uz}
+            {t.bodyChild}
           </p>
           <p className="font-display text-[17px] leading-[1.45] text-text-primary md:text-[19px]">
-            {copy.bodyParent.uz}
+            {t.bodyParent}
           </p>
         </div>
 
         <p className="mt-4 pr-[70px] font-sans text-[17px] font-semibold leading-[1.4] text-text-primary sm:pr-[75px] md:pr-[130px] md:text-[19px] lg:pr-[150px]">
-          {copy.anchorPrefix.uz}{" "}
-          <span className="text-accent-primary">{copy.anchorEmphasis.uz}</span>{" "}
-          {copy.anchorSuffix.uz}
+          {t.anchorPrefix}{" "}
+          <span className="text-accent-primary">{t.anchorEmphasis}</span>
+          {t.anchorSuffix}
         </p>
 
         <div className="mt-6">
@@ -62,7 +65,7 @@ export function IntroScreenThree({ onAdvance }: { onAdvance: () => void }) {
             onClick={onAdvance}
             className="group inline-flex h-11 items-center gap-2 rounded-[8px] bg-surface-contrast px-5 font-sans text-[13.5px] font-semibold tracking-[0.01em] text-text-inverse transition-opacity duration-200 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-primary"
           >
-            {copy.cta.uz}
+            {t.cta}
             <span
               aria-hidden="true"
               className="inline-block transition-transform duration-200 group-hover:translate-x-1"
