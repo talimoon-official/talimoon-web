@@ -9,6 +9,21 @@
  * the active screen's content swaps underneath it, so the panel never
  * remounts or jumps between steps.
  *
+ * Step transition: a single `motion.div` keyed by `step`, enter-only
+ * (no `exit`/`AnimatePresence`). React's own key-change reconciliation
+ * unmounts the outgoing screen and mounts the incoming one on the same
+ * commit that updates `step` — the DOM always reflects `step`
+ * immediately. Only the incoming screen's fade-in is animated, and
+ * that's a plain opacity/transform tween the browser can run on the
+ * compositor without waiting on a JS completion callback. A previous
+ * version used `AnimatePresence mode="wait"`, which withholds mounting
+ * the incoming screen until the outgoing one's exit animation reports
+ * finished via `onExitComplete` — a real production bug, since that
+ * callback can be delayed or dropped (tab throttling, a slow device, a
+ * skipped frame) and CTA clicks would then update `step` internally
+ * while the visible screen never advanced. Navigation must never
+ * depend on a decorative animation completing.
+ *
  * First-visit state: `useIntroVisibility` (lib/intro/useIntroVisibility.ts)
  * gates on a `talimoon-intro-seen` localStorage flag, the same pattern
  * already used by the PWA install prompt. Dev/QA reset: clear that key,
@@ -29,7 +44,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useIntroVisibility } from "@/lib/intro/useIntroVisibility";
 import { IntroPanelShell } from "./IntroPanelShell";
 import { IntroScreenOne } from "./IntroScreenOne";
@@ -120,14 +135,6 @@ export function HomeIntroExperience() {
     complete();
   }
 
-  const stageVariants = reduced
-    ? undefined
-    : {
-        initial: { opacity: 0, y: 8 },
-        animate: { opacity: 1, y: 0 },
-        exit: { opacity: 0, y: -8 },
-      };
-
   return (
     <div
       ref={containerRef}
@@ -138,21 +145,17 @@ export function HomeIntroExperience() {
       className="fixed inset-0 z-[1000] outline-none"
     >
       <IntroPanelShell>
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={step}
-            variants={stageVariants}
-            initial={reduced ? false : "initial"}
-            animate="animate"
-            exit={reduced ? undefined : "exit"}
-            transition={{ duration: 0.35, ease: EASE }}
-          >
-            {step === 1 && <IntroScreenOne onAdvance={() => advanceTo(2)} />}
-            {step === 2 && <IntroScreenTwo onAdvance={() => advanceTo(3)} />}
-            {step === 3 && <IntroScreenThree onAdvance={() => advanceTo(4)} />}
-            {step === 4 && <IntroScreenFour onAdvance={handleFinish} />}
-          </motion.div>
-        </AnimatePresence>
+        <motion.div
+          key={step}
+          initial={reduced ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: EASE }}
+        >
+          {step === 1 && <IntroScreenOne onAdvance={() => advanceTo(2)} />}
+          {step === 2 && <IntroScreenTwo onAdvance={() => advanceTo(3)} />}
+          {step === 3 && <IntroScreenThree onAdvance={() => advanceTo(4)} />}
+          {step === 4 && <IntroScreenFour onAdvance={handleFinish} />}
+        </motion.div>
       </IntroPanelShell>
     </div>
   );
