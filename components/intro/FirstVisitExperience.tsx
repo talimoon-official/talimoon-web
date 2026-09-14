@@ -120,7 +120,7 @@ export function FirstVisitExperience() {
       tabIndex={-1}
       className="fixed inset-0 z-[1000] outline-none"
     >
-      <IntroPanelShell>
+      <IntroPanelShell variant={phase === "gate" ? "dark" : "light"}>
         <motion.div
           key={phase}
           initial={reduced ? false : { opacity: 0, y: 8 }}

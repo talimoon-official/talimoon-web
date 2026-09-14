@@ -17,6 +17,14 @@
  * inside it changes size between screens (framer-motion FLIP) instead
  * of jumping — disabled under reduced motion, where height should just
  * snap with no animation dependency.
+ *
+ * `variant` swaps the panel's surface colors only — the veil, shape,
+ * radius, shadow, padding, responsive sizing and reveal/layout motion
+ * stay byte-identical between variants, so this is still one shared
+ * shell, not a duplicated one. "dark" is the deep-navy ceremonial
+ * Language Gate surface (cream text, gold accents); "light" (default)
+ * is the approved warm-ivory intro-screen surface, unchanged from
+ * before this prop existed.
  */
 
 import type { ReactNode } from "react";
@@ -24,7 +32,13 @@ import { motion, useReducedMotion } from "framer-motion";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
-export function IntroPanelShell({ children }: { children: ReactNode }) {
+export function IntroPanelShell({
+  children,
+  variant = "light",
+}: {
+  children: ReactNode;
+  variant?: "light" | "dark";
+}) {
   const reduced = useReducedMotion();
 
   const panelReveal = reduced
@@ -33,6 +47,11 @@ export function IntroPanelShell({ children }: { children: ReactNode }) {
         initial: { opacity: 0, y: 10, scale: 0.985 },
         animate: { opacity: 1, y: 0, scale: 1 },
       };
+
+  const surfaceClasses =
+    variant === "dark"
+      ? "border-white/10 bg-surface-contrast"
+      : "border-border-subtle bg-surface-raised";
 
   return (
     // Full-viewport FOCUS LAYER — a light warm veil + restrained blur.
@@ -46,7 +65,7 @@ export function IntroPanelShell({ children }: { children: ReactNode }) {
         {...panelReveal}
         layout={!reduced}
         transition={{ duration: 0.5, ease: EASE, layout: { duration: 0.4, ease: EASE } }}
-        className="relative w-full max-w-[400px] rounded-[28px] border border-border-subtle bg-surface-raised px-6 py-6 shadow-elevated sm:max-w-[420px] sm:px-7 sm:py-7 md:max-w-[660px] md:px-9 md:py-9 lg:max-w-[820px] lg:px-12 lg:py-11"
+        className={`relative w-full max-w-[400px] rounded-[28px] border px-6 py-6 shadow-elevated sm:max-w-[420px] sm:px-7 sm:py-7 md:max-w-[660px] md:px-9 md:py-9 lg:max-w-[820px] lg:px-12 lg:py-11 ${surfaceClasses}`}
       >
         {children}
       </motion.div>

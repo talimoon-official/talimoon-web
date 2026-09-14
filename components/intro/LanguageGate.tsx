@@ -4,11 +4,18 @@
  * The entrance decision before the editorial intro journey: a
  * brand-new visitor with no persisted TALIMOON language picks one of
  * O‘zbekcha / English / Русский before anything else happens. Renders
- * as IntroPanelShell's children exactly like every intro screen (see
- * FirstVisitExperience.tsx) — same shell, same scale discipline — but
- * this is NOT intro step "00/04": no IntroProgress here (spec §9), no
- * character by default (restraint preferred over mechanically forcing
- * her in, spec §33).
+ * inside IntroPanelShell's `variant="dark"` surface (see
+ * FirstVisitExperience.tsx) — same shell shape/scale/motion as every
+ * intro screen, but a deep-navy ceremonial surface instead of the
+ * screens' warm ivory, by deliberate art-direction contrast: this is
+ * the one dark, distinctive entrance moment before Screens 01-04
+ * open into a bright editorial story. Text here reads in the shell's
+ * cream/gold-on-navy tokens (text-inverse / text-inverse-muted /
+ * accent-primary); the language option tiles stay warm ivory
+ * (surface-raised) so they read as lit entrances set into the dark
+ * panel, not further navy-on-navy. This is NOT intro step "00/04": no
+ * IntroProgress here (spec §9), no character by default (restraint
+ * preferred over mechanically forcing her in, spec §33).
  *
  * The visitor hasn't chosen a language yet, so the welcome copy itself
  * can't be localized — all three languages are shown together,
@@ -65,17 +72,17 @@ export function LanguageGate({ onSelect }: { onSelect: (language: GateLanguage) 
         TALIMOON
       </h1>
 
-      <span className="font-sans text-[11px] font-semibold uppercase tracking-[0.22em] text-text-secondary">
+      <span className="font-sans text-[11px] font-semibold uppercase tracking-[0.22em] text-text-inverse-muted">
         TALIMOON
       </span>
 
       <div className="mt-4 space-y-3">
         {WELCOME.map((w) => (
           <div key={w.headline}>
-            <p className="font-display text-[13px] font-semibold leading-snug text-surface-contrast sm:text-[14px] md:text-[15px] lg:text-[16px]">
+            <p className="font-display text-[13px] font-semibold leading-snug text-text-inverse sm:text-[14px] md:text-[15px] lg:text-[16px]">
               {w.headline}
             </p>
-            <p className="mt-0.5 font-sans text-[11px] leading-snug text-text-secondary sm:text-[12px] md:text-[13px] lg:text-[14px]">
+            <p className="mt-0.5 font-sans text-[11px] leading-snug text-text-inverse-muted sm:text-[12px] md:text-[13px] lg:text-[14px]">
               {w.sub}
             </p>
           </div>
