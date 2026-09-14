@@ -40,12 +40,31 @@
  * the one frame before this component unmounts, so tracking
  * `selected` no longer served a purpose.
  *
- * `.tm-cta-gold-elevated` (globals.css §30, added 2026-09-14) stacks
- * alongside `.tm-cta-gold` on these three buttons only — a restrained
- * floating/depth treatment (neutral drop shadow + a slight hover
- * lift) scoped to the Language Gate, layered on top of rather than
- * modifying the shared class, so Navbar/Footer/Story Library's own
- * `.tm-cta-gold` usage is completely unaffected.
+ * The floating/depth treatment (neutral drop shadow + a slight hover
+ * lift, added 2026-09-14) is applied as `!`-important Tailwind
+ * arbitrary-value utilities directly on these three buttons, not a
+ * new shared CSS class: a first attempt added a plain `.tm-cta-gold-
+ * elevated` rule to globals.css, and while it worked in a local build,
+ * it silently failed to appear in the deployed production CSS bundle
+ * (confirmed via the live bundle — the rule was verifiably absent,
+ * not just cached) despite the exact same committed source producing
+ * it correctly locally — a real, unresolved local-vs-production build
+ * discrepancy for hand-authored rules appended to globals.css. The
+ * `!important` utilities here reuse the same proven-reliable
+ * mechanism as every other arbitrary-value class in this codebase
+ * (`w-[150px]`, `mr-9`, etc., all confirmed live in production this
+ * session) and force a win over `.tm-cta-gold`'s own hover/active
+ * box-shadow regardless of CSS layer ordering, rather than relying on
+ * a second same-specificity class stacked alongside it. No `transition`
+ * override is added: `.tm-cta-gold`'s own transition declaration
+ * already covers `box-shadow` (250ms) and `transform` (150ms), so it
+ * animates these new values smoothly on its own, leaving the
+ * shimmer's `background-position` (500ms) and `filter` (250ms)
+ * transitions completely untouched — a separate transition utility
+ * risked collapsing that whole shorthand list down to just the two
+ * properties this pass cares about. `.tm-cta-gold` itself (globals.css
+ * §27) is completely untouched, so Navbar/Footer/Story Library's own
+ * usage is unaffected.
  *
  * One click commits: `onSelect` fires immediately and synchronously —
  * FirstVisitExperience's cue to update the shared language source and
@@ -120,7 +139,7 @@ export function LanguageGate({ onSelect }: { onSelect: (language: GateLanguage) 
             key={code}
             type="button"
             onClick={() => onSelect(code)}
-            className="tm-cta-gold tm-cta-gold-elevated flex h-[52px] w-[85%] items-center justify-center text-[15px] font-semibold tracking-[0.01em] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-primary md:w-auto md:flex-1 md:max-w-[190px]"
+            className="tm-cta-gold flex h-[52px] w-[85%] items-center justify-center text-[15px] font-semibold tracking-[0.01em] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(0,0,0,0.14),0_2px_4px_rgba(0,0,0,0.18),0_8px_18px_rgba(0,0,0,0.22)]! hover:-translate-y-0.5 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.28),inset_0_-1px_0_rgba(0,0,0,0.16),0_3px_6px_rgba(0,0,0,0.2),0_12px_24px_rgba(0,0,0,0.26)]! active:translate-y-0 active:shadow-[inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-1px_0_rgba(0,0,0,0.16),0_1px_2px_rgba(0,0,0,0.18),0_4px_10px_rgba(0,0,0,0.2)]! focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-primary md:w-auto md:flex-1 md:max-w-[190px]"
           >
             {label}
           </button>
