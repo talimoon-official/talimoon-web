@@ -1095,3 +1095,48 @@ body {
     0 calc(3px + 3px * var(--hg-depth-norm)) calc(10px + 8px * var(--hg-depth-norm))
       calc(-4px - 4px * var(--hg-depth-norm)) rgba(28, 42, 58, 0.12);
 }
+
+/* ==========================================================================
+   30. GOLD CTA ELEVATION — LANGUAGE GATE ONLY
+   An ADDITIVE layer on top of `.tm-cta-gold` (§27), not a replacement —
+   `.tm-cta-gold` itself is untouched so Navbar/Footer/Story Library's
+   CTAs keep their exact current appearance. Stack both classes on the
+   same element (`tm-cta-gold tm-cta-gold-elevated`) to opt one CTA
+   instance into a slightly-lifted, floating presence: the base class's
+   gold gradient + inset highlights stay as the surface treatment, this
+   only adds/overrides the box-shadow and hover/active transforms for a
+   restrained sense of physical depth above the navy Language Gate
+   panel. Declared after §27 so its same-specificity box-shadow/
+   transform rules win the cascade for elements carrying both classes.
+   ========================================================================== */
+
+.tm-cta-gold-elevated {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.14),
+    0 2px 4px rgba(0, 0, 0, 0.18),
+    0 8px 18px rgba(0, 0, 0, 0.22);
+  transition:
+    background-position 500ms ease-out,
+    box-shadow 200ms ease-out,
+    transform 200ms ease-out,
+    filter 250ms ease-out;
+}
+
+.tm-cta-gold-elevated:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.16),
+    0 3px 6px rgba(0, 0, 0, 0.2),
+    0 12px 24px rgba(0, 0, 0, 0.26);
+}
+
+.tm-cta-gold-elevated:active {
+  transform: translateY(0);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.16),
+    0 1px 2px rgba(0, 0, 0, 0.18),
+    0 4px 10px rgba(0, 0, 0, 0.2);
+}

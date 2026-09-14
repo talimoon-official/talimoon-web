@@ -18,16 +18,18 @@
  * of jumping — disabled under reduced motion, where height should just
  * snap with no animation dependency.
  *
- * `variant` swaps the panel's surface colors only — the veil, shape,
- * radius, shadow, padding, responsive sizing and reveal/layout motion
- * stay byte-identical between variants, so this is still one shared
- * shell, not a duplicated one. "dark" is the deep-navy ceremonial
- * Language Gate surface (`bg-surface-contrast`, `#1C2A3A`) with a 1px
- * TALIMOON-gold perimeter (`border-accent-primary`, `#B8935B`) — the
- * `border` utility already on the panel below sets the width, so this
- * only supplies the dark variant's border color; "light" (default) is
- * the approved warm-ivory intro-screen surface, unchanged from before
- * this prop existed.
+ * `variant` swaps the panel's surface colors (and, for the border,
+ * width too) only — the veil, shape, radius, shadow, padding,
+ * responsive sizing and reveal/layout motion stay byte-identical
+ * between variants, so this is still one shared shell, not a
+ * duplicated one. "dark" is the deep-navy ceremonial Language Gate
+ * surface (`bg-surface-contrast`, `#1C2A3A`) with a 2px TALIMOON-gold
+ * perimeter (`border-accent-primary`, `#B8935B`) — thicker than the
+ * light variant's 1px `border-border-subtle` specifically because a
+ * 1px gold line visually disappeared against the blurred homepage
+ * backdrop (owner-reported, 2026-09-14); "light" (default, Screens
+ * 01-04) is the approved warm-ivory intro-screen surface, unchanged
+ * from before this prop existed.
  */
 
 import type { ReactNode } from "react";
@@ -53,8 +55,8 @@ export function IntroPanelShell({
 
   const surfaceClasses =
     variant === "dark"
-      ? "border-accent-primary bg-surface-contrast"
-      : "border-border-subtle bg-surface-raised";
+      ? "border-2 border-accent-primary bg-surface-contrast"
+      : "border border-border-subtle bg-surface-raised";
 
   return (
     // Full-viewport FOCUS LAYER — a light warm veil + restrained blur.
@@ -68,7 +70,7 @@ export function IntroPanelShell({
         {...panelReveal}
         layout={!reduced}
         transition={{ duration: 0.5, ease: EASE, layout: { duration: 0.4, ease: EASE } }}
-        className={`relative w-full max-w-[400px] rounded-[28px] border px-6 py-6 shadow-elevated sm:max-w-[420px] sm:px-7 sm:py-7 md:max-w-[660px] md:px-9 md:py-9 lg:max-w-[820px] lg:px-12 lg:py-11 ${surfaceClasses}`}
+        className={`relative w-full max-w-[400px] rounded-[28px] px-6 py-6 shadow-elevated sm:max-w-[420px] sm:px-7 sm:py-7 md:max-w-[660px] md:px-9 md:py-9 lg:max-w-[820px] lg:px-12 lg:py-11 ${surfaceClasses}`}
       >
         {children}
       </motion.div>

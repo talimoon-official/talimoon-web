@@ -40,6 +40,13 @@
  * the one frame before this component unmounts, so tracking
  * `selected` no longer served a purpose.
  *
+ * `.tm-cta-gold-elevated` (globals.css §30, added 2026-09-14) stacks
+ * alongside `.tm-cta-gold` on these three buttons only — a restrained
+ * floating/depth treatment (neutral drop shadow + a slight hover
+ * lift) scoped to the Language Gate, layered on top of rather than
+ * modifying the shared class, so Navbar/Footer/Story Library's own
+ * `.tm-cta-gold` usage is completely unaffected.
+ *
  * One click commits: `onSelect` fires immediately and synchronously —
  * FirstVisitExperience's cue to update the shared language source and
  * swap to Screen 01 — no separate "Continue" button (spec §20) and no
@@ -107,13 +114,13 @@ export function LanguageGate({ onSelect }: { onSelect: (language: GateLanguage) 
         ))}
       </div>
 
-      <div className="mt-7 flex w-full flex-col items-center gap-3 md:flex-row md:justify-center md:gap-4">
+      <div className="mt-7 flex w-full flex-col items-center gap-4 md:flex-row md:justify-center md:gap-6">
         {LANGUAGES.map(({ code, label }) => (
           <button
             key={code}
             type="button"
             onClick={() => onSelect(code)}
-            className="tm-cta-gold flex h-[52px] w-[85%] items-center justify-center text-[15px] font-semibold tracking-[0.01em] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-primary md:w-auto md:flex-1 md:max-w-[190px]"
+            className="tm-cta-gold tm-cta-gold-elevated flex h-[52px] w-[85%] items-center justify-center text-[15px] font-semibold tracking-[0.01em] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-primary md:w-auto md:flex-1 md:max-w-[190px]"
           >
             {label}
           </button>
