@@ -17,7 +17,9 @@ type TurnstileWidgetId = string;
 
 interface TurnstileRenderOptions {
   sitekey: string;
-  size?: "invisible" | "normal" | "compact";
+  size?: "flexible" | "normal" | "compact";
+  appearance?: "always" | "execute" | "interaction-only";
+  execution?: "render" | "execute";
   retry?: "auto" | "never";
   callback?: (token: string) => void;
   "error-callback"?: () => void;
@@ -74,7 +76,13 @@ const Turnstile = forwardRef<TurnstileHandle, { siteKey: string | undefined }>(f
         try {
           widgetId = api.render(container, {
             sitekey: siteKey,
-            size: "invisible",
+            // `invisible` is a widget mode configured in Cloudflare, not a
+            // valid value for the client-side `size` option. Explicit
+            // execution also prevents render() and execute() from starting
+            // the same challenge twice.
+            size: "flexible",
+            appearance: "interaction-only",
+            execution: "execute",
             retry: "never",
             callback: (token) => {
               clearTimeout(timeout);
@@ -107,7 +115,13 @@ const Turnstile = forwardRef<TurnstileHandle, { siteKey: string | undefined }>(f
         strategy="afterInteractive"
         onReady={() => setScriptReady(true)}
       />
-      <div ref={containerRef} aria-hidden="true" style={{ display: "none" }} />
+      {/* Normally this has no visual footprint. If Cloudflare requires an
+          interaction, keep the challenge reachable instead of hiding it
+          with display:none (which can make checkout impossible). */}
+      <div
+        ref={containerRef}
+        className="fixed bottom-4 left-1/2 z-[100] w-[min(300px,calc(100vw-2rem))] -translate-x-1/2"
+      />
     </>
   );
 });
