@@ -408,8 +408,8 @@ function apiUrl(path: string): string {
 async function throwApiError(res: Response): Promise<never> {
   let code: string | undefined;
   try {
-    const body = (await res.json()) as { error?: { code?: string } } | undefined;
-    code = body?.error?.code;
+    const body = (await res.json()) as { error?: string | { code?: string } } | undefined;
+    code = typeof body?.error === "string" ? body.error : body?.error?.code;
   } catch {
     // non-JSON error body — fall through with just the status
   }

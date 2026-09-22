@@ -310,6 +310,8 @@ const CHROME_EN = {
   receiptReplace: "Replace",
   receiptError: "Please upload the payment receipt to finish.",
   submitError: "We couldn't send your order. Please try again.",
+  archiveError: "The order storage service is temporarily unavailable. Keep this page open and try again later.",
+  verificationError: "Security verification failed. Please try again.",
   voiceTooLongError:
     "The voice recording is longer than 2 minutes. Please go back and shorten it, or remove it to continue without a recording.",
   consentHeading: "Consent and electronic signature",
@@ -537,6 +539,8 @@ const CHROME_UZ: typeof CHROME_EN = {
   receiptReplace: "Almashtirish",
   receiptError: "Yakunlash uchun to‘lov chekini yuklang.",
   submitError: "Buyurtmangizni yuborishda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.",
+  archiveError: "Buyurtmani saqlash xizmati vaqtincha ishlamayapti. Sahifani ochiq qoldiring va birozdan so‘ng qayta urinib ko‘ring.",
+  verificationError: "Xavfsizlik tekshiruvi yakunlanmadi. Qayta urinib ko‘ring.",
   voiceTooLongError:
     "Ovozli yozuv 2 daqiqadan uzun. Orqaga qaytib uni qisqartiring yoki yozuvsiz davom etish uchun olib tashlang.",
   consentHeading: "Rozilik va elektron imzo",
@@ -761,6 +765,8 @@ const CHROME_RU: typeof CHROME_EN = {
   receiptReplace: "Заменить",
   receiptError: "Пожалуйста, загрузите чек об оплате, чтобы завершить заказ.",
   submitError: "Не удалось отправить Ваш заказ. Пожалуйста, попробуйте ещё раз.",
+  archiveError: "Сервис хранения заказов временно недоступен. Оставьте страницу открытой и повторите попытку позже.",
+  verificationError: "Проверка безопасности не завершена. Повторите попытку.",
   voiceTooLongError:
     "Аудиозапись длиннее 2 минут. Вернитесь назад и сократите её или удалите, чтобы продолжить без записи.",
   consentHeading: "Согласие и электронная подпись",
@@ -1687,7 +1693,13 @@ export default function PersonalizedBookOrderForm({
       // ("shorten or remove it") is actionable and not sensitive.
       const voiceTooLong =
         err instanceof IntakeApiError && err.code === "audio_too_long";
-      setSubmitError(voiceTooLong ? t.voiceTooLongError : t.submitError);
+      const code = err instanceof IntakeApiError ? err.code : undefined;
+      setSubmitError(
+        voiceTooLong ? t.voiceTooLongError
+          : code === "archive_unavailable" ? t.archiveError
+          : code === "turnstile_failed" ? t.verificationError
+          : t.submitError,
+      );
       setSubmitting(false);
     }
   }
