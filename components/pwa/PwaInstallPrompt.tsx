@@ -53,7 +53,12 @@ export function PwaInstallPrompt() {
     && !/crios|fxios|edgios|opios|yabrowser/i.test(navigator.userAgent);
 
   useEffect(() => {
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => undefined);
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/sw.js', { updateViaCache: 'none' })
+        .then((registration) => registration.update())
+        .catch(() => undefined);
+    }
     if (isStandalone()) return;
 
     const dismissedAt = Number(localStorage.getItem(DISMISSED_KEY) || 0);
