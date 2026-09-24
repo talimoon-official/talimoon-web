@@ -26,7 +26,6 @@ export type ArtifactKind =
   | "child_photo"
   | "special_photo"
   | "character_photo"
-  | "receipt"
   | "final_voice";
 
 /**
@@ -85,18 +84,16 @@ export interface DeliveryLocationPayload {
   confirmedByCustomer: true;
 }
 
-/** Book languages accepted by the TALIMOON order intake. */
-export type BackendBookLanguage = "uz" | "ru" | "en" | "kk" | "ky" | "tg" | "ar";
+/**
+ * Book languages the website may SUBMIT — the production-supported set.
+ * Must be a subset of talimoon-intake's `bookLanguageSchema` and equal to
+ * the "available" entries of BOOK_LANGUAGE_OPTIONS; both are enforced by
+ * lib/order/__tests__/bookLanguage-contract.test.ts. A "soon" language is
+ * never sent.
+ */
+export type BackendBookLanguage = "uz" | "ru" | "en";
 
-const BACKEND_BOOK_LANGUAGES: readonly BackendBookLanguage[] = [
-  "uz",
-  "ru",
-  "en",
-  "kk",
-  "ky",
-  "tg",
-  "ar",
-];
+export const BACKEND_BOOK_LANGUAGES: readonly BackendBookLanguage[] = ["uz", "ru", "en"];
 
 export function isBackendBookLanguage(code: string): code is BackendBookLanguage {
   return (BACKEND_BOOK_LANGUAGES as readonly string[]).includes(code);
@@ -202,7 +199,6 @@ export interface BuildSubmitPayloadArgs {
     childPhotoCount: number;
     wantsSpecialPhoto: boolean;
     characterPhotoCount: number;
-    hasReceipt: boolean;
     /** the story giver added a voice note to the final page */
     hasFinalVoice?: boolean;
   };
@@ -257,9 +253,6 @@ export function buildSubmitPayload(args: BuildSubmitPayloadArgs): SubmitOrderPay
   }
   if (args.declaredArtifacts.characterPhotoCount > 0) {
     declaredArtifacts.push({ kind: "character_photo", count: args.declaredArtifacts.characterPhotoCount });
-  }
-  if (args.declaredArtifacts.hasReceipt) {
-    declaredArtifacts.push({ kind: "receipt", count: 1 });
   }
   if (args.declaredArtifacts.hasFinalVoice) {
     declaredArtifacts.push({ kind: "final_voice", count: 1 });
@@ -398,14 +391,14 @@ export class IntakeApiError extends Error {
   }
 }
 
-function apiUrl(path: string): string {
+export function apiUrl(path: string): string {
   if (!API_BASE) {
     throw new Error("NEXT_PUBLIC_INTAKE_API_URL is not configured");
   }
   return `${API_BASE}${path}`;
 }
 
-async function throwApiError(res: Response): Promise<never> {
+export async function throwApiError(res: Response): Promise<never> {
   let code: string | undefined;
   try {
     const body = (await res.json()) as { error?: string | { code?: string } } | undefined;
@@ -459,11 +452,26 @@ export async function uploadFile(args: {
   if (!res.ok) await throwApiError(res);
 }
 
+/**
+ * Finalize = the order is SAVED (lifecycle AWAITING_PAYMENT). The response
+ * carries the customer's order-bound payment/resume capability, ONCE. The
+ * caller keeps it in memory and only ever puts it in the payment link's
+ * `#fragment` (lib/payment/link.ts) — never storage, never a query.
+ * `resume` is null/absent on a backend that predates the payment lifecycle.
+ */
+export interface FinalizeOrderResult {
+  orderCode: string;
+  status: string;
+  paymentStatus: string;
+  lifecycleStatus?: string;
+  resume?: { token: string; expiresAt: string } | null;
+}
+
 export async function finalizeOrder(args: {
   orderCode: string;
   capabilityToken: string;
   notify?: { customerName?: string; phone?: string };
-}): Promise<{ orderCode: string; status: string; paymentStatus: string }> {
+}): Promise<FinalizeOrderResult> {
   const res = await fetch(apiUrl(`/v1/orders/${args.orderCode}/finalize`), {
     method: "POST",
     headers: {
@@ -473,5 +481,5 @@ export async function finalizeOrder(args: {
     body: JSON.stringify({ notify: args.notify }),
   });
   if (!res.ok) return throwApiError(res);
-  return (await res.json()) as { orderCode: string; status: string; paymentStatus: string };
+  return (await res.json()) as FinalizeOrderResult;
 }

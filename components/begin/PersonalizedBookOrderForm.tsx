@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, LoaderCircle, MapPin, Upload } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, LoaderCircle, MapPin } from "lucide-react";
 import { useLanguage, useT } from "@/lib/i18n/LanguageContext";
 import { toLocale } from "@/lib/journey/types";
 import {
@@ -10,15 +10,11 @@ import {
   BookType,
   COUNTRIES,
   DELIVERY_REGIONS,
-  PAYMENT_ACCOUNTS,
   STEPS,
   TraitId,
   type StepId,
   calculateOrderTotal,
-  countryLabel,
-  deliveryRegionLabel,
   formatMoney,
-  paymentMethodsForMarket,
   type Market,
 } from "./orderFormData";
 import {
@@ -40,7 +36,8 @@ import {
   orderEmotionalText,
 } from "@/lib/order/profileText";
 import Turnstile, { type TurnstileHandle } from "./Turnstile";
-import { PaymentAccount } from "./PaymentAccount";
+import { OrderSaved } from "./OrderSaved";
+import { PAYMENT_COPY } from "@/lib/payment/copy";
 import { MapLocationPicker } from "./MapLocationPicker";
 import { setMarketPreference, useMarketPreference, marketFromLocation } from "@/lib/order/market";
 import { normalizeOrderPhone } from "@/lib/order/phone";
@@ -67,7 +64,6 @@ import {
 import {
   Field,
   inputClass,
-  MAX_PHOTO_BYTES,
   PhotoUpload,
   TextArea,
   TextInput,
@@ -126,16 +122,6 @@ const CHROME_EN = {
   submittingTitle: "Your information is being uploaded",
   submittingBody: "Please wait a moment and do not leave this page.",
 
-  // Completion — the order is SUBMITTED, not in production. Review →
-  // confirmation → 5–7 day preparation → delivery notification.
-  doneHeading: "Your order has been received",
-  doneBody: [
-    "We've received all the information you provided. The TALIMOON team will now review it carefully.",
-    "If we need to clarify anything, we'll contact you. If everything is complete, we'll send you a message confirming your order.",
-    "Once confirmed, your book is usually prepared within 5–7 days. When it is ready, we'll contact you with the delivery details.",
-  ],
-  doneNote: "Order updates will be sent to the phone number you provided.",
-
   heroesLabel: "Heroes of this story",
   years: (age: number | null) => (age == null ? "" : `, ${age}`),
 
@@ -166,7 +152,6 @@ const CHROME_EN = {
   rowBook: "Book",
   rowExtraCopies: (n: number) => (n === 1 ? "Extra copy" : `Extra copies × ${n}`),
   rowDelivery: "Delivery",
-  payAmount: "Amount to pay",
   addrDistrict: "City / district",
   addrStreet: "Street / mahalla",
   addrBuilding: "House / building",
@@ -292,23 +277,6 @@ const CHROME_EN = {
   numberOfCopies: "Number of copies",
   total: "Total",
 
-  payUzHeading: "Payment for Uzbekistan",
-  payUzBody: "You can pay by card-to-card transfer to the card number below.",
-  payIntlHeading: "International payment",
-  payIntlBody:
-    "For international orders, you can pay by card-to-card transfer to one of the cards below.",
-  cardNumberLabel: "Card number",
-  cardHolderLabel: "Cardholder",
-  copyAction: "Copy",
-  copiedAction: "Copied",
-  payNote:
-    "For now, payments are made by card transfer. Online automatic payments are coming soon.",
-  receiptQ: "Upload payment receipt",
-  receiptHint:
-    "You can upload the payment receipt or a screenshot from your banking app.",
-  receiptDone: "Receipt uploaded",
-  receiptReplace: "Replace",
-  receiptError: "Please upload the payment receipt to finish.",
   submitError: "We couldn't send your order. Please try again.",
   archiveError: "The order storage service is temporarily unavailable. Keep this page open and try again later.",
   verificationError: "Security verification failed. Please try again.",
@@ -360,13 +328,6 @@ const CHROME_UZ: typeof CHROME_EN = {
   submittingTitle: "Ma’lumotlaringiz yuklanmoqda",
   submittingBody: "Iltimos, biroz kuting va sahifadan chiqib ketmang.",
 
-  doneHeading: "Buyurtmangiz qabul qilindi",
-  doneBody: [
-    "Barcha ma’lumotlaringiz bizga yetib keldi. Endi TALIMOON jamoasi ularni diqqat bilan ko‘rib chiqadi.",
-    "Agar biror ma’lumotga aniqlik kiritish kerak bo‘lsa, Siz bilan bog‘lanamiz. Hammasi joyida bo‘lsa, buyurtmangiz tasdiqlangani haqida xabar yuboramiz.",
-    "Tasdiqlangandan so‘ng kitobingiz odatda 7–10 kun ichida tayyorlanadi. Tayyor bo‘lgach, yetkazib berish bo‘yicha Sizga alohida xabar beramiz.",
-  ],
-  doneNote: "Buyurtma holati bo‘yicha xabarlar Siz ko‘rsatgan telefon raqamiga yuboriladi.",
 
   heroesLabel: "Hikoya qahramonlari",
   years: (age: number | null) => (age == null ? "" : `, ${age} yosh`),
@@ -393,7 +354,6 @@ const CHROME_UZ: typeof CHROME_EN = {
   rowBook: "Kitob",
   rowExtraCopies: (n: number) => (n === 1 ? "Qo‘shimcha nusxa" : `Qo‘shimcha nusxa × ${n}`),
   rowDelivery: "Yetkazib berish",
-  payAmount: "To‘lov summasi",
   addrDistrict: "Shahar / tuman",
   addrStreet: "Ko‘cha / mahalla",
   addrBuilding: "Uy / bino",
@@ -520,24 +480,6 @@ const CHROME_UZ: typeof CHROME_EN = {
   numberOfCopies: "Nusxalar soni",
   total: "Jami",
 
-  payUzHeading: "O‘zbekiston bo‘yicha to‘lov",
-  payUzBody:
-    "To‘lovni quyidagi karta raqamiga kartadan kartaga amalga oshirishingiz mumkin.",
-  payIntlHeading: "Xalqaro to‘lov",
-  payIntlBody:
-    "Xalqaro buyurtmalar uchun to‘lovni quyidagi kartalardan biriga kartadan kartaga amalga oshirishingiz mumkin.",
-  cardNumberLabel: "Karta raqami",
-  cardHolderLabel: "Karta egasi",
-  copyAction: "Nusxalash",
-  copiedAction: "Nusxalandi",
-  payNote:
-    "Hozircha to‘lov kartadan kartaga amalga oshiriladi. Onlayn avtomatik to‘lov tizimi tez orada ishga tushadi.",
-  receiptQ: "To‘lov chekini yuklang",
-  receiptHint:
-    "Bank ilovasidagi to‘lov cheki yoki screenshotni yuklashingiz mumkin.",
-  receiptDone: "Chek yuklandi",
-  receiptReplace: "Almashtirish",
-  receiptError: "Yakunlash uchun to‘lov chekini yuklang.",
   submitError: "Buyurtmangizni yuborishda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.",
   archiveError: "Buyurtmani saqlash xizmati vaqtincha ishlamayapti. Sahifani ochiq qoldiring va birozdan so‘ng qayta urinib ko‘ring.",
   verificationError: "Xavfsizlik tekshiruvi yakunlanmadi. Qayta urinib ko‘ring.",
@@ -589,13 +531,6 @@ const CHROME_RU: typeof CHROME_EN = {
   submittingTitle: "Загружаем Ваши данные",
   submittingBody: "Пожалуйста, подождите немного и не покидайте эту страницу.",
 
-  doneHeading: "Ваш заказ принят",
-  doneBody: [
-    "Мы получили всю предоставленную Вами информацию. Теперь команда TALIMOON внимательно её изучит.",
-    "Если понадобится что-то уточнить, мы свяжемся с Вами. Если всё в порядке, мы пришлём сообщение с подтверждением заказа.",
-    "После подтверждения книга обычно готовится в течение 5–7 дней. Когда она будет готова, мы сообщим Вам о деталях доставки.",
-  ],
-  doneNote: "Уведомления о статусе заказа будут приходить на указанный Вами номер телефона.",
 
   heroesLabel: "Герои этой истории",
   years: (age: number | null) => (age == null ? "" : `, ${age} лет`),
@@ -622,7 +557,6 @@ const CHROME_RU: typeof CHROME_EN = {
   rowBook: "Книга",
   rowExtraCopies: (n: number) => (n === 1 ? "Дополнительный экземпляр" : `Дополнительные экземпляры × ${n}`),
   rowDelivery: "Доставка",
-  payAmount: "Сумма к оплате",
   addrDistrict: "Город / район",
   addrStreet: "Улица / махалля",
   addrBuilding: "Дом / строение",
@@ -747,23 +681,6 @@ const CHROME_RU: typeof CHROME_EN = {
   numberOfCopies: "Количество экземпляров",
   total: "Итого",
 
-  payUzHeading: "Оплата для Узбекистана",
-  payUzBody: "Вы можете оплатить переводом с карты на карту, указанную ниже.",
-  payIntlHeading: "Международная оплата",
-  payIntlBody:
-    "Для международных заказов Вы можете оплатить переводом с карты на одну из карт ниже.",
-  cardNumberLabel: "Номер карты",
-  cardHolderLabel: "Владелец карты",
-  copyAction: "Копировать",
-  copiedAction: "Скопировано",
-  payNote:
-    "Пока оплата принимается только переводом с карты на карту. Автоматическая онлайн-оплата появится совсем скоро.",
-  receiptQ: "Загрузите чек об оплате",
-  receiptHint:
-    "Вы можете загрузить чек об оплате или скриншот из банковского приложения.",
-  receiptDone: "Чек загружен",
-  receiptReplace: "Заменить",
-  receiptError: "Пожалуйста, загрузите чек об оплате, чтобы завершить заказ.",
   submitError: "Не удалось отправить Ваш заказ. Пожалуйста, попробуйте ещё раз.",
   archiveError: "Сервис хранения заказов временно недоступен. Оставьте страницу открытой и повторите попытку позже.",
   verificationError: "Проверка безопасности не завершена. Повторите попытку.",
@@ -810,7 +727,7 @@ const CHROME_RU: typeof CHROME_EN = {
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-interface FormData {
+export interface FormData {
   orderer: Orderer;
   recipientRelationship: RecipientRelationship;
   /** Commercial market for this order — decides the currency and the
@@ -873,22 +790,19 @@ interface FormData {
   /** Stable machine code (spec §41) — "" until chosen. */
   bookLanguageCode: BookLanguageCode | "";
   copies: number;
-  paymentMethod: string;
-  receipt: File | null;
   consentAuthority: boolean;
   consentPrivacy: boolean;
   consentTerms: boolean;
   consentDrawnSignature: string;
 }
 
-function emptyForm(market: Market = "UZ"): FormData {
+export function emptyForm(market: Market = "UZ"): FormData {
   const orderer = emptyOrderer();
   if (market === "UZ") orderer.deliveryAddress.countryCode = "UZ";
   return {
     orderer,
     recipientRelationship: { type: "parent" },
     market,
-    paymentMethod: paymentMethodsForMarket(market)[0]?.id ?? "bank_transfer",
     bookType: "single",
     children: [emptyChild()],
     interests: "",
@@ -910,7 +824,6 @@ function emptyForm(market: Market = "UZ"): FormData {
     specialPhoto: null,
     bookLanguageCode: "",
     copies: 1,
-    receipt: null,
     consentAuthority: false,
     consentPrivacy: false,
     consentTerms: false,
@@ -927,10 +840,11 @@ const MAX_CHILD_PHOTOS = 5;
  * "can we advance?" decision routes through here — no step re-derives
  * its own rule inline. Completion is either a real required answer or,
  * where the spec allows it, an explicit alternative; there is no bare
- * "skip" for contact details, the required photos, or the payment
- * receipt.
+ * "skip" for contact details, the required photos, or the consent
+ * signature. Payment is NOT a form step: it is a separate stage after the
+ * order is saved (see components/payment/PaymentPage.tsx).
  */
-function isStepComplete(stepId: StepId, data: FormData): boolean {
+export function isStepComplete(stepId: StepId, data: FormData): boolean {
   switch (stepId) {
     case "personal-touch": {
       // "Esdalik sahifasi" only. Additional characters moved to the photo
@@ -987,12 +901,10 @@ function isStepComplete(stepId: StepId, data: FormData): boolean {
         isDeliveryComplete(data.orderer.deliveryAddress, data.market)
       );
     }
-    case "payment":
-      // A receipt must be attached before the order can be sent
-      // (spec §13). This is NOT payment verification — that stays a
-      // later admin action.
+    case "consent":
+      // The LAST form section: consent + a drawn signature. No payment
+      // receipt — the order is saved first and paid on its own page.
       return (
-        data.receipt != null &&
         data.consentAuthority &&
         data.consentPrivacy &&
         data.consentTerms &&
@@ -1128,7 +1040,13 @@ export default function PersonalizedBookOrderForm({
   const [charEntry, setCharEntry] = useState<"start" | "end">("start");
   const [data, setData] = useState<FormData>(() => emptyForm(resolvedInitialMarket));
   const [phase01Seeded, setPhase01Seeded] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  /** Set once finalize succeeds: the order is SAVED (not paid, not in
+   *  production). `resume` is the backend's order-bound payment capability —
+   *  memory only, never persisted. */
+  const [saved, setSaved] = useState<{
+    orderCode: string;
+    resume: { token: string; expiresAt: string } | null;
+  } | null>(null);
   /** Latched the moment the final submit fires, so a second click /
    *  an Enter race can't send the order twice (spec §6). */
   const [submitting, setSubmitting] = useState(false);
@@ -1160,7 +1078,6 @@ export default function PersonalizedBookOrderForm({
     specialPhotoDone: boolean;
     finalVoiceDone: boolean;
     characterPhotoDone: boolean[];
-    receiptDone: boolean;
   } | null>(null);
 
   // Switching market is ONE atomic transition (spec §17): currency,
@@ -1186,8 +1103,6 @@ export default function PersonalizedBookOrderForm({
           ...prev.orderer,
           deliveryAddress: resetDeliveryForMarket(prev.orderer.deliveryAddress, next),
         },
-        paymentMethod: paymentMethodsForMarket(next)[0]?.id ?? prev.paymentMethod,
-        receipt: null,
       };
     });
     setShowStepError(false);
@@ -1217,8 +1132,6 @@ export default function PersonalizedBookOrderForm({
                 seedMarket,
               ),
             },
-            paymentMethod:
-              paymentMethodsForMarket(seedMarket)[0]?.id ?? prev.paymentMethod,
           },
     );
   }
@@ -1525,7 +1438,6 @@ export default function PersonalizedBookOrderForm({
             // required for the Esdalik page.
             wantsSpecialPhoto: true,
             characterPhotoCount,
-            hasReceipt: data.receipt != null,
             // ONLY declare a voice memory when the customer explicitly chose
             // "Ha" AND a take is actually held — a stale recording from an
             // earlier "Ha" that was switched back to "Yo'q" is never sent.
@@ -1604,7 +1516,6 @@ export default function PersonalizedBookOrderForm({
           specialPhotoDone: false,
           finalVoiceDone: false,
           characterPhotoDone: namedCharacters.flatMap((c) => c.photos.map(() => false)),
-          receiptDone: false,
         };
         orderSessionRef.current = session;
       }
@@ -1674,18 +1585,16 @@ export default function PersonalizedBookOrderForm({
         }
       }
 
-      if (data.receipt && !session.receiptDone) {
-        await uploadFile({ orderCode, capabilityToken, kind: "receipt", file: data.receipt });
-        session.receiptDone = true;
-      }
-
-      await finalizeOrder({
+      // Finalize = the order is SAVED (lifecycle AWAITING_PAYMENT). No
+      // receipt is part of intake; the backend returns the order-bound
+      // payment/resume capability, held in memory only for the next screen.
+      const finalized = await finalizeOrder({
         orderCode,
         capabilityToken,
         notify: { customerName: data.orderer.name, phone: canonicalPhone },
       });
 
-      setSubmitted(true);
+      setSaved({ orderCode: finalized.orderCode, resume: finalized.resume ?? null });
     } catch (err) {
       // Never surface the raw error (status text, validation detail) to the
       // customer — same "never leak internals" posture as the backend. The
@@ -1839,31 +1748,16 @@ export default function PersonalizedBookOrderForm({
     );
   }
 
-  if (submitted) {
-    // The order is SUBMITTED — not in production. It goes SUBMITTED →
-    // REVIEW → CONFIRMED → PREPARATION (5–7 days) → READY → DELIVERY.
+  if (saved) {
+    // The order is SAVED (AWAITING_PAYMENT) — not paid, not in production.
+    // Payment is its own stage; this screen only offers Pay now / Pay later.
     return (
-      <section
-        data-order-flow=""
-        className="mx-auto flex min-h-[560px] w-full max-w-container-content flex-col items-center bg-surface-base px-6 py-16 md:py-20 lg:py-28"
-      >
-        <div className="mx-auto max-w-md text-center">
-          <span className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-accent-primary/[0.14]">
-            <Check size={24} strokeWidth={2} className="text-accent-primary" />
-          </span>
-          <h2 className="font-display text-[26px] font-medium leading-tight text-text-primary">
-            {t.doneHeading}
-          </h2>
-          <div className="mt-4 space-y-3 font-sans text-[14px] leading-[1.65] text-text-secondary">
-            {t.doneBody.map((p, i) => (
-              <p key={i}>{p}</p>
-            ))}
-          </div>
-          <p className="mt-6 font-sans text-[12.5px] leading-[1.6] text-text-muted">
-            {t.doneNote}
-          </p>
-        </div>
-      </section>
+      <OrderSaved
+        orderCode={saved.orderCode}
+        resume={saved.resume}
+        copy={PAYMENT_COPY[bookLoc]}
+        locale={bookLoc}
+      />
     );
   }
 
@@ -2727,128 +2621,11 @@ export default function PersonalizedBookOrderForm({
             </>
           )}
 
-          {step.id === "payment" && (
+          {step.id === "consent" && (
             <>
-              {/* A quiet reminder of which market's prices these are —
-                  the full control lives one step back on Review. */}
-              <p className="font-sans text-[12px] text-text-secondary">
-                <span className="font-medium uppercase tracking-[0.12em] text-text-muted">
-                  {t.orderRegion}
-                </span>
-                <span className="mx-2 text-border-strong">·</span>
-                {data.market === "UZ" ? t.marketUz : t.marketIntl}
-              </p>
-
-              {/* The amount to pay IS the order grand total — same
-                  deterministic figure as the review breakdown (spec F). */}
-              <div className="rounded-lg border border-border-default p-5">
-                <div className="space-y-1.5 font-sans text-[13px]">
-                  <div className="flex items-center justify-between">
-                    <span className="text-text-secondary">{t.rowBook}</span>
-                    <span className="text-text-primary">
-                      {money(totals.bookSubtotal)}
-                    </span>
-                  </div>
-                  {data.copies > 1 && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-text-secondary">
-                        {t.rowExtraCopies(data.copies - 1)}
-                      </span>
-                      <span className="text-text-primary">
-                        {money(totals.extraCopiesSubtotal)}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between">
-                    <span className="text-text-secondary">
-                      {deliveryRowLabel}
-                      {wantsDelivery &&
-                        data.market === "UZ" &&
-                        data.orderer.deliveryAddress.regionCode &&
-                        ` · ${deliveryRegionLabel(
-                          data.orderer.deliveryAddress.regionCode,
-                          bookLoc,
-                        )}`}
-                      {wantsDelivery &&
-                        data.market === "INTERNATIONAL" &&
-                        data.orderer.deliveryAddress.countryCode &&
-                        ` · ${countryLabel(
-                          data.orderer.deliveryAddress.countryCode,
-                          bookLoc,
-                        )}`}
-                    </span>
-                    <span className="text-text-primary">
-                      {wantsDelivery
-                        ? totals.deliveryFee === 0
-                          ? t.deliveryFree
-                          : money(totals.deliveryFee)
-                        : t.pickupSummary}
-                    </span>
-                  </div>
-                  <div className="mt-1 flex items-center justify-between border-t border-border-subtle pt-2">
-                    <span className="font-medium text-text-secondary">
-                      {t.payAmount}
-                    </span>
-                    <span className="font-display text-[20px] font-medium text-text-primary">
-                      {money(totals.grandTotal)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card-to-card transfer — market-based (spec §9–13). One
-                  order is one market: a UZ order sees only the local
-                  card, an INTERNATIONAL order only the Visa / Mastercard
-                  cards. No currency picker, no mixed payment screens. */}
-              <div className="space-y-3">
-                <div>
-                  <p className="font-sans text-[14px] font-medium text-text-primary">
-                    {data.market === "UZ" ? t.payUzHeading : t.payIntlHeading}
-                  </p>
-                  <p className="mt-1 font-sans text-[12.5px] leading-[1.6] text-text-secondary">
-                    {data.market === "UZ" ? t.payUzBody : t.payIntlBody}
-                  </p>
-                </div>
-
-                {PAYMENT_ACCOUNTS[data.market].map((account) => (
-                  <PaymentAccount
-                    key={account.id}
-                    account={account}
-                    numberLabel={t.cardNumberLabel}
-                    holderLabel={t.cardHolderLabel}
-                    copyLabel={t.copyAction}
-                    copiedLabel={t.copiedAction}
-                  />
-                ))}
-
-                {/* Secondary — must never imply automatic online payment
-                    works today (spec §12). */}
-                <p className="font-sans text-[12px] leading-[1.6] text-text-muted">
-                  {t.payNote}
-                </p>
-              </div>
-
-              {/* Payment receipt (spec §13). A receipt on file is NOT a
-                  verified payment — verification stays a later admin
-                  action; this only records that a receipt was attached,
-                  and submission cannot complete without it. */}
-              <ReceiptUpload
-                label={t.receiptQ}
-                hint={t.receiptHint}
-                doneLabel={t.receiptDone}
-                replaceLabel={t.receiptReplace}
-                tooLargeLabel={t.photoTooLarge}
-                notImageLabel={t.photoNotImage}
-                file={data.receipt}
-                onChange={(f) => update("receipt", f)}
-              />
-
-              {showStepError && data.receipt == null && (
-                <p role="alert" className="font-sans text-[13px] text-state-error">
-                  {t.receiptError}
-                </p>
-              )}
-
+              {/* The last form section: consent + drawn signature. There is
+                  deliberately no payment here — once sent, the order is
+                  saved and the customer chooses to pay now or later. */}
               <OrderConsent
                 copy={CONSENT_COPY[bookLoc]}
                 accepted={data.consentAuthority && data.consentPrivacy && data.consentTerms}
@@ -2857,7 +2634,7 @@ export default function PersonalizedBookOrderForm({
                 onSignature={(value) => update("consentDrawnSignature", value)}
               />
 
-              {showStepError && data.receipt != null && !canContinue() && (
+              {showStepError && !canContinue() && (
                 <p role="alert" className="mt-4 font-sans text-[13px] text-state-error">
                   {t.consentError}
                 </p>
@@ -2897,96 +2674,3 @@ export default function PersonalizedBookOrderForm({
     </section>
   );
 }
-
-// ─── Small shared components ────────────────────────────────────────────────
-//    The switch/toggle lives in ./Switch (SwitchRow) — one deterministic
-//    geometry for every true on/off control in the flow. MAX_PHOTO_BYTES
-//    and PhotoUpload live in ./formPrimitives.
-
-/**
- * The payment receipt (spec §13) — a single-file upload with a clear
- * two-state affordance: an "upload" button before, and "✓ receipt
- * uploaded / Replace" after. Same client-side guards as PhotoUpload
- * (image type + a size ceiling). A file here means "a receipt is
- * attached", nothing more — it is never treated as a verified payment.
- */
-function ReceiptUpload({
-  label,
-  hint,
-  doneLabel,
-  replaceLabel,
-  tooLargeLabel,
-  notImageLabel,
-  file,
-  onChange,
-}: {
-  label: string;
-  hint?: string;
-  doneLabel: string;
-  replaceLabel: string;
-  tooLargeLabel: string;
-  notImageLabel: string;
-  file: File | null;
-  onChange: (file: File | null) => void;
-}) {
-  const [notice, setNotice] = useState<string | null>(null);
-
-  function accept(incoming: File | undefined) {
-    setNotice(null);
-    if (!incoming) return;
-    if (!incoming.type.startsWith("image/")) {
-      setNotice(notImageLabel);
-      return;
-    }
-    if (incoming.size > MAX_PHOTO_BYTES) {
-      setNotice(tooLargeLabel);
-      return;
-    }
-    onChange(incoming);
-  }
-
-  return (
-    <Field label={label} hint={file ? undefined : hint}>
-      {file ? (
-        <div className="flex items-center justify-between gap-3 rounded-md border border-border-default px-3.5 py-2.5">
-          <span className="inline-flex min-w-0 items-center gap-2 font-sans text-[13px] font-medium text-text-primary">
-            <Check size={15} strokeWidth={2.25} className="shrink-0 text-accent-primary" />
-            <span className="truncate">{doneLabel}</span>
-          </span>
-          <label className="inline-flex min-h-[44px] shrink-0 cursor-pointer items-center font-sans text-[12.5px] font-medium text-text-secondary underline underline-offset-4 hover:text-text-primary">
-            {replaceLabel}
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                accept(e.target.files?.[0]);
-                e.target.value = "";
-              }}
-            />
-          </label>
-        </div>
-      ) : (
-        <label className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-md border border-dashed border-border-strong px-4 py-2.5 font-sans text-[13px] font-medium text-text-primary transition-colors hover:border-solid hover:border-accent-primary">
-          <Upload size={15} strokeWidth={1.5} className="text-text-secondary" />
-          {label}
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              accept(e.target.files?.[0]);
-              e.target.value = "";
-            }}
-          />
-        </label>
-      )}
-      {notice && (
-        <span role="alert" className="mt-1.5 block font-sans text-[12px] text-state-error">
-          {notice}
-        </span>
-      )}
-    </Field>
-  );
-}
-

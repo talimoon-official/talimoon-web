@@ -32,14 +32,16 @@ const BASE = {
 };
 
 describe("isBackendBookLanguage", () => {
-  it("accepts every supported book language code", () => {
+  it("accepts only the production-supported book languages", () => {
     expect(isBackendBookLanguage("uz")).toBe(true);
     expect(isBackendBookLanguage("ru")).toBe(true);
     expect(isBackendBookLanguage("en")).toBe(true);
-    expect(isBackendBookLanguage("ar")).toBe(true);
-    expect(isBackendBookLanguage("kk")).toBe(true);
-    expect(isBackendBookLanguage("ky")).toBe(true);
-    expect(isBackendBookLanguage("tg")).toBe(true);
+  });
+
+  it("rejects the coming-soon languages so they can never be submitted", () => {
+    for (const code of ["ar", "kk", "ky", "tg"]) {
+      expect(isBackendBookLanguage(code)).toBe(false);
+    }
   });
 });
 
@@ -47,7 +49,7 @@ describe("buildSubmitPayload", () => {
   it("builds the minimal shape the backend expects, channel always W", () => {
     const payload = buildSubmitPayload({
       ...BASE,
-      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: false, characterPhotoCount: 0, hasReceipt: false },
+      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: false, characterPhotoCount: 0 },
     });
     expect(payload.channel).toBe("W");
     expect(payload.idempotencyKey).toBe(BASE.idempotencyKey);
@@ -63,21 +65,28 @@ describe("buildSubmitPayload", () => {
         childPhotoCount: 3,
         wantsSpecialPhoto: true,
         characterPhotoCount: 0,
-        hasReceipt: true,
       },
     });
     expect(payload.declaredArtifacts).toEqual([
       { kind: "child_photo", count: 3 },
       { kind: "special_photo", count: 1 },
-      { kind: "receipt", count: 1 },
     ]);
+  });
+
+  it("never declares a payment receipt — payment is a separate stage after the order is saved", () => {
+    const payload = buildSubmitPayload({
+      ...BASE,
+      declaredArtifacts: { childPhotoCount: 3, wantsSpecialPhoto: true, characterPhotoCount: 2, hasFinalVoice: true },
+    });
+    expect(payload.declaredArtifacts.map((d) => d.kind)).not.toContain("receipt");
+    expect(JSON.stringify(payload)).not.toMatch(/receipt/i);
   });
 
   it("omits a child's age when null rather than sending null", () => {
     const payload = buildSubmitPayload({
       ...BASE,
       children: [{ name: "Ali", age: null }],
-      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: false, characterPhotoCount: 0, hasReceipt: false },
+      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: false, characterPhotoCount: 0 },
     });
     expect(payload.profile.children[0]).toEqual({
       name: "Ali",
@@ -102,7 +111,7 @@ describe("buildSubmitPayload", () => {
           growthAreas: "", // blank must not be sent
         },
       ],
-      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: false, characterPhotoCount: 0, hasReceipt: false },
+      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: false, characterPhotoCount: 0 },
     });
     expect(payload.profile.children[0]).toEqual({
       name: "Ali",
@@ -122,7 +131,7 @@ describe("buildSubmitPayload", () => {
         { name: "Ali", age: 7, relationship: { type: "grandparent" } },
         { name: "Zara", age: 5, relationship: { type: "aunt-uncle" } },
       ],
-      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: false, characterPhotoCount: 0, hasReceipt: false },
+      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: false, characterPhotoCount: 0 },
     });
     expect(payload.profile.recipientRelationship).toEqual({ type: "grandparent" });
     expect(payload.profile.children[0]!.relationship).toEqual({ type: "grandparent" });
@@ -134,7 +143,7 @@ describe("buildSubmitPayload", () => {
       ...BASE,
       recipientRelationship: { type: "other", customLabel: "  amakivachchamning farzandi  " },
       children: [{ name: "Ali", age: 7, relationship: { type: "parent", customLabel: "ignored" } }],
-      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: false, characterPhotoCount: 0, hasReceipt: false },
+      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: false, characterPhotoCount: 0 },
     });
     expect(payload.profile.recipientRelationship).toEqual({
       type: "other",
@@ -148,7 +157,7 @@ describe("buildSubmitPayload", () => {
     const payload = buildSubmitPayload({
       ...BASE,
       children: [{ name: "Ali", age: 7 }],
-      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: false, characterPhotoCount: 0, hasReceipt: false },
+      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: false, characterPhotoCount: 0 },
     });
     expect(payload.profile.recipientRelationship).toBeUndefined();
     expect(payload.profile.children[0]!.relationship).toBeUndefined();
@@ -158,7 +167,6 @@ describe("buildSubmitPayload", () => {
     childPhotoCount: 0,
     wantsSpecialPhoto: false,
     characterPhotoCount: 0,
-    hasReceipt: false,
   };
   const PIN = {
     latitude: 41.311081,
@@ -210,7 +218,6 @@ describe("buildSubmitPayload", () => {
         childPhotoCount: 1,
         wantsSpecialPhoto: true,
         characterPhotoCount: 0,
-        hasReceipt: false,
         hasFinalVoice: true,
       },
       personalMessage: "Sen bizning eng katta baxtimizsan.",
@@ -237,7 +244,7 @@ describe("buildSubmitPayload", () => {
   it("keeps a story giver customLabel only for type 'other', trims the given name", () => {
     const other = buildSubmitPayload({
       ...BASE,
-      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: true, characterPhotoCount: 0, hasReceipt: false },
+      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: true, characterPhotoCount: 0 },
       storyGiver: {
         relationshipType: "other",
         customLabel: "  my cousin's child  ",
@@ -254,7 +261,7 @@ describe("buildSubmitPayload", () => {
 
     const parent = buildSubmitPayload({
       ...BASE,
-      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: true, characterPhotoCount: 0, hasReceipt: false },
+      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: true, characterPhotoCount: 0 },
       storyGiver: {
         relationshipType: "parent",
         customLabel: "ignored",
@@ -272,7 +279,7 @@ describe("buildSubmitPayload", () => {
   it("omits storyGiver entirely when no given name was provided", () => {
     const payload = buildSubmitPayload({
       ...BASE,
-      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: false, characterPhotoCount: 0, hasReceipt: false },
+      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: false, characterPhotoCount: 0 },
       storyGiver: { relationshipType: "parent", displayName: "   ", presentedAs: "self" },
     });
     expect(payload.profile.storyGiver).toBeUndefined();
@@ -285,7 +292,6 @@ describe("buildSubmitPayload", () => {
         childPhotoCount: 1,
         wantsSpecialPhoto: true,
         characterPhotoCount: 0,
-        hasReceipt: false,
         hasFinalVoice: true,
       },
       personalMessage: "Esdalik so'zlari",
@@ -309,7 +315,7 @@ describe("buildSubmitPayload", () => {
   it("keeps the keepsake customLabel for the fine-grained 'other' code, drops it otherwise", () => {
     const other = buildSubmitPayload({
       ...BASE,
-      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: true, characterPhotoCount: 0, hasReceipt: false },
+      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: true, characterPhotoCount: 0 },
       storyGiver: {
         relationshipType: "other",
         keepsakeRelationship: "other",
@@ -330,7 +336,7 @@ describe("buildSubmitPayload", () => {
 
     const uncle = buildSubmitPayload({
       ...BASE,
-      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: true, characterPhotoCount: 0, hasReceipt: false },
+      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: true, characterPhotoCount: 0 },
       storyGiver: {
         relationshipType: "aunt-uncle",
         keepsakeRelationship: "maternal_uncle",
@@ -350,7 +356,7 @@ describe("buildSubmitPayload", () => {
   it("ignores an invalid keepsakeRelationship value (keeps only the coarse type)", () => {
     const payload = buildSubmitPayload({
       ...BASE,
-      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: true, characterPhotoCount: 0, hasReceipt: false },
+      declaredArtifacts: { childPhotoCount: 0, wantsSpecialPhoto: true, characterPhotoCount: 0 },
       storyGiver: {
         relationshipType: "parent",
         // @ts-expect-error — deliberately invalid to prove it is filtered out

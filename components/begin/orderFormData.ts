@@ -17,7 +17,7 @@
 // a second array to keep index-aligned by hand.
 
 import type { LucideIcon } from "lucide-react";
-import { CreditCard, Globe, Heart, Camera } from "lucide-react";
+import { Globe, Heart, Camera, PenLine } from "lucide-react";
 
 export type BookType = "single" | "multi";
 
@@ -289,25 +289,6 @@ export function countryLabel(code: string, locale: "uz" | "en" | "ru"): string {
   return locale === "uz" ? c.labelUz : c.label;
 }
 
-// ── Payment methods per market ──────────────────────────────────────
-// Availability is market-specific and NOT assumed. UZ has a working
-// local method; the international online methods are not switched on
-// yet — the flow must say so honestly and must never convert a USD
-// order back to UZS to force it through (spec §33–34, §65).
-export function paymentMethodsForMarket(
-  market: Market,
-): readonly (typeof PAYMENT_METHODS)[number][] {
-  return market === "UZ"
-    ? [...PAYMENT_METHODS]
-    : PAYMENT_METHODS.filter((m) => m.id === "visa_mc" || m.id === "paypal");
-}
-
-/** True when the market currently has at least one method the customer
- *  can actually pay with online right now. */
-export function marketHasOnlinePayment(market: Market): boolean {
-  return paymentMethodsForMarket(market).some((m) => m.status === "available");
-}
-
 // ── Submitted-order pricing snapshot ───────────────────────────────
 // A submitted order must PRESERVE the prices that applied when it was
 // sent — never recalculated from a later config (spec §36–37). This is
@@ -379,8 +360,10 @@ export const MAX_TRAITS = 3;
 //    is written in, NOT the site UI language. Stable machine `code` is
 //    the backend identity; `label` is shown in the language's own
 //    script, never translated. `status: "soon"` renders disabled with a
-//    "Tez orada" tag and cannot be ordered (spec §40). Every language
-//    here is confirmed deliverable at production quality.
+//    "Tez orada" tag and cannot be ordered (spec §40). Only "available"
+//    languages are production-supported; they must equal
+//    BACKEND_BOOK_LANGUAGES in lib/order/api.ts (enforced by
+//    lib/order/__tests__/bookLanguage-contract.test.ts).
 export type BookLanguageCode = "uz" | "en" | "ru" | "kk" | "ky" | "tg" | "ar";
 
 export interface BookLanguageOption {
@@ -393,10 +376,10 @@ export const BOOK_LANGUAGE_OPTIONS: readonly BookLanguageOption[] = [
   { code: "uz", label: "O‘zbekcha", status: "available" },
   { code: "en", label: "English", status: "available" },
   { code: "ru", label: "Русский", status: "available" },
-  { code: "kk", label: "Қазақша", status: "available" },
-  { code: "ky", label: "Кыргызча", status: "available" },
-  { code: "tg", label: "Тоҷикӣ", status: "available" },
-  { code: "ar", label: "العربية", status: "available" },
+  { code: "kk", label: "Қазақша", status: "soon" },
+  { code: "ky", label: "Кыргызча", status: "soon" },
+  { code: "tg", label: "Тоҷикӣ", status: "soon" },
+  { code: "ar", label: "العربية", status: "soon" },
 ] as const;
 
 export function bookLanguageLabel(code: string): string {
@@ -406,7 +389,8 @@ export function bookLanguageLabel(code: string): string {
 // ── Card-to-card transfer accounts (spec §10–11) ───────────────────
 // Online automatic payment is NOT live yet; every order is paid by a
 // card-to-card transfer to one of the accounts below, then a receipt
-// is uploaded. Accounts are market-specific and never mixed on screen:
+// is uploaded on the SEPARATE payment page (components/payment), after
+// the order is saved — never inside the order form. Accounts are market-specific and never mixed on screen:
 // a UZ order sees only the local card, an INTERNATIONAL order sees only
 // the Visa / Mastercard cards.
 //
@@ -469,36 +453,6 @@ export const CARD_BRAND_LABEL: Record<CardBrand, string> = {
   mastercard: "Mastercard",
 };
 
-export const PAYMENT_METHODS = [
-  {
-    id: "bank_transfer",
-    label: "UZCARD / Humo",
-    sublabel: "Bank transfer + receipt",
-    sublabelUz: "Bank o'tkazmasi + chek",
-    status: "available",
-  },
-  {
-    id: "visa_mc",
-    label: "Visa / Mastercard",
-    sublabel: "International cards",
-    sublabelUz: "Xalqaro kartalar",
-    status: "soon",
-  },
-  {
-    id: "paypal",
-    label: "PayPal",
-    sublabel: "International",
-    sublabelUz: "Xalqaro",
-    status: "soon",
-  },
-  {
-    id: "ipay",
-    label: "iPay",
-    sublabel: "Regional",
-    sublabelUz: "Mintaqaviy",
-    status: "soon",
-  },
-] as const;
 
 /**
  * Wizard steps AFTER Phase 01 ("Siz bilan tanishamiz" — orderer name,
@@ -514,7 +468,7 @@ export type StepId =
   | "personal-touch"
   | "photos"
   | "review"
-  | "payment";
+  | "consent";
 
 export interface StepConfig {
   id: StepId;
@@ -532,5 +486,8 @@ export const STEPS: StepConfig[] = [
   { id: "personal-touch", chapter: 2, eyebrow: "A personal touch", eyebrowUz: "Shaxsiy jozibasi", title: "A personal touch", titleUz: "Shaxsiy jozibasi", icon: Heart },
   { id: "photos", chapter: 4, eyebrow: "Photos", eyebrowUz: "Suratlar", title: "Photos for the illustrations", titleUz: "Illyustratsiyalar uchun suratlar", icon: Camera },
   { id: "review", chapter: 5, eyebrow: "Review", eyebrowUz: "Ko'rib chiqamiz", title: "Delivery, language & review", titleUz: "Yetkazish, til va ko'rib chiqish", icon: Globe },
-  { id: "payment", chapter: 6, eyebrow: "Finish", eyebrowUz: "Yakun", title: "Payment", titleUz: "To'lov", icon: CreditCard },
+  // The last form section is consent + signature. Payment is NOT a form
+  // step: the order is saved first, then paid on its own page
+  // (/begin/personalized-book/payment).
+  { id: "consent", chapter: 6, eyebrow: "Finish", eyebrowUz: "Yakun", title: "Consent & signature", titleUz: "Rozilik va imzo", icon: PenLine },
 ];
