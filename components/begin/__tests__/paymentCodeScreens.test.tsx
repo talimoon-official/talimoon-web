@@ -1,8 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { OrderSaved } from "../OrderSaved";
-import { OrderPaths } from "../OrderPaths";
-import { LanguageProvider } from "@/lib/i18n/LanguageContext";
 import { PAYMENT_COPY } from "@/lib/payment/copy";
 
 const c = PAYMENT_COPY.uz;
@@ -85,25 +83,5 @@ describe("saved screen — payment code", () => {
       expect(String(call[1])).not.toContain("K7M4P2");
       expect(String(call[1])).not.toContain(RESUME.token);
     }
-  });
-});
-
-describe("/begin — two separate order paths", () => {
-  it("offers a new order and a separate pay-for-existing path to /pay", () => {
-    render(
-      <LanguageProvider>
-        <OrderPaths />
-      </LanguageProvider>,
-    );
-    const newOrder = screen.getByRole("link", { name: /Yangi buyurtma/ });
-    const existing = screen.getByRole("link", { name: /Oldingi buyurtma uchun to‘lov/ });
-    expect(newOrder).toHaveAttribute("href", "/begin/personalized-book/price");
-    expect(existing).toHaveAttribute("href", "/pay");
-    expect(newOrder).toHaveTextContent("Farzandingiz uchun yangi shaxsiylashtirilgan kitob buyurtmasini boshlang.");
-    expect(newOrder).toHaveTextContent("Yangi buyurtma berish");
-    expect(existing).toHaveTextContent(
-      "Avval formani yuborgan bo‘lsangiz, to‘lov kodini kiriting va saqlangan buyurtmangiz uchun to‘lovni davom ettiring.",
-    );
-    expect(existing).toHaveTextContent("To‘lovga o‘tish");
   });
 });

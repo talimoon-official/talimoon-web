@@ -1095,3 +1095,17 @@ body {
     0 calc(3px + 3px * var(--hg-depth-norm)) calc(10px + 8px * var(--hg-depth-norm))
       calc(-4px - 4px * var(--hg-depth-norm)) rgba(28, 42, 58, 0.12);
 }
+
+/* Personalized Books order entry — the book-choice reveal (6px, calm).
+   Used via `motion-safe:animate-[entryReveal_260ms_ease-out]`, so it never
+   runs under prefers-reduced-motion. */
+@keyframes entryReveal {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

@@ -1,7 +1,6 @@
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import ProductSelect from "@/components/begin/ProductSelect";
-import OrderPaths from "@/components/begin/OrderPaths";
 
 export default function BeginPage() {
   return (
@@ -15,9 +14,6 @@ export default function BeginPage() {
           identically — a component embedded mid-page elsewhere (e.g.
           PricingSection at the product page's `#pricing`) has no such need. */}
       <main className="pt-16 lg:pt-[74px]">
-        {/* Two separate ways in: a NEW order, or paying for a SAVED one
-            with its payment code (/pay) — never the form again. */}
-        <OrderPaths />
         <ProductSelect />
       </main>
       <Footer />

@@ -14,8 +14,8 @@
  *
  * The "Choose …" buttons navigate to `/begin/personalized-book/form` —
  * the only route that renders the actual order form. This section never
- * renders the form itself, and package selection is NOT transferred
- * (chosen again inside the form's Phase 01).
+ * renders the form itself; the chosen package is carried in memory
+ * (lib/order/planIntent) and pre-seeds the form's child count.
  *
  * Container/spacing matches every other section on the product page
  * exactly (max-w-[1440px], px-5 md:px-10 lg:px-16, py-16 md:py-20
@@ -33,6 +33,7 @@ import {
   type Market,
 } from "@/components/begin/orderFormData";
 import { useMarketPreference } from "@/lib/order/market";
+import { setPlanIntent } from "@/lib/order/planIntent";
 
 const PLANS: Array<{
   type: BookType;
@@ -372,6 +373,8 @@ export default function PricingSection() {
 
                 <Link
                   href="/begin/personalized-book/form"
+                  // carry the chosen plan into the form (memory only)
+                  onClick={() => setPlanIntent(plan.type)}
                   className={[
                     "tm-cta-gold mt-6 flex h-12 w-full items-center justify-center rounded-lg font-sans text-[13.5px] font-medium tracking-[0.015em] transition-all duration-200",
                     plan.featured

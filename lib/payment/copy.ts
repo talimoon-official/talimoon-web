@@ -101,14 +101,6 @@ export interface PaymentCopy {
   payNetwork: string;
   paySupport: string;
 
-  // ── order entry: two paths ──────────────────────────────────────────
-  entryEyebrow: string;
-  newOrderTitle: string;
-  newOrderBody: string;
-  newOrderCta: string;
-  existingTitle: string;
-  existingBody: string;
-  existingCta: string;
 }
 
 const UZ: PaymentCopy = {
@@ -209,14 +201,6 @@ const UZ: PaymentCopy = {
   payNetwork: "Ulanishda xatolik. Internet aloqasini tekshirib, qayta urinib ko‘ring.",
   paySupport: "Kodni topa olmayapsizmi? Telegram orqali buyurtma raqamingizni yozing.",
 
-  entryEyebrow: "Buyurtma",
-  newOrderTitle: "Yangi buyurtma",
-  newOrderBody: "Farzandingiz uchun yangi shaxsiylashtirilgan kitob buyurtmasini boshlang.",
-  newOrderCta: "Yangi buyurtma berish",
-  existingTitle: "Oldingi buyurtma uchun to‘lov",
-  existingBody:
-    "Avval formani yuborgan bo‘lsangiz, to‘lov kodini kiriting va saqlangan buyurtmangiz uchun to‘lovni davom ettiring.",
-  existingCta: "To‘lovga o‘tish",
 };
 
 const EN: PaymentCopy = {
@@ -312,14 +296,6 @@ const EN: PaymentCopy = {
   payNetwork: "Connection problem. Please check your internet connection and try again.",
   paySupport: "Can’t find your code? Message us your order number on Telegram.",
 
-  entryEyebrow: "Order",
-  newOrderTitle: "New order",
-  newOrderBody: "Start a new personalized book order for your child.",
-  newOrderCta: "Start a new order",
-  existingTitle: "Pay for an existing order",
-  existingBody:
-    "Already submitted the form? Enter your payment code and continue payment for your saved order.",
-  existingCta: "Go to payment",
 };
 
 const RU: PaymentCopy = {
@@ -415,14 +391,6 @@ const RU: PaymentCopy = {
   payNetwork: "Ошибка соединения. Проверьте подключение к интернету и попробуйте ещё раз.",
   paySupport: "Не можете найти код? Напишите нам номер заказа в Telegram.",
 
-  entryEyebrow: "Заказ",
-  newOrderTitle: "Новый заказ",
-  newOrderBody: "Оформите новый заказ персональной книги для Вашего ребёнка.",
-  newOrderCta: "Оформить новый заказ",
-  existingTitle: "Оплата существующего заказа",
-  existingBody:
-    "Уже отправили форму? Введите код оплаты и продолжите оплату сохранённого заказа.",
-  existingCta: "Перейти к оплате",
 };
 
 export const PAYMENT_COPY: Record<PaymentLocale, PaymentCopy> = { uz: UZ, en: EN, ru: RU };
