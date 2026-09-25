@@ -25,6 +25,7 @@ import {
   planChildPhotoUploads,
   submitOrder,
   uploadFile,
+  type FinalizeOrderResult,
 } from "@/lib/order/api";
 import { buildAddressText } from "@/lib/order/addressText";
 import {
@@ -1046,6 +1047,8 @@ export default function PersonalizedBookOrderForm({
   const [saved, setSaved] = useState<{
     orderCode: string;
     resume: { token: string; expiresAt: string } | null;
+    paymentCode: FinalizeOrderResult["paymentCode"];
+    paymentCodeDelivery: FinalizeOrderResult["paymentCodeDelivery"];
   } | null>(null);
   /** Latched the moment the final submit fires, so a second click /
    *  an Enter race can't send the order twice (spec §6). */
@@ -1591,10 +1594,16 @@ export default function PersonalizedBookOrderForm({
       const finalized = await finalizeOrder({
         orderCode,
         capabilityToken,
-        notify: { customerName: data.orderer.name, phone: canonicalPhone },
+        // bookLoc = the customer's own language, for the payment-code message
+        notify: { customerName: data.orderer.name, phone: canonicalPhone, locale: bookLoc },
       });
 
-      setSaved({ orderCode: finalized.orderCode, resume: finalized.resume ?? null });
+      setSaved({
+        orderCode: finalized.orderCode,
+        resume: finalized.resume ?? null,
+        paymentCode: finalized.paymentCode ?? null,
+        paymentCodeDelivery: finalized.paymentCodeDelivery ?? null,
+      });
     } catch (err) {
       // Never surface the raw error (status text, validation detail) to the
       // customer — same "never leak internals" posture as the backend. The
@@ -1755,6 +1764,8 @@ export default function PersonalizedBookOrderForm({
       <OrderSaved
         orderCode={saved.orderCode}
         resume={saved.resume}
+        paymentCode={saved.paymentCode}
+        paymentCodeDelivery={saved.paymentCodeDelivery}
         copy={PAYMENT_COPY[bookLoc]}
         locale={bookLoc}
       />

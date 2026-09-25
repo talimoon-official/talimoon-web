@@ -72,6 +72,43 @@ export interface PaymentCopy {
   savedReassurance: string;
   /** invalid/expired link: we cannot know an order exists, so conditional */
   invalidReassurance: string;
+  // ── payment code (short credential, e.g. K7M4P2) ─────────────────────
+  paymentCodeLabel: string;
+  /** under the code block on the saved screen */
+  paymentCodeHelper: string;
+  /** under the code block on the pay-later screen */
+  laterCodeHelper: string;
+  /** small hint inside the code block */
+  codeKeepHint: string;
+  copyCode: string;
+  codeCopied: string;
+  /** "talimoon.com/pay" row label */
+  payAccessLabel: string;
+  /** automated delivery confirmed by the provider — only then */
+  deliveredSms: string;
+  deliveredWhatsapp: string;
+  /** shown when automated delivery did NOT confirm */
+  saveCodeNotice: string;
+
+  // ── /pay ────────────────────────────────────────────────────────────
+  payTitle: string;
+  payDescription: string;
+  payInputLabel: string;
+  payOpen: string;
+  payOpening: string;
+  payInvalid: string;
+  payRateLimited: string;
+  payNetwork: string;
+  paySupport: string;
+
+  // ── order entry: two paths ──────────────────────────────────────────
+  entryEyebrow: string;
+  newOrderTitle: string;
+  newOrderBody: string;
+  newOrderCta: string;
+  existingTitle: string;
+  existingBody: string;
+  existingCta: string;
 }
 
 const UZ: PaymentCopy = {
@@ -99,7 +136,7 @@ const UZ: PaymentCopy = {
   copyLink: "Havolani nusxalash",
   linkCopied: "Nusxalandi",
   lostLink:
-    "Havolani yo‘qotsangiz, Telegram orqali buyurtma raqamingizni yozing — Sizga yangi havola yuboramiz.",
+    "To‘lov kodini yoki havolani yo‘qotsangiz, Telegram orqali buyurtma raqamingizni yozing — Sizga yangisini yuboramiz.",
   contactTelegram: "Telegram orqali yozish",
 
   loading: "Buyurtmangiz ochilmoqda…",
@@ -146,6 +183,40 @@ const UZ: PaymentCopy = {
     "Buyurtmangiz saqlangan — formani qayta to‘ldirishingiz shart emas.",
   invalidReassurance:
     "Agar buyurtma bergan bo‘lsangiz, u saqlangan — formani qayta to‘ldirishingiz shart emas. Yangi havola uchun Telegram orqali buyurtma raqamingizni yozing.",
+
+  paymentCodeLabel: "To‘lov kodi",
+  paymentCodeHelper:
+    "To‘lov kodini saqlab qo‘ying. Keyinroq shu kod orqali buyurtmangizni ochib, to‘lovni davom ettirishingiz mumkin.",
+  laterCodeHelper:
+    "To‘lov kodini saqlab qo‘ying. Keyinroq shu kod orqali saqlangan buyurtmangizni ochib, to‘lovni davom ettirasiz.",
+  codeKeepHint: "Keyinroq to‘lov qilish uchun shu kod kerak bo‘ladi.",
+  copyCode: "Nusxalash",
+  codeCopied: "Nusxalandi",
+  payAccessLabel: "To‘lov sahifasi",
+  deliveredSms: "To‘lov kodi SMS orqali ham yuborildi.",
+  deliveredWhatsapp: "To‘lov kodi WhatsApp orqali ham yuborildi.",
+  saveCodeNotice: "To‘lov kodini saqlab qo‘ying",
+
+  payTitle: "To‘lov kodini kiriting",
+  payDescription:
+    "Avval buyurtma formasini yuborgan bo‘lsangiz, SMS yoki WhatsApp orqali olgan to‘lov kodingizni kiriting. Shu kod orqali saqlangan buyurtmangiz ochiladi va to‘lovni davom ettirasiz.",
+  payInputLabel: "To‘lov kodi",
+  payOpen: "Buyurtmani ochish",
+  payOpening: "Ochilmoqda…",
+  payInvalid:
+    "To‘lov kodi topilmadi yoki amal qilish muddati tugagan. Kodni tekshirib, qayta urinib ko‘ring.",
+  payRateLimited: "Juda ko‘p urinish bo‘ldi. Birozdan so‘ng qayta urinib ko‘ring.",
+  payNetwork: "Ulanishda xatolik. Internet aloqasini tekshirib, qayta urinib ko‘ring.",
+  paySupport: "Kodni topa olmayapsizmi? Telegram orqali buyurtma raqamingizni yozing.",
+
+  entryEyebrow: "Buyurtma",
+  newOrderTitle: "Yangi buyurtma",
+  newOrderBody: "Farzandingiz uchun yangi shaxsiylashtirilgan kitob buyurtmasini boshlang.",
+  newOrderCta: "Yangi buyurtma berish",
+  existingTitle: "Oldingi buyurtma uchun to‘lov",
+  existingBody:
+    "Avval formani yuborgan bo‘lsangiz, to‘lov kodini kiriting va saqlangan buyurtmangiz uchun to‘lovni davom ettiring.",
+  existingCta: "To‘lovga o‘tish",
 };
 
 const EN: PaymentCopy = {
@@ -171,7 +242,7 @@ const EN: PaymentCopy = {
   copyLink: "Copy link",
   linkCopied: "Copied",
   lostLink:
-    "If you lose the link, message us your order number on Telegram and we’ll send you a new one.",
+    "If you lose your payment code or link, message us your order number on Telegram and we’ll send you a new one.",
   contactTelegram: "Message us on Telegram",
 
   loading: "Opening your order…",
@@ -215,6 +286,40 @@ const EN: PaymentCopy = {
   savedReassurance: "Your order is saved — you don’t need to fill in the form again.",
   invalidReassurance:
     "If you have placed an order, it is saved — you don’t need to fill in the form again. For a new link, message us your order number on Telegram.",
+
+  paymentCodeLabel: "Payment code",
+  paymentCodeHelper:
+    "Keep this payment code. You can use it later to open your order and continue payment.",
+  laterCodeHelper:
+    "Keep this payment code. Later, it opens your saved order so you can continue payment.",
+  codeKeepHint: "You’ll need this code to pay later.",
+  copyCode: "Copy",
+  codeCopied: "Copied",
+  payAccessLabel: "Payment page",
+  deliveredSms: "We’ve also sent the payment code by SMS.",
+  deliveredWhatsapp: "We’ve also sent the payment code on WhatsApp.",
+  saveCodeNotice: "Please keep this payment code",
+
+  payTitle: "Enter your payment code",
+  payDescription:
+    "If you’ve already submitted the order form, enter the payment code you received by SMS or WhatsApp. It opens your saved order so you can continue payment.",
+  payInputLabel: "Payment code",
+  payOpen: "Open my order",
+  payOpening: "Opening…",
+  payInvalid:
+    "We couldn’t find this payment code, or it has expired. Please check the code and try again.",
+  payRateLimited: "Too many attempts. Please wait a little and try again.",
+  payNetwork: "Connection problem. Please check your internet connection and try again.",
+  paySupport: "Can’t find your code? Message us your order number on Telegram.",
+
+  entryEyebrow: "Order",
+  newOrderTitle: "New order",
+  newOrderBody: "Start a new personalized book order for your child.",
+  newOrderCta: "Start a new order",
+  existingTitle: "Pay for an existing order",
+  existingBody:
+    "Already submitted the form? Enter your payment code and continue payment for your saved order.",
+  existingCta: "Go to payment",
 };
 
 const RU: PaymentCopy = {
@@ -240,7 +345,7 @@ const RU: PaymentCopy = {
   copyLink: "Скопировать ссылку",
   linkCopied: "Скопировано",
   lostLink:
-    "Если ссылка потеряется, напишите нам номер заказа в Telegram — мы пришлём новую.",
+    "Если код оплаты или ссылка потеряется, напишите нам номер заказа в Telegram — мы пришлём новый.",
   contactTelegram: "Написать в Telegram",
 
   loading: "Открываем Ваш заказ…",
@@ -284,6 +389,40 @@ const RU: PaymentCopy = {
   savedReassurance: "Ваш заказ сохранён — заполнять форму заново не нужно.",
   invalidReassurance:
     "Если Вы оформили заказ, он сохранён — заполнять форму заново не нужно. Для новой ссылки напишите нам номер заказа в Telegram.",
+
+  paymentCodeLabel: "Код оплаты",
+  paymentCodeHelper:
+    "Сохраните код оплаты. Позже с его помощью Вы откроете заказ и продолжите оплату.",
+  laterCodeHelper:
+    "Сохраните код оплаты. Позже он откроет Ваш сохранённый заказ, и Вы продолжите оплату.",
+  codeKeepHint: "Этот код понадобится, чтобы оплатить позже.",
+  copyCode: "Скопировать",
+  codeCopied: "Скопировано",
+  payAccessLabel: "Страница оплаты",
+  deliveredSms: "Код оплаты также отправлен по SMS.",
+  deliveredWhatsapp: "Код оплаты также отправлен в WhatsApp.",
+  saveCodeNotice: "Сохраните код оплаты",
+
+  payTitle: "Введите код оплаты",
+  payDescription:
+    "Если Вы уже отправили форму заказа, введите код оплаты из SMS или WhatsApp. Он откроет Ваш сохранённый заказ, и Вы продолжите оплату.",
+  payInputLabel: "Код оплаты",
+  payOpen: "Открыть заказ",
+  payOpening: "Открываем…",
+  payInvalid:
+    "Код оплаты не найден или срок его действия истёк. Проверьте код и попробуйте ещё раз.",
+  payRateLimited: "Слишком много попыток. Подождите немного и попробуйте снова.",
+  payNetwork: "Ошибка соединения. Проверьте подключение к интернету и попробуйте ещё раз.",
+  paySupport: "Не можете найти код? Напишите нам номер заказа в Telegram.",
+
+  entryEyebrow: "Заказ",
+  newOrderTitle: "Новый заказ",
+  newOrderBody: "Оформите новый заказ персональной книги для Вашего ребёнка.",
+  newOrderCta: "Оформить новый заказ",
+  existingTitle: "Оплата существующего заказа",
+  existingBody:
+    "Уже отправили форму? Введите код оплаты и продолжите оплату сохранённого заказа.",
+  existingCta: "Перейти к оплате",
 };
 
 export const PAYMENT_COPY: Record<PaymentLocale, PaymentCopy> = { uz: UZ, en: EN, ru: RU };

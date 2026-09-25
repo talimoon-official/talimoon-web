@@ -3,6 +3,8 @@
  *
  *   POST /v1/payment/session    exchange the #fragment resume token (in the
  *                               JSON body) for an HttpOnly session cookie
+ *   POST /v1/payment/code/session  the same, from the short payment code the
+ *                               customer types on /pay (e.g. K7M4P2)
  *   GET  /v1/payment            this session's order payment view
  *   POST /v1/payment/attempts   start (or resume) the payment attempt
  *   POST /v1/payment/receipt    upload the receipt for the OPEN attempt
@@ -59,6 +61,22 @@ export async function exchangePaymentSession(resumeToken: string): Promise<Payme
     cache: "no-store",
     headers: { "content-type": "application/json", ...WRITE_HEADERS },
     body: JSON.stringify({ resumeToken }),
+  });
+  return parse(res);
+}
+
+/**
+ * Exchange the customer's payment code for the SAME payment session a resume
+ * link gives. Any failure is a generic 401 `payment_code_invalid` (or 429
+ * when rate-limited) — the answer never says why.
+ */
+export async function exchangePaymentCode(code: string): Promise<PaymentView> {
+  const res = await fetch(apiUrl("/v1/payment/code/session"), {
+    method: "POST",
+    credentials: "include",
+    cache: "no-store",
+    headers: { "content-type": "application/json", ...WRITE_HEADERS },
+    body: JSON.stringify({ code }),
   });
   return parse(res);
 }

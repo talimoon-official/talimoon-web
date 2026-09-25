@@ -7,17 +7,18 @@
  * Payment is a separate stage, so this screen only offers the choice:
  *
  *   "Hozir to‘lash"   → the separate payment page, opened through the
- *                       order-bound resume capability the backend returned
- *                       (in the URL fragment only — see lib/payment/link.ts)
- *   "Keyinroq to‘lash" → a calm confirmation that nothing is lost, plus the
- *                       personal link to come back and pay only
+ *                       order-bound resume capability (URL fragment only —
+ *                       see lib/payment/link.ts)
+ *   "Keyinroq to‘lash" → a calm confirmation that nothing is lost, with the
+ *                       customer's PAYMENT CODE and talimoon.com/pay — the way
+ *                       back to payment only, never to the form
  *
  * Nothing here says the book is being prepared: production starts only
  * after the payment is confirmed AND an admin starts it.
  *
- * The raw resume token is held only in this component's props (memory). It
- * is never written to storage and only leaves memory as the fragment of the
- * payment link.
+ * The raw resume token and payment code live only in props (memory). They
+ * are never written to storage; the token only leaves memory as the fragment
+ * of the payment link.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -26,11 +27,22 @@ import type { PaymentCopy } from "@/lib/payment/copy";
 import { lifecycleStatusLabel, type PaymentLocale } from "@/lib/payment/status";
 import { paymentPath, paymentUrl } from "@/lib/payment/link";
 import { CONTACT } from "@/lib/site/social";
+import { PaymentCodeCard } from "@/components/payment/PaymentCodeCard";
+
+export const PAY_ENTRY_PATH = "/pay";
+const PAY_ENTRY_DISPLAY = "talimoon.com/pay";
 
 export interface OrderSavedProps {
   orderCode: string;
   /** the backend's 30-day payment/resume capability; null on an older backend */
   resume: { token: string; expiresAt: string } | null;
+  /** the short payment code (e.g. K7M4P2); null on an older backend */
+  paymentCode?: { code: string; expiresAt: string } | null;
+  /** what automated SMS/WhatsApp delivery did — only "accepted" is claimed */
+  paymentCodeDelivery?: {
+    channel: "sms" | "whatsapp" | null;
+    status: "accepted" | "failed" | "provider_unavailable" | "not_configured";
+  } | null;
   copy: PaymentCopy;
   locale: PaymentLocale;
   /** injectable for tests; defaults to a full-page replace() so "Back" from
@@ -46,14 +58,37 @@ function formatDate(iso: string): string {
   return `${dd}.${mm}.${d.getFullYear()}`;
 }
 
-export function OrderSaved({ orderCode, resume, copy: c, locale, navigate }: OrderSavedProps) {
+const primaryBtn =
+  "inline-flex min-h-[48px] items-center justify-center rounded-md bg-accent-primary px-5 font-sans text-[14px] font-medium text-white outline-none transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-primary";
+const secondaryBtn =
+  "inline-flex min-h-[48px] items-center justify-center rounded-md border border-border-strong px-5 font-sans text-[14px] font-medium text-text-primary outline-none transition-colors hover:border-accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-primary";
+
+export function OrderSaved({
+  orderCode,
+  resume,
+  paymentCode = null,
+  paymentCodeDelivery = null,
+  copy: c,
+  locale,
+  navigate,
+}: OrderSavedProps) {
   const [mode, setMode] = useState<"decide" | "later">("decide");
+  const go = navigate ?? ((path: string) => window.location.replace(path));
+  const canPayNow = resume != null || paymentCode != null;
 
   function payNow() {
-    if (!resume) return;
-    const go = navigate ?? ((path: string) => window.location.replace(path));
-    go(paymentPath(resume.token));
+    // the resume link opens the payment page directly; without one, the
+    // payment code on /pay is the way in
+    if (resume) go(paymentPath(resume.token));
+    else if (paymentCode) go(PAY_ENTRY_PATH);
   }
+
+  const delivered =
+    paymentCodeDelivery?.status === "accepted"
+      ? paymentCodeDelivery.channel === "sms"
+        ? c.deliveredSms
+        : c.deliveredWhatsapp
+      : null;
 
   return (
     <section
@@ -89,6 +124,37 @@ export function OrderSaved({ orderCode, resume, copy: c, locale, navigate }: Ord
           )}
         </dl>
 
+        {paymentCode && (
+          <div className="mt-5 space-y-2">
+            <PaymentCodeCard
+              code={paymentCode.code}
+              label={c.paymentCodeLabel}
+              hint={c.codeKeepHint}
+              copyLabel={c.copyCode}
+              copiedLabel={c.codeCopied}
+            />
+            {mode === "later" && (
+              <p className="flex items-center justify-between rounded-lg border border-border-default px-5 py-3 text-left font-sans text-[13px]">
+                <span className="text-text-muted">{c.payAccessLabel}</span>
+                <a
+                  href={PAY_ENTRY_PATH}
+                  className="font-medium text-text-primary underline underline-offset-4"
+                >
+                  {PAY_ENTRY_DISPLAY}
+                </a>
+              </p>
+            )}
+            <p className="text-left font-sans text-[12.5px] leading-[1.6] text-text-secondary">
+              {delivered ? (
+                <>{delivered} </>
+              ) : (
+                <strong className="font-medium text-text-primary">{c.saveCodeNotice}. </strong>
+              )}
+              {mode === "decide" ? c.paymentCodeHelper : c.laterCodeHelper}
+            </p>
+          </div>
+        )}
+
         <p
           role="note"
           className="mt-5 flex items-start gap-2.5 rounded-lg bg-accent-primary/[0.07] px-4 py-3 text-left font-sans text-[13px] leading-[1.6] text-text-primary"
@@ -99,20 +165,12 @@ export function OrderSaved({ orderCode, resume, copy: c, locale, navigate }: Ord
 
         {mode === "decide" ? (
           <div className="mt-8 flex flex-col gap-3">
-            {resume ? (
+            {canPayNow ? (
               <>
-                <button
-                  type="button"
-                  onClick={payNow}
-                  className="inline-flex min-h-[48px] items-center justify-center rounded-md bg-accent-primary px-5 font-sans text-[14px] font-medium text-white outline-none transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-primary"
-                >
+                <button type="button" onClick={payNow} className={primaryBtn}>
                   {c.payNow}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setMode("later")}
-                  className="inline-flex min-h-[48px] items-center justify-center rounded-md border border-border-strong px-5 font-sans text-[14px] font-medium text-text-primary outline-none transition-colors hover:border-accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-primary"
-                >
+                <button type="button" onClick={() => setMode("later")} className={secondaryBtn}>
                   {c.payLater}
                 </button>
               </>
@@ -121,7 +179,7 @@ export function OrderSaved({ orderCode, resume, copy: c, locale, navigate }: Ord
             )}
           </div>
         ) : (
-          <PayLaterDetails copy={c} resume={resume} onPayNow={payNow} />
+          <PayLaterDetails copy={c} resume={resume} hasCode={paymentCode != null} onPayNow={payNow} />
         )}
       </div>
     </section>
@@ -131,10 +189,12 @@ export function OrderSaved({ orderCode, resume, copy: c, locale, navigate }: Ord
 function PayLaterDetails({
   copy: c,
   resume,
+  hasCode,
   onPayNow,
 }: {
   copy: PaymentCopy;
   resume: OrderSavedProps["resume"];
+  hasCode: boolean;
   onPayNow: () => void;
 }) {
   const [copied, setCopied] = useState(false);
@@ -142,8 +202,10 @@ function PayLaterDetails({
   const timer = useRef<number | undefined>(undefined);
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
-  const link = resume ? paymentUrl(window.location.origin, resume.token) : null;
-  const validUntil = resume ? formatDate(resume.expiresAt) : "";
+  // With a payment code, the code + talimoon.com/pay IS the way back. The
+  // personal link stays only as a fallback for a backend that issues no code.
+  const link = !hasCode && resume ? paymentUrl(window.location.origin, resume.token) : null;
+  const validUntil = link && resume ? formatDate(resume.expiresAt) : "";
 
   async function copyLink() {
     if (!link) return;
@@ -160,18 +222,22 @@ function PayLaterDetails({
 
   return (
     <div className="mt-8 space-y-5 text-left">
-      {link ? (
+      {hasCode || resume ? (
+        <button type="button" onClick={onPayNow} className={`${primaryBtn} w-full`}>
+          {c.payNow}
+        </button>
+      ) : (
+        <p className="font-sans text-[13px] leading-[1.6] text-text-secondary">{c.savedNoLink}</p>
+      )}
+
+      {link && (
         <div className="rounded-lg border border-border-default p-5">
           <p className="font-sans text-[14px] font-medium text-text-primary">{c.linkHeading}</p>
           <p className="mt-1.5 font-sans text-[12.5px] leading-[1.6] text-text-secondary">{c.linkBody}</p>
           {validUntil && (
             <p className="mt-1.5 font-sans text-[12px] text-text-muted">{c.linkValidUntil(validUntil)}</p>
           )}
-          <button
-            type="button"
-            onClick={copyLink}
-            className="mt-4 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-md border border-border-strong px-4 font-sans text-[13.5px] font-medium text-text-primary outline-none transition-colors hover:border-accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-primary"
-          >
+          <button type="button" onClick={copyLink} className={`${secondaryBtn} mt-4 w-full gap-2`}>
             {copied ? (
               <Check size={15} strokeWidth={2} className="text-accent-primary" />
             ) : (
@@ -188,16 +254,7 @@ function PayLaterDetails({
               className="mt-3 w-full rounded-md border border-border-default bg-surface-base px-3 py-2 font-mono text-[11.5px] text-text-secondary"
             />
           )}
-          <button
-            type="button"
-            onClick={onPayNow}
-            className="mt-3 inline-flex min-h-[44px] w-full items-center justify-center rounded-md bg-accent-primary px-4 font-sans text-[13.5px] font-medium text-white outline-none transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-primary"
-          >
-            {c.payNow}
-          </button>
         </div>
-      ) : (
-        <p className="font-sans text-[13px] leading-[1.6] text-text-secondary">{c.savedNoLink}</p>
       )}
 
       <p className="font-sans text-[12.5px] leading-[1.6] text-text-muted">

@@ -465,12 +465,21 @@ export interface FinalizeOrderResult {
   paymentStatus: string;
   lifecycleStatus?: string;
   resume?: { token: string; expiresAt: string } | null;
+  /** the short payment code (e.g. K7M4P2), returned once — shown on the
+   *  saved screen, never stored in the browser */
+  paymentCode?: { code: string; expiresAt: string } | null;
+  /** what automated SMS/WhatsApp delivery did; only "accepted" means sent */
+  paymentCodeDelivery?: {
+    channel: "sms" | "whatsapp" | null;
+    status: "accepted" | "failed" | "provider_unavailable" | "not_configured";
+  } | null;
 }
 
 export async function finalizeOrder(args: {
   orderCode: string;
   capabilityToken: string;
-  notify?: { customerName?: string; phone?: string };
+  /** `locale` = the customer's language, for the payment-code message */
+  notify?: { customerName?: string; phone?: string; locale?: "uz" | "en" | "ru" };
 }): Promise<FinalizeOrderResult> {
   const res = await fetch(apiUrl(`/v1/orders/${args.orderCode}/finalize`), {
     method: "POST",
