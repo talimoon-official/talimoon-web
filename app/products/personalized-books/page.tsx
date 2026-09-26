@@ -33,7 +33,8 @@ import Footer from "@/components/layout/Footer";
  * has already chosen the product, so they stay here to see the plans.
  * From the pricing cards, "Choose …" then enters the shared order form
  * at `/begin/personalized-book/form`. Customers arriving through the
- * GENERAL funnel instead go `/begin` → `/begin/personalized-book/price`
+ * GENERAL funnel instead go `/begin` → `/begin/personalized-book` →
+ * `/begin/personalized-book/price`
  * → the same form.
  */
 export default function PersonalizedBooksPage() {

@@ -89,7 +89,7 @@ export default function ProductSelect() {
   // rendered inline while the address bar still says `/begin`.
   function openProduct(id: ProductId) {
     if (id === "personalized-books") {
-      router.push("/begin/personalized-book/price");
+      router.push("/begin/personalized-book");
     }
     // Other products are not active yet (see PRODUCTS[].active); their
     // routes (/begin/yusuf-yasmina/…, /begin/toys/…) are added later.

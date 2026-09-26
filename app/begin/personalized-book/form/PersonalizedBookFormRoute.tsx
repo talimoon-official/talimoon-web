@@ -11,7 +11,7 @@ import PersonalizedBookOrderForm from "@/components/begin/PersonalizedBookOrderF
  * form's first screen returns to the previous journey step — the
  * pricing route — not to `/begin`.
  *
- * The book type chosen one step earlier (PersonalizedBookEntry, or a
+ * The book type chosen one step earlier (PersonalizedBookPlans, or a
  * PricingSection card) arrives through the in-memory plan intent and
  * pre-seeds the form's child count; the market is preserved by the
  * existing `useMarketPreference` mechanism the form already reads.

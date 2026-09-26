@@ -4,11 +4,10 @@
  * PricingSection — TALIMOON personalized-books pricing step
  * ----------------------------------------------------------------
  * Two plan cards + the market/currency selector + the reassurance row.
- * This is the ONE pricing implementation and it is reused in two
- * places, unchanged:
- *   • `/products/personalized-books` at `#pricing` (product-page section)
- *   • `/begin/personalized-book/price` (the order journey's pricing step)
- * There is no second pricing source of truth — all values, calculations,
+ * Rendered on `/products/personalized-books` at `#pricing`. The order
+ * journey's own choice screen (`/begin/personalized-book/price`,
+ * PersonalizedBookPlans) shares its visual language and reads the same
+ * data. There is no second pricing source of truth — all values, calculations,
  * market/currency/delivery logic and package definitions live in
  * `@/components/begin/orderFormData`.
  *

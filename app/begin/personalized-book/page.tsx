@@ -1,14 +1,26 @@
-import { redirect } from "next/navigation";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import PersonalizedBookEntry from "@/components/begin/PersonalizedBookEntry";
 
 /**
- * Canonical `/begin/personalized-book` — no UI of its own. The order
- * journey always shows the price before the form, so this route just
- * redirects to the pricing step.
+ * `/begin/personalized-book` — the Personalized Books order entry.
+ * Reached after choosing the Personalized Books world on `/begin`. The
+ * customer chooses their intent here, and only that:
  *
- *   /begin/personalized-book        -> /begin/personalized-book/price
- *   /begin/personalized-book/price  -> Personalized Book pricing (PricingSection)
- *   /begin/personalized-book/form   -> the existing order form
+ *   Yangi buyurtma               -> /begin/personalized-book/price (own page)
+ *   Mavjud buyurtma uchun to‘lov -> /pay (never the form)
+ *
+ * Navbar/Footer + top clearance mirror `/begin` so the steps sit under the
+ * fixed navbar identically.
  */
-export default function PersonalizedBookIndex() {
-  redirect("/begin/personalized-book/price");
+export default function PersonalizedBookEntryPage() {
+  return (
+    <>
+      <Navbar />
+      <main className="pt-16 lg:pt-[74px]">
+        <PersonalizedBookEntry />
+      </main>
+      <Footer />
+    </>
+  );
 }

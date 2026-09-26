@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useEffect } from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -8,14 +8,17 @@ import { resolve } from "node:path";
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, replace: vi.fn() }), usePathname: () => "/" }));
 
-import PersonalizedBookEntry, { FORM_PATH, PAY_PATH } from "../PersonalizedBookEntry";
+import PersonalizedBookEntry from "../PersonalizedBookEntry";
+import PersonalizedBookPlans from "../PersonalizedBookPlans";
 import { LanguageProvider, useLanguage } from "@/lib/i18n/LanguageContext";
-import { ENTRY_COPY } from "@/lib/order/entry-copy";
+import { ENTRY_COPY, PLAN_COPY } from "@/lib/order/entry-copy";
+import { ENTRY_PATH, FORM_PATH, PAY_PATH, PRICE_PATH } from "@/lib/order/paths";
 import { clearPlanIntent, peekPlanIntent, setPlanIntent } from "@/lib/order/planIntent";
 import { MARKET_PRICING, formatMoney } from "../orderFormData";
 import { setMarketPreference } from "@/lib/order/market";
 
 const c = ENTRY_COPY.uz;
+const pc = PLAN_COPY.uz;
 
 beforeEach(() => {
   push.mockReset();
@@ -25,147 +28,76 @@ beforeEach(() => {
   setMarketPreference("UZ");
 });
 
-function mount() {
+const read = (p: string) => readFileSync(resolve(process.cwd(), p), "utf8");
+
+function mountEntry() {
   return render(
     <LanguageProvider>
       <PersonalizedBookEntry />
     </LanguageProvider>,
   );
 }
+function mountPlans() {
+  return render(
+    <LanguageProvider>
+      <PersonalizedBookPlans />
+    </LanguageProvider>,
+  );
+}
 
-const newCard = () => screen.getByRole("button", { name: new RegExp(c.newTitle) });
+const newCard = () => screen.getByRole("link", { name: new RegExp(c.newTitle) });
 const existingCard = () => screen.getByRole("link", { name: new RegExp(c.existingTitle) });
+const planCard = (name: RegExp) => screen.getByRole("link", { name });
 
-describe("Personalized Books order entry — intent", () => {
+describe("intent screen (/begin/personalized-book)", () => {
   it("frames the choice inside the Personalized Books journey", () => {
-    mount();
+    mountEntry();
     const h1 = screen.getByRole("heading", { level: 1, name: c.heading });
-    expect(h1).toBeInTheDocument();
     expect(screen.getByText(c.eyebrow)).toBeInTheDocument();
-    // context comes BEFORE the intent cards in the document
     expect(h1.compareDocumentPosition(newCard()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it("offers the two intents with the approved copy", () => {
-    mount();
+  it("offers exactly the two intents with the approved copy", () => {
+    const { container } = mountEntry();
+    expect(container.querySelectorAll("[data-intent]")).toHaveLength(2);
     expect(newCard()).toHaveTextContent("Yangi buyurtma");
     expect(newCard()).toHaveTextContent("Farzandingiz uchun yangi shaxsiylashtirilgan kitob buyurtmasini boshlang.");
-    expect(newCard()).toHaveTextContent("Yangi buyurtma berish");
     expect(existingCard()).toHaveTextContent("Mavjud buyurtma uchun to‘lov");
-    expect(existingCard()).toHaveTextContent(
-      "Avval formani yuborgan bo‘lsangiz, to‘lov kodini kiriting va saqlangan buyurtmangiz uchun to‘lovni davom ettiring.",
-    );
-    expect(existingCard()).toHaveTextContent("To‘lovga o‘tish");
     expect(existingCard()).toHaveTextContent("Formani qayta to‘ldirish shart emas");
   });
 
-  it("the existing-order path goes straight to /pay and never to the form", () => {
-    mount();
+  it("'Yangi buyurtma' navigates to the dedicated pricing page", () => {
+    mountEntry();
+    expect(PRICE_PATH).toBe("/begin/personalized-book/price");
+    expect(newCard()).toHaveAttribute("href", PRICE_PATH);
+    expect(newCard()).not.toHaveAttribute("aria-expanded");
+  });
+
+  it("pricing never expands inline on the intent screen", () => {
+    mountEntry();
+    fireEvent.click(newCard());
+    expect(screen.queryByText(pc.heading)).toBeNull();
+    expect(screen.queryByText(/499 000/)).toBeNull();
+    expect(screen.queryByText(/699 000/)).toBeNull();
+    expect(screen.queryByRole("radiogroup")).toBeNull();
+    expect(read("components/begin/PersonalizedBookEntry.tsx")).not.toMatch(/MARKET_PRICING|useState/);
+  });
+
+  it("'Mavjud buyurtma uchun to‘lov' goes straight to /pay, never the form", () => {
+    mountEntry();
     expect(existingCard()).toHaveAttribute("href", PAY_PATH);
-    expect(existingCard().getAttribute("href")).not.toMatch(/form/);
+    expect(PAY_PATH).toBe("/pay");
     fireEvent.click(existingCard());
-    expect(push).not.toHaveBeenCalledWith(FORM_PATH);
+    expect(push).not.toHaveBeenCalled();
     expect(peekPlanIntent()).toBeUndefined();
   });
 
-  it("book choice is hidden until 'Yangi buyurtma' is chosen, then revealed", () => {
-    mount();
-    expect(newCard()).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByRole("radiogroup", { name: c.planHeading })).toBeNull();
-    fireEvent.click(newCard());
-    expect(newCard()).toHaveAttribute("aria-expanded", "true");
-    const group = screen.getByRole("radiogroup", { name: c.planHeading });
-    expect(group).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: /1 farzand uchun/ })).toHaveTextContent(
-      formatMoney(MARKET_PRICING.UZ.single, "UZS"),
-    );
-    expect(screen.getByRole("radio", { name: /Bir nechta farzand uchun/ })).toHaveTextContent(
-      formatMoney(MARKET_PRICING.UZ.multi, "UZS"),
-    );
-  });
-});
-
-describe("Personalized Books order entry — book choice → form", () => {
-  it("nothing starts before a book is chosen", () => {
-    mount();
-    fireEvent.click(newCard());
-    fireEvent.click(screen.getByRole("button", { name: c.start }));
-    expect(push).not.toHaveBeenCalled();
-    expect(screen.getByRole("alert")).toHaveTextContent(c.startHint);
-  });
-
-  it.each([
-    ["single", /1 farzand uchun/],
-    ["multi", /Bir nechta farzand uchun/],
-  ] as const)("%s → the existing form, with the book type handed over in memory", (plan, name) => {
-    mount();
-    fireEvent.click(newCard());
-    const card = screen.getByRole("radio", { name });
-    fireEvent.click(card);
-    expect(card).toHaveAttribute("aria-checked", "true");
-    expect(card).toHaveTextContent(c.chosen);
-    fireEvent.click(screen.getByRole("button", { name: c.start }));
-    expect(push).toHaveBeenCalledWith(FORM_PATH);
-    expect(peekPlanIntent()).toBe(plan);
-    // no URL parameter, nothing persisted
-    expect(push.mock.calls[0]![0]).not.toContain("?");
-    expect(JSON.stringify({ ...localStorage })).not.toMatch(/single|multi/);
-  });
-
-  it("prices follow the market selector (the one pricing source)", () => {
-    mount();
-    fireEvent.click(newCard());
-    fireEvent.click(screen.getByRole("radio", { name: c.marketIntl }));
-    expect(screen.getByRole("radio", { name: /1 farzand uchun/ })).toHaveTextContent(
-      formatMoney(MARKET_PRICING.INTERNATIONAL.single, "USD"),
-    );
-    expect(screen.getByRole("radio", { name: /Bir nechta farzand uchun/ })).toHaveTextContent(
-      formatMoney(MARKET_PRICING.INTERNATIONAL.multi, "USD"),
-    );
-  });
-});
-
-describe("Personalized Books order entry — keyboard", () => {
-  it("Tab reaches both intents; Enter reveals; arrows move the selection; Enter starts", async () => {
-    const user = userEvent.setup();
-    mount();
-    await user.tab();
-    expect(newCard()).toHaveFocus();
-    await user.tab();
-    expect(existingCard()).toHaveFocus();
-    await user.tab({ shift: true });
-    await user.keyboard("{Enter}");
-    expect(newCard()).toHaveAttribute("aria-expanded", "true");
-
-    const single = screen.getByRole("radio", { name: /1 farzand uchun/ });
-    const multi = screen.getByRole("radio", { name: /Bir nechta farzand uchun/ });
-    // roving tabindex: one plan is the tab stop
-    expect(single).toHaveAttribute("tabindex", "0");
-    expect(multi).toHaveAttribute("tabindex", "-1");
-    single.focus();
-    await user.keyboard("{ArrowRight}");
-    expect(multi).toHaveAttribute("aria-checked", "true");
-    expect(multi).toHaveFocus();
-    await user.keyboard("{ArrowLeft}");
-    expect(single).toHaveAttribute("aria-checked", "true");
-
-    screen.getByRole("button", { name: c.start }).focus();
-    await user.keyboard("{Enter}");
-    expect(push).toHaveBeenCalledWith(FORM_PATH);
-    expect(peekPlanIntent()).toBe("single");
-  });
-});
-
-describe("Personalized Books order entry — structure & locales", () => {
-  it("stacks on mobile and pairs on ≥ sm (grid classes), with 44px+ touch targets", () => {
-    const { container } = mount();
-    const intents = container.querySelector('[data-intent="new"]')!.parentElement!;
-    expect(intents.className).toMatch(/\bgrid\b/);
-    expect(intents.className).toMatch(/sm:grid-cols-2/);
-    expect(intents.className).not.toMatch(/(^|\s)grid-cols-2/); // single column by default
-    fireEvent.click(newCard());
-    const planCta = container.querySelector('[data-plan="single"] span.h-11');
-    expect(planCta).not.toBeNull();
+  it("stacks on mobile and pairs on ≥ sm", () => {
+    const { container } = mountEntry();
+    const grid = container.querySelector('[data-intent="new"]')!.parentElement!;
+    expect(grid.className).toMatch(/\bgrid\b/);
+    expect(grid.className).toMatch(/sm:grid-cols-2/);
+    expect(grid.className).not.toMatch(/(^|\s)grid-cols-2/);
   });
 
   it.each([
@@ -174,7 +106,11 @@ describe("Personalized Books order entry — structure & locales", () => {
   ] as const)("%s copy renders", (lang, key) => {
     function SetLang() {
       const { setLanguage } = useLanguage();
-      useEffect(() => setLanguage(lang), [setLanguage]);
+      // module-level language state: restore UZ on unmount so later tests stay UZ
+      useEffect(() => {
+        setLanguage(lang);
+        return () => setLanguage("UZ");
+      }, [setLanguage]);
       return null;
     }
     render(
@@ -185,19 +121,130 @@ describe("Personalized Books order entry — structure & locales", () => {
     );
     expect(screen.getByRole("heading", { level: 1, name: ENTRY_COPY[key].heading })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: new RegExp(ENTRY_COPY[key].existingTitle) })).toHaveAttribute("href", PAY_PATH);
+    expect(screen.getByRole("link", { name: new RegExp(ENTRY_COPY[key].newTitle) })).toHaveAttribute("href", PRICE_PATH);
   });
 });
 
-describe("placement", () => {
-  it("/begin no longer renders a standalone order block above the product worlds", () => {
-    const page = readFileSync(resolve(process.cwd(), "app/begin/page.tsx"), "utf8");
-    expect(page).not.toMatch(/OrderPaths/);
-    expect(page).toMatch(/<ProductSelect \/>/);
+describe("pricing page (/begin/personalized-book/price)", () => {
+  it("shows the approved header", () => {
+    mountPlans();
+    expect(screen.getByText("Buyurtmani boshlash")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Kitob turini tanlang" })).toBeInTheDocument();
+    expect(screen.getByText("Farzandlaringiz soniga mos variantni tanlang.")).toBeInTheDocument();
   });
 
-  it("the Personalized Books step renders the entry (not the bare pricing section)", () => {
-    const page = readFileSync(resolve(process.cwd(), "app/begin/personalized-book/price/page.tsx"), "utf8");
-    expect(page).toMatch(/<PersonalizedBookEntry \/>/);
+  it("shows exactly two options, each a complete premium card", () => {
+    const { container } = mountPlans();
+    const cards = container.querySelectorAll("[data-plan]");
+    expect(cards).toHaveLength(2);
+    cards.forEach((card) => {
+      expect(card).toHaveTextContent("Shaxsiylashtirilgan kitob");
+      expect(card).toHaveTextContent("Shuni tanlash");
+      expect(card.querySelector("svg")).not.toBeNull(); // visual marker
+      expect(card.getAttribute("role")).toBeNull(); // not a radio form
+    });
+    expect(planCard(/1 farzand uchun/)).toHaveTextContent("499 000 so‘m");
+    expect(planCard(/1 farzand uchun/)).toHaveTextContent(pc.singleBody);
+    expect(planCard(/Bir nechta farzand uchun/)).toHaveTextContent("699 000 so‘m");
+    expect(planCard(/Bir nechta farzand uchun/)).toHaveTextContent(pc.multiBody);
+  });
+
+  it("prices come from MARKET_PRICING (no hardcoded values)", () => {
+    mountPlans();
+    const num = (n: number) => n.toLocaleString("en-US").replace(/,/g, " ");
+    expect(planCard(/1 farzand uchun/)).toHaveTextContent(num(MARKET_PRICING.UZ.single));
+    expect(planCard(/Bir nechta farzand uchun/)).toHaveTextContent(num(MARKET_PRICING.UZ.multi));
+    fireEvent.click(screen.getByRole("radio", { name: pc.marketIntl }));
+    expect(planCard(/1 farzand uchun/)).toHaveTextContent(formatMoney(MARKET_PRICING.INTERNATIONAL.single, "USD"));
+    expect(planCard(/Bir nechta farzand uchun/)).toHaveTextContent(formatMoney(MARKET_PRICING.INTERNATIONAL.multi, "USD"));
+  });
+
+  it.each([
+    ["single", /1 farzand uchun/],
+    ["multi", /Bir nechta farzand uchun/],
+  ] as const)("%s → continues to the existing form with the book type handed over", (plan, name) => {
+    mountPlans();
+    const card = planCard(name);
+    expect(card).toHaveAttribute("href", FORM_PATH);
+    expect(card).toHaveAttribute("data-chosen", "false");
+    fireEvent.click(card);
+    expect(card).toHaveAttribute("data-chosen", "true"); // selected state
+    expect(peekPlanIntent()).toBe(plan);
+    expect(card.getAttribute("href")).not.toContain("?");
+    expect(JSON.stringify({ ...localStorage })).not.toMatch(/single|multi/);
+  });
+
+  it("keyboard: Tab reaches both cards; Enter chooses", async () => {
+    const user = userEvent.setup();
+    mountPlans();
+    const single = planCard(/1 farzand uchun/);
+    const multi = planCard(/Bir nechta farzand uchun/);
+    single.focus();
+    await user.tab();
+    expect(multi).toHaveFocus();
+    await user.keyboard("{Enter}");
+    expect(peekPlanIntent()).toBe("multi");
+  });
+
+  it("offers a way back to the intent screen", () => {
+    mountPlans();
+    expect(screen.getByRole("link", { name: pc.back })).toHaveAttribute("href", ENTRY_PATH);
+  });
+
+  it("stacks full-width on mobile, side by side on desktop, large touch targets", () => {
+    const { container } = mountPlans();
+    const list = container.querySelector("[data-plan]")!.closest("ul")!;
+    expect(list.className).toMatch(/\bgrid\b/);
+    expect(list.className).toMatch(/md:grid-cols-2/);
+    expect(list.className).not.toMatch(/(^|\s)grid-cols-2/);
+    container.querySelectorAll("[data-plan]").forEach((card) => {
+      expect(card.className).toMatch(/\bw-full\b/);
+      expect(within(card as HTMLElement).getByText(pc.choose).className).toMatch(/\bh-12\b/);
+    });
+  });
+
+  it.each([
+    ["EN", "en"],
+    ["RU", "ru"],
+  ] as const)("%s copy renders", (lang, key) => {
+    function SetLang() {
+      const { setLanguage } = useLanguage();
+      // module-level language state: restore UZ on unmount so later tests stay UZ
+      useEffect(() => {
+        setLanguage(lang);
+        return () => setLanguage("UZ");
+      }, [setLanguage]);
+      return null;
+    }
+    render(
+      <LanguageProvider>
+        <SetLang />
+        <PersonalizedBookPlans />
+      </LanguageProvider>,
+    );
+    expect(screen.getByRole("heading", { level: 1, name: PLAN_COPY[key].heading })).toBeInTheDocument();
+    expect(screen.getAllByText(PLAN_COPY[key].choose)).toHaveLength(2);
+  });
+});
+
+describe("routing", () => {
+  it("/begin → Personalized Books goes to the intent screen", () => {
+    expect(read("components/begin/ProductSelect.tsx")).toMatch(/router\.push\("\/begin\/personalized-book"\)/);
+    expect(read("app/begin/page.tsx")).not.toMatch(/OrderPaths/);
+  });
+
+  it("each step is its own page", () => {
+    expect(read("app/begin/personalized-book/page.tsx")).toMatch(/<PersonalizedBookEntry \/>/);
+    expect(read("app/begin/personalized-book/page.tsx")).not.toMatch(/redirect\(/);
+    const price = read("app/begin/personalized-book/price/page.tsx");
+    expect(price).toMatch(/<PersonalizedBookPlans \/>/);
+    expect(price).not.toMatch(/PersonalizedBookEntry/);
+  });
+
+  it("the form's back step returns to the pricing page", () => {
+    expect(read("app/begin/personalized-book/form/PersonalizedBookFormRoute.tsx")).toMatch(
+      /router\.push\("\/begin\/personalized-book\/price"\)/,
+    );
   });
 });
 

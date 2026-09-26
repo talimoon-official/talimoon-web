@@ -1,7 +1,8 @@
 /**
- * Copy for the Personalized Books order-entry step
- * (`/begin/personalized-book/price`): the two order intents and the book-type
- * choice. UZ is the canonical wording.
+ * Copy for the Personalized Books order entry — two separate screens:
+ *   `/begin/personalized-book`        the two order intents (ENTRY_COPY)
+ *   `/begin/personalized-book/price`  the book-type choice  (PLAN_COPY)
+ * UZ is the canonical wording.
  */
 
 export interface EntryCopy {
@@ -18,20 +19,6 @@ export interface EntryCopy {
   existingCta: string;
   /** the one reassurance that matters for a returning customer */
   existingNote: string;
-
-  planHeading: string;
-  planEyebrow: string;
-  singleTitle: string;
-  singleBody: string;
-  multiTitle: string;
-  multiBody: string;
-  choose: string;
-  chosen: string;
-  start: string;
-  startHint: string;
-  marketAria: string;
-  marketUz: string;
-  marketIntl: string;
 }
 
 const UZ: EntryCopy = {
@@ -49,20 +36,6 @@ const UZ: EntryCopy = {
     "Avval formani yuborgan bo‘lsangiz, to‘lov kodini kiriting va saqlangan buyurtmangiz uchun to‘lovni davom ettiring.",
   existingCta: "To‘lovga o‘tish",
   existingNote: "Formani qayta to‘ldirish shart emas",
-
-  planHeading: "Kitob turini tanlang",
-  planEyebrow: "Shaxsiylashtirilgan kitob",
-  singleTitle: "1 farzand uchun",
-  singleBody: "Farzandingiz hikoyaning bosh qahramoni bo‘ladi.",
-  multiTitle: "Bir nechta farzand uchun",
-  multiBody: "Farzandlaringiz bitta hikoyada birga qahramon bo‘ladi.",
-  choose: "Shuni tanlash",
-  chosen: "Tanlandi",
-  start: "Buyurtmani boshlash",
-  startHint: "Avval kitob turini tanlang.",
-  marketAria: "Buyurtma hududi",
-  marketUz: "O‘zbekiston",
-  marketIntl: "Xalqaro",
 };
 
 const EN: EntryCopy = {
@@ -79,20 +52,6 @@ const EN: EntryCopy = {
     "Already submitted the form? Enter your payment code and continue payment for your saved order.",
   existingCta: "Go to payment",
   existingNote: "No need to fill in the form again",
-
-  planHeading: "Choose your book",
-  planEyebrow: "Personalized book",
-  singleTitle: "For one child",
-  singleBody: "Your child becomes the hero of the story.",
-  multiTitle: "For several children",
-  multiBody: "Your children share one story as its heroes.",
-  choose: "Choose this",
-  chosen: "Selected",
-  start: "Start my order",
-  startHint: "Please choose a book first.",
-  marketAria: "Order region",
-  marketUz: "Uzbekistan",
-  marketIntl: "International",
 };
 
 const RU: EntryCopy = {
@@ -109,20 +68,73 @@ const RU: EntryCopy = {
     "Уже отправили форму? Введите код оплаты и продолжите оплату сохранённого заказа.",
   existingCta: "Перейти к оплате",
   existingNote: "Заполнять форму заново не нужно",
+};
 
-  planHeading: "Выберите книгу",
-  planEyebrow: "Персональная книга",
+export const ENTRY_COPY: Record<"uz" | "en" | "ru", EntryCopy> = { uz: UZ, en: EN, ru: RU };
+
+export interface PlanCopy {
+  eyebrow: string;
+  heading: string;
+  subheading: string;
+  /** small label above each card title */
+  cardEyebrow: string;
+  singleTitle: string;
+  singleBody: string;
+  multiTitle: string;
+  multiBody: string;
+  choose: string;
+  back: string;
+  marketAria: string;
+  marketUz: string;
+  marketIntl: string;
+}
+
+const PLAN_UZ: PlanCopy = {
+  eyebrow: "Buyurtmani boshlash",
+  heading: "Kitob turini tanlang",
+  subheading: "Farzandlaringiz soniga mos variantni tanlang.",
+  cardEyebrow: "Shaxsiylashtirilgan kitob",
+  singleTitle: "1 farzand uchun",
+  singleBody: "Farzandingiz hikoyaning bosh qahramoni bo‘ladi.",
+  multiTitle: "Bir nechta farzand uchun",
+  multiBody: "Farzandlaringiz bitta hikoyada birga qahramon bo‘ladi.",
+  choose: "Shuni tanlash",
+  back: "Orqaga",
+  marketAria: "Buyurtma hududi",
+  marketUz: "O‘zbekiston",
+  marketIntl: "Xalqaro",
+};
+
+const PLAN_EN: PlanCopy = {
+  eyebrow: "Start your order",
+  heading: "Choose your book",
+  subheading: "Choose the option that fits how many children you have.",
+  cardEyebrow: "Personalized book",
+  singleTitle: "For one child",
+  singleBody: "Your child becomes the hero of the story.",
+  multiTitle: "For several children",
+  multiBody: "Your children share one story as its heroes.",
+  choose: "Choose this",
+  back: "Back",
+  marketAria: "Order region",
+  marketUz: "Uzbekistan",
+  marketIntl: "International",
+};
+
+const PLAN_RU: PlanCopy = {
+  eyebrow: "Начало заказа",
+  heading: "Выберите книгу",
+  subheading: "Выберите вариант по количеству Ваших детей.",
+  cardEyebrow: "Персональная книга",
   singleTitle: "Для одного ребёнка",
   singleBody: "Ваш ребёнок станет главным героем истории.",
   multiTitle: "Для нескольких детей",
   multiBody: "Ваши дети станут героями одной общей истории.",
   choose: "Выбрать",
-  chosen: "Выбрано",
-  start: "Начать заказ",
-  startHint: "Сначала выберите книгу.",
+  back: "Назад",
   marketAria: "Регион заказа",
   marketUz: "Узбекистан",
   marketIntl: "Международный",
 };
 
-export const ENTRY_COPY: Record<"uz" | "en" | "ru", EntryCopy> = { uz: UZ, en: EN, ru: RU };
+export const PLAN_COPY: Record<"uz" | "en" | "ru", PlanCopy> = { uz: PLAN_UZ, en: PLAN_EN, ru: PLAN_RU };
