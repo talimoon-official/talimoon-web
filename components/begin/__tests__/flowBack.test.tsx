@@ -93,6 +93,7 @@ describe("Back walks every screen and keeps the answers", () => {
     const onBack = vi.fn();
     render(<Bridge onBack={onBack} kids={[{ id: "c1", name: "Nodira", age: 7 }]} />);
     await u.click(screen.getByRole("button", NEXT)); // → situation
+    await new Promise((r) => setTimeout(r, 60)); // let the heading focus land
     await u.type(screen.getByRole("textbox"), "Yangi maktab");
     // situation → experience → feeling → sensitivity → done
     for (let i = 0; i < 4; i++) {

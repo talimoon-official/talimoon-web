@@ -33,8 +33,12 @@ function Harness({
   );
 }
 
-const next = (u: ReturnType<typeof userEvent.setup>) =>
-  u.click(screen.getByRole("button", { name: /Davom etish|Continue|Продолжить/ }));
+/** Continue, then let the new screen's delayed heading focus (40ms) land —
+ *  otherwise it can steal focus mid-`type` and drop keystrokes (flaky). */
+const next = async (u: ReturnType<typeof userEvent.setup>) => {
+  await u.click(screen.getByRole("button", { name: /Davom etish|Continue|Продолжить/ }));
+  await new Promise((r) => setTimeout(r, 60));
+};
 
 describe("EmotionalBridge — KO'NGIL SO'ZLARI flow", () => {
   it("intro shows the flow name and the non-judgmental opening, then four distinct question screens", async () => {

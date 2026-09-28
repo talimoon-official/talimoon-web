@@ -1,34 +1,84 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
-import { clearFormDraft, peekFormDraft, saveFormDraft } from "../formDraft";
+import { describe, it, expect, afterEach } from "vitest";
+import { IDBFactory } from "fake-indexeddb";
+import {
+  DRAFT_SCHEMA_VERSION,
+  MAX_AGE_MS,
+  clearDraft,
+  indexedDbStorage,
+  memoryStorage,
+  readDraft,
+  setDraftStorage,
+  writeDraft,
+  type DraftStorage,
+} from "../formDraft";
 import { consumeReturnedToMenu, markReturnedToMenu } from "../menuReturn";
 
-afterEach(() => {
-  clearFormDraft();
-  vi.useRealTimers();
-  vi.restoreAllMocks();
-});
+afterEach(() => setDraftStorage(null));
 
-describe("form draft (memory only)", () => {
-  it("keeps the latest progress until cleared", () => {
-    saveFormDraft({ step: 1 });
-    saveFormDraft({ step: 2 });
-    expect(peekFormDraft()).toEqual({ step: 2 });
-    expect(peekFormDraft()).toEqual({ step: 2 }); // peek does not consume
-    clearFormDraft();
-    expect(peekFormDraft()).toBeUndefined();
+function withIdb(): DraftStorage {
+  const s = indexedDbStorage(new IDBFactory());
+  setDraftStorage(s);
+  return s;
+}
+
+describe("persistent draft store (IndexedDB)", () => {
+  it("round-trips one structured record per flow", async () => {
+    withIdb();
+    await writeDraft("personalized-book", { phase: "world", data: { a: 1 } });
+    expect(await readDraft("personalized-book")).toEqual({ phase: "world", data: { a: 1 } });
   });
 
-  it("never touches browser storage", () => {
-    const setItem = vi.spyOn(Storage.prototype, "setItem");
-    saveFormDraft({ phone: "+998901234567" });
-    expect(setItem).not.toHaveBeenCalled();
+  it("survives a 'restart': a NEW storage handle on the same database sees the draft", async () => {
+    const idb = new IDBFactory();
+    setDraftStorage(indexedDbStorage(idb));
+    await writeDraft("personalized-book", { step: 4 });
+    // app killed + reopened = a brand-new connection to the same origin DB
+    setDraftStorage(indexedDbStorage(idb));
+    expect(await readDraft("personalized-book")).toEqual({ step: 4 });
   });
 
-  it("expires an abandoned draft", () => {
-    vi.useFakeTimers();
-    saveFormDraft({ step: 3 });
-    vi.advanceTimersByTime(2 * 60 * 60 * 1000 + 1);
-    expect(peekFormDraft()).toBeUndefined();
+  it("an incompatible schema version fails safely: absent + deleted, never thrown", async () => {
+    const s = withIdb();
+    await s.put("personalized-book", { v: DRAFT_SCHEMA_VERSION + 1, flow: "personalized-book", savedAt: Date.now(), payload: { x: 1 } });
+    await expect(readDraft("personalized-book")).resolves.toBeUndefined();
+    expect(await s.get("personalized-book")).toBeUndefined();
+  });
+
+  it("garbage in the slot is discarded", async () => {
+    const s = withIdb();
+    await s.put("personalized-book", "not a draft");
+    expect(await readDraft("personalized-book")).toBeUndefined();
+    expect(await s.get("personalized-book")).toBeUndefined();
+  });
+
+  it("an expired draft is deleted, not restored", async () => {
+    withIdb();
+    await writeDraft("personalized-book", { step: 1 });
+    expect(await readDraft("personalized-book", Date.now() + MAX_AGE_MS + 1)).toBeUndefined();
+    expect(await readDraft("personalized-book")).toBeUndefined();
+  });
+
+  it("clear removes it", async () => {
+    withIdb();
+    await writeDraft("personalized-book", { step: 1 });
+    await clearDraft("personalized-book");
+    expect(await readDraft("personalized-book")).toBeUndefined();
+  });
+
+  it("a failing storage reads as 'no draft' instead of throwing", async () => {
+    setDraftStorage({
+      get: () => Promise.reject(new Error("blocked")),
+      put: () => Promise.reject(new Error("blocked")),
+      delete: () => Promise.reject(new Error("blocked")),
+    });
+    await expect(readDraft("personalized-book")).resolves.toBeUndefined();
+    await expect(clearDraft("personalized-book")).resolves.toBeUndefined();
+  });
+
+  it("memory fallback has the same behaviour", async () => {
+    setDraftStorage(memoryStorage());
+    await writeDraft("personalized-book", { step: 2 });
+    expect(await readDraft("personalized-book")).toEqual({ step: 2 });
   });
 });
 

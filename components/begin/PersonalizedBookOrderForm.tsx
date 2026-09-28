@@ -44,7 +44,9 @@ import { MapLocationPicker } from "./MapLocationPicker";
 import { setMarketPreference, useMarketPreference, marketFromLocation } from "@/lib/order/market";
 import { normalizeOrderPhone } from "@/lib/order/phone";
 import { useFlowScroll } from "@/lib/order/useFlowScroll";
-import { clearFormDraft, peekFormDraft, saveFormDraft } from "@/lib/order/formDraft";
+import { createDraftSaver, type FormPhase, type RestoredOrderDraft } from "./orderDraft";
+import type { Phase01Snapshot } from "./Phase01";
+import type { SubPosition } from "./flowPosition";
 import {
   additionalCharacterLabel,
   additionalCharacterNamed,
@@ -926,19 +928,10 @@ export function isStepComplete(stepId: StepId, data: FormData): boolean {
 
 // ─── Main component ─────────────────────────────────────────────────────────
 
-type FormPhase = "intro" | "world" | "character" | "heart" | "steps";
-
-/** What survives leaving the form mid-order (see lib/order/formDraft). */
-interface OrderFormDraft {
-  data: FormData;
-  phase: FormPhase;
-  stepIndex: number;
-  marketTouched: boolean;
-}
-
 export default function PersonalizedBookOrderForm({
   onBack,
   onReturnToMenu,
+  restored = null,
   initialBookType,
   initialMarket,
 }: {
@@ -946,6 +939,10 @@ export default function PersonalizedBookOrderForm({
   /** Leaves the saved screen for the order menu (auto-return / system
    *  Back). Omitted → OrderSaved's own full-page fallback. */
   onReturnToMenu?: () => void;
+  /** The unfinished order from this device (components/begin/orderDraft),
+   *  already validated and scoped to this book type by the route. The form
+   *  reopens on its exact step with every answer; null = a fresh form. */
+  restored?: RestoredOrderDraft | null;
   /**
    * Pre-selects the child count when the form is entered from a
    * pricing card that already committed to a book type (e.g.
@@ -1041,18 +1038,6 @@ export default function PersonalizedBookOrderForm({
   //    action always beats stale saved state (spec §12).
   const { preference: savedMarket } = useMarketPreference();
 
-  // ── An unfinished order from earlier in this tab (the customer stepped
-  //    Back past the first screen, or followed a link mid-order). Restored
-  //    unless the customer has since chosen a DIFFERENT book type or market
-  //    — that is a new order, and the old draft is dropped.
-  const [restored] = useState<OrderFormDraft | null>(() => {
-    const d = peekFormDraft<OrderFormDraft>();
-    if (!d) return null;
-    const conflicts =
-      (initialBookType && bookTypeForChildCount(d.data.children.length) !== initialBookType) ||
-      (initialMarket && d.data.market !== initialMarket);
-    return conflicts ? null : d;
-  });
   const [marketTouched, setMarketTouched] = useState(restored?.marketTouched ?? false);
   const resolvedInitialMarket: Market =
     initialMarket ?? marketFromLocation() ?? savedMarket ?? "UZ";
@@ -1071,7 +1056,16 @@ export default function PersonalizedBookOrderForm({
   const [data, setData] = useState<FormData>(
     () => restored?.data ?? emptyForm(resolvedInitialMarket),
   );
-  const [phase01Seeded, setPhase01Seeded] = useState(restored != null);
+  const [phase01Seeded, setPhase01Seeded] = useState(restored?.phase01Seeded ?? false);
+  /** Phase 01's in-progress answers + the per-child sub-screen — reported
+   *  up by the phases only so the draft can reopen the exact screen. */
+  const [phase01Snap, setPhase01Snap] = useState<Phase01Snapshot | null>(null);
+  const [subPos, setSubPos] = useState<SubPosition | undefined>(restored?.pos);
+  /** The restored sub-position applies to the phase it was saved in, and
+   *  only to that phase's FIRST mount (later visits use entry=start/end). */
+  const [resumePhase, setResumePhase] = useState<FormPhase | null>(restored ? restored.phase : null);
+  if (resumePhase && resumePhase !== phase) setResumePhase(null);
+  const resumeFor = (p: FormPhase) => (resumePhase === p ? restored : null);
   /** Set once finalize succeeds: the order is SAVED (not paid, not in
    *  production). `resume` is the backend's order-bound payment capability —
    *  memory only, never persisted. */
@@ -1081,13 +1075,45 @@ export default function PersonalizedBookOrderForm({
     paymentCode: FinalizeOrderResult["paymentCode"];
     paymentCodeDelivery: FinalizeOrderResult["paymentCodeDelivery"];
   } | null>(null);
-  // Keep the unfinished order for a later visit in this tab — only once
-  // Phase 01 has produced something worth keeping, and never after the
-  // order is saved (the completed form must not come back).
+  // ── Persistent draft: debounced writes of the allowlisted answers +
+  //    position (components/begin/orderDraft). Only once the customer has
+  //    entered something, never after the order is saved. Flushed when the
+  //    page is hidden / left (a backgrounded PWA may be killed) and on
+  //    unmount.
+  const [saver] = useState(() => createDraftSaver());
+  const hasProgress =
+    phase01Seeded ||
+    (phase01Snap != null && (phase01Snap.honorific != null || phase01Snap.ordererName.trim() !== ""));
   useEffect(() => {
-    if (saved) clearFormDraft();
-    else if (phase01Seeded) saveFormDraft<OrderFormDraft>({ data, phase, stepIndex, marketTouched });
-  }, [saved, phase01Seeded, data, phase, stepIndex, marketTouched]);
+    if (saved || !hasProgress) return;
+    saver.schedule({
+      bookType: phase01Seeded
+        ? bookTypeForChildCount(data.children.length)
+        : phase01Snap?.count
+          ? bookTypeForChildCount(phase01Snap.count)
+          : (initialBookType ?? "single"),
+      data,
+      phase,
+      stepIndex,
+      marketTouched,
+      phase01Seeded,
+      phase01: phase01Snap ?? undefined,
+      pos: phase === "world" || phase === "character" || phase === "heart" ? subPos : undefined,
+    });
+  }, [saver, saved, hasProgress, data, phase, stepIndex, marketTouched, phase01Seeded, phase01Snap, subPos, initialBookType]);
+  useEffect(() => {
+    const onHide = () => {
+      if (document.visibilityState === "hidden") saver.flush();
+    };
+    const onLeave = () => saver.flush();
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", onLeave);
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("pagehide", onLeave);
+      saver.flush();
+    };
+  }, [saver]);
 
   /** Latched the moment the final submit fires, so a second click /
    *  an Enter race can't send the order twice (spec §6). */
@@ -1647,9 +1673,10 @@ export default function PersonalizedBookOrderForm({
         notify: { customerName: data.orderer.name, phone: canonicalPhone, locale: bookLoc },
       });
 
-      // The order exists now: drop the draft at once (even if the form has
-      // been unmounted meanwhile), so it can never be sent a second time.
-      clearFormDraft();
+      // The order exists now: stop and delete the stored draft at once (even
+      // if the form has been unmounted meanwhile), so the completed order can
+      // never reopen as an editable draft or be sent a second time.
+      await saver.seal();
       setSaved({
         orderCode: finalized.orderCode,
         resume: finalized.resume ?? null,
@@ -1734,6 +1761,8 @@ export default function PersonalizedBookOrderForm({
     return (
       <Phase01
         onBack={onBack}
+        resume={resumeFor("intro")?.phase01}
+        onSnapshot={setPhase01Snap}
         onComplete={(result) => {
           setWorldEntry("start");
           handlePhase01(result);
@@ -1762,6 +1791,8 @@ export default function PersonalizedBookOrderForm({
         childrenIn={data.children}
         onPatchChild={patchChild}
         entry={worldEntry}
+        resume={resumeFor("world")?.pos}
+        onPosition={setSubPos}
         onBack={() => setPhase("intro")}
         onComplete={() => {
           setCharEntry("start");
@@ -1778,6 +1809,8 @@ export default function PersonalizedBookOrderForm({
         childrenIn={data.children}
         onPatchChild={patchChild}
         entry={charEntry}
+        resume={resumeFor("character")?.pos}
+        onPosition={setSubPos}
         onBack={() => {
           setCharEntry("start");
           setWorldEntry("end");
@@ -1799,6 +1832,8 @@ export default function PersonalizedBookOrderForm({
       <EmotionalBridge
         childrenIn={data.children}
         entry={heartEntry}
+        resume={resumeFor("heart")?.pos}
+        onPosition={setSubPos}
         onPatchChild={patchChild}
         onBack={() => {
           setPhase("steps");

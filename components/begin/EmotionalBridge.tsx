@@ -26,6 +26,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { startPosition, usePositionReport, type SubPosition } from "./flowPosition";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { FlowBackButton } from "./FlowBack";
@@ -38,6 +39,7 @@ import { useFlowScroll } from "@/lib/order/useFlowScroll";
 import { JourneyProgress } from "./JourneyProgress";
 
 type Screen = "intro" | "situation" | "experience" | "feeling" | "sensitivity" | "done";
+const SCREENS: readonly Screen[] = ["intro", "situation", "experience", "feeling", "sensitivity", "done"];
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -47,6 +49,8 @@ export default function EmotionalBridge({
   onPatchChild,
   onComplete,
   onBack,
+  resume,
+  onPosition,
 }: {
   childrenIn: ChildProfile[];
   /** kept for call-site compatibility — no longer used for copy */
@@ -59,6 +63,10 @@ export default function EmotionalBridge({
   onPatchChild: (id: string, patch: Partial<ChildProfile>) => void;
   onComplete: () => void;
   onBack: () => void;
+  /** A stored position (persistent draft) — wins over `entry` at mount. */
+  resume?: SubPosition;
+  /** Reports child + screen on every change (for the persistent draft). */
+  onPosition?: (p: SubPosition) => void;
 }) {
   const { language } = useLanguage();
   const raw = toLocale(language);
@@ -67,8 +75,14 @@ export default function EmotionalBridge({
   const c = emotionalBridgeCopy(locale);
   const reduced = useReducedMotion();
 
-  const [idx, setIdx] = useState(entry === "end" ? childrenIn.length - 1 : 0);
-  const [screen, setScreen] = useState<Screen>(entry === "end" ? "done" : "intro");
+  const [start] = useState(() =>
+    startPosition<Screen>(resume, SCREENS, childrenIn.length, entry === "end"
+      ? { idx: childrenIn.length - 1, screen: "done" }
+      : { idx: 0, screen: "intro" }),
+  );
+  const [idx, setIdx] = useState(start.idx);
+  const [screen, setScreen] = useState<Screen>(start.screen);
+  usePositionReport(idx, screen, onPosition);
 
   const child = childrenIn[idx];
   const nextChild = childrenIn[idx + 1];

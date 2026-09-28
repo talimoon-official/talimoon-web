@@ -14,6 +14,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { startPosition, usePositionReport, type SubPosition } from "./flowPosition";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { FlowBackButton } from "./FlowBack";
@@ -57,6 +58,7 @@ type Screen =
   | "context"
   | "values"
   | "child-done";
+const SCREENS: readonly Screen[] = ["intro", "qualities", "example", "growth", "context", "values", "child-done"];
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -66,6 +68,8 @@ export default function Phase03({
   onComplete,
   onBack,
   entry = "start",
+  resume,
+  onPosition,
 }: {
   childrenIn: ChildProfile[];
   onPatchChild: (id: string, patch: Partial<ChildProfile>) => void;
@@ -75,6 +79,10 @@ export default function Phase03({
    *  wizard step — land on the last child's completion screen so Back
    *  really is one screen (spec §03), not a jump to the phase start. */
   entry?: "start" | "end";
+  /** A stored position (persistent draft) — wins over `entry` at mount. */
+  resume?: SubPosition;
+  /** Reports child + screen on every change (for the persistent draft). */
+  onPosition?: (p: SubPosition) => void;
 }) {
   const { language } = useLanguage();
   const rawLocale = toLocale(language);
@@ -83,8 +91,14 @@ export default function Phase03({
   const c = phase03Copy(locale);
   const reduced = useReducedMotion();
 
-  const [idx, setIdx] = useState(entry === "end" ? childrenIn.length - 1 : 0);
-  const [screen, setScreen] = useState<Screen>(entry === "end" ? "child-done" : "intro");
+  const [start] = useState(() =>
+    startPosition<Screen>(resume, SCREENS, childrenIn.length, entry === "end"
+      ? { idx: childrenIn.length - 1, screen: "child-done" }
+      : { idx: 0, screen: "intro" }),
+  );
+  const [idx, setIdx] = useState(start.idx);
+  const [screen, setScreen] = useState<Screen>(start.screen);
+  usePositionReport(idx, screen, onPosition);
   const [attempted, setAttempted] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
   const [customDraft, setCustomDraft] = useState("");

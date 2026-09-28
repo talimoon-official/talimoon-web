@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useEffect } from "react";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -268,7 +268,8 @@ describe("form route receives the chosen book type", () => {
   it("passes the plan intent as initialBookType, then clears it", async () => {
     vi.resetModules();
     const seen: Array<string | undefined> = [];
-    vi.doMock("@/components/begin/PersonalizedBookOrderForm", () => ({
+    vi.doMock("@/components/begin/PersonalizedBookOrderForm", async (importOriginal) => ({
+      ...(await importOriginal<object>()),
       default: (props: { initialBookType?: string }) => {
         seen.push(props.initialBookType);
         return null;
@@ -278,8 +279,9 @@ describe("form route receives the chosen book type", () => {
     const { default: Route } = await import("@/app/begin/personalized-book/form/PersonalizedBookFormRoute");
     intent.setPlanIntent("multi");
     render(<Route />);
-    expect(seen[0]).toBe("multi");
+    // the form mounts once the (empty) device draft has been read
+    await waitFor(() => expect(seen[0]).toBe("multi"));
     expect(intent.peekPlanIntent()).toBeUndefined(); // one-shot
     vi.doUnmock("@/components/begin/PersonalizedBookOrderForm");
-  });
+  }, 30_000); // dynamic-imports the whole form module: slow under full-suite load
 });

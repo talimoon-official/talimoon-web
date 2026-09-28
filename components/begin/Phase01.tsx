@@ -62,11 +62,70 @@ const MAX_RELATIONSHIP_TYPES = 3;
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
+/** Phase 01's in-progress answers — persisted with the order draft so a
+ *  reload mid-Phase-01 reopens on the same question with the same answers. */
+export interface Phase01Snapshot {
+  screen: Screen;
+  honorific: Honorific | null;
+  ordererName: string;
+  relTypes: RelationshipType[];
+  customLabel: string;
+  count: number | null;
+  pool: ChildProfile[];
+}
+
+const SCREEN_KINDS = ["identity", "relationship", "count", "child", "child-relationship", "completion"];
+
+/** Validates a stored snapshot; anything off → null (start normally). */
+export function parsePhase01Snapshot(raw: unknown): Phase01Snapshot | null {
+  try {
+    if (typeof raw !== "object" || raw === null) return null;
+    const s = raw as Record<string, unknown>;
+    const pool = Array.isArray(s.pool)
+      ? (s.pool.filter(
+          (c) =>
+            typeof c === "object" &&
+            c !== null &&
+            typeof (c as ChildProfile).id === "string" &&
+            typeof (c as ChildProfile).name === "string",
+        ) as ChildProfile[]).slice(0, MAX_MAIN_CHILDREN)
+      : [];
+    if (pool.length === 0) return null;
+    const count =
+      typeof s.count === "number" && s.count >= 1 && s.count <= MAX_MAIN_CHILDREN
+        ? Math.trunc(s.count)
+        : null;
+    const sc = s.screen as { kind?: unknown; index?: unknown } | undefined;
+    if (!sc || typeof sc.kind !== "string" || !SCREEN_KINDS.includes(sc.kind)) return null;
+    let screen = { kind: sc.kind } as Screen;
+    if (sc.kind === "child" || sc.kind === "child-relationship") {
+      const max = Math.min(count ?? 1, pool.length) - 1;
+      const index = typeof sc.index === "number" ? Math.min(Math.max(Math.trunc(sc.index), 0), max) : 0;
+      screen = { kind: sc.kind, index };
+    }
+    return {
+      screen,
+      honorific: s.honorific === "mr" || s.honorific === "ms" ? s.honorific : null,
+      ordererName: typeof s.ordererName === "string" ? s.ordererName : "",
+      relTypes: Array.isArray(s.relTypes)
+        ? (s.relTypes.filter((t) => typeof t === "string") as RelationshipType[]).slice(0, MAX_RELATIONSHIP_TYPES)
+        : [],
+      customLabel: typeof s.customLabel === "string" ? s.customLabel : "",
+      count,
+      pool,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export default function Phase01({
   onBack,
   onComplete,
   initialChildCount,
   initial,
+  resume,
+  onSnapshot,
 }: {
   onBack: () => void;
   onComplete: (result: Phase01Result) => void;
@@ -77,6 +136,10 @@ export default function Phase01({
     recipientRelationship?: RecipientRelationship;
     children?: ChildProfile[];
   };
+  /** A stored Phase01Snapshot (validated here). Wins over `initial`. */
+  resume?: unknown;
+  /** Reports the in-progress answers + screen on every change. */
+  onSnapshot?: (s: Phase01Snapshot) => void;
 }) {
   const { language } = useLanguage();
   const locale = toLocale(language);
@@ -84,22 +147,24 @@ export default function Phase01({
   const c = phase01Copy(locale);
   const reduced = useReducedMotion();
 
+  const [snap] = useState(() => parsePhase01Snapshot(resume));
   const resuming = Boolean(initial?.children && initial.children.length > 0);
   const seededCount = initial?.children?.length ?? initialChildCount ?? null;
 
   const [screen, setScreen] = useState<Screen>(
-    resuming ? { kind: "completion" } : { kind: "identity" },
+    snap?.screen ?? (resuming ? { kind: "completion" } : { kind: "identity" }),
   );
   const [attempted, setAttempted] = useState(false);
 
   const [honorific, setHonorific] = useState<Honorific | null>(
-    initial?.ordererHonorific ?? null,
+    snap ? snap.honorific : (initial?.ordererHonorific ?? null),
   );
-  const [ordererName, setOrdererName] = useState(initial?.ordererName ?? "");
+  const [ordererName, setOrdererName] = useState(snap?.ordererName ?? initial?.ordererName ?? "");
   // Real families are often mixed (spec §01): up to 3 relationship types,
   // one per some subset of children. Resuming prefers whatever distinct
   // types the children already carry over the single order-level default.
   const [relTypes, setRelTypes] = useState<RelationshipType[]>(() => {
+    if (snap) return snap.relTypes;
     const fromChildren = Array.from(
       new Set(
         (initial?.children ?? [])
@@ -111,15 +176,19 @@ export default function Phase01({
     return initial?.recipientRelationship?.type ? [initial.recipientRelationship.type] : [];
   });
   const [customLabel, setCustomLabel] = useState(
-    initial?.recipientRelationship?.customLabel ?? "",
+    snap?.customLabel ?? initial?.recipientRelationship?.customLabel ?? "",
   );
   const [count, setCount] = useState<number | null>(
-    seededCount != null
-      ? Math.min(Math.max(seededCount, 1), MAX_MAIN_CHILDREN)
-      : null,
+    snap
+      ? snap.count
+      : seededCount != null
+        ? Math.min(Math.max(seededCount, 1), MAX_MAIN_CHILDREN)
+        : null,
   );
   const [pool, setPool] = useState<ChildProfile[]>(() =>
-    initial?.children && initial.children.length > 0
+    snap
+      ? snap.pool
+      : initial?.children && initial.children.length > 0
       ? initial.children.slice(0, MAX_MAIN_CHILDREN)
       : Array.from(
           { length: Math.max(seededCount ?? 1, 1) },
@@ -131,6 +200,16 @@ export default function Phase01({
     () => pool.slice(0, count ?? 0),
     [pool, count],
   );
+
+  // Report the in-progress answers for the persistent draft. The latest
+  // callback is read through a ref, so a new parent closure never re-fires.
+  const onSnapshotRef = useRef(onSnapshot);
+  useEffect(() => {
+    onSnapshotRef.current = onSnapshot;
+  });
+  useEffect(() => {
+    onSnapshotRef.current?.({ screen, honorific, ordererName, relTypes, customLabel, count, pool });
+  }, [screen, honorific, ordererName, relTypes, customLabel, count, pool]);
   // Used only to phrase the count / child-name-prompt copy. A single
   // chosen type gets its real kinship noun; 2–3 mixed types fall back to
   // "other"'s neutral phrasing — no single noun could fit every child.

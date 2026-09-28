@@ -18,5 +18,8 @@ export default defineConfig({
     setupFiles: ["./vitest.setup.ts"],
     include: ["**/*.test.{ts,tsx}"],
     exclude: ["node_modules", ".next", ".claude"],
+    // userEvent-driven flow tests type whole answers; under a full parallel
+    // run (heavy jsdom setup per worker) they can exceed the 5s default.
+    testTimeout: 15_000,
   },
 });
