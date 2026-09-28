@@ -26,6 +26,7 @@ const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY;
 const DEFAULT_CENTER = { lat: 41.311081, lng: 69.279737 };
 
 let mapsLoader: Promise<void> | null = null;
+const MAPS_TIMEOUT_MS = 15_000;
 
 /** Load the Maps JS + Places library once. Rejects if no key or on error. */
 function loadGoogleMaps(): Promise<void> {
@@ -35,23 +36,30 @@ function loadGoogleMaps(): Promise<void> {
   if (mapsLoader) return mapsLoader;
 
   mapsLoader = new Promise<void>((resolve, reject) => {
-    const existing = document.getElementById("gmaps-js") as HTMLScriptElement | null;
-    if (existing) {
-      existing.addEventListener("load", () => resolve());
-      existing.addEventListener("error", () => reject(new Error("maps script error")));
-      return;
-    }
+    // A script that never answers (dead mobile connection) must not leave
+    // the picker loading forever: give up after MAPS_TIMEOUT_MS, drop the
+    // tag and let the picker show its "unavailable" state (manual address
+    // entry keeps working). The next open retries from scratch.
+    const fail = (why: string) => {
+      window.clearTimeout(timer);
+      document.getElementById("gmaps-js")?.remove();
+      mapsLoader = null;
+      reject(new Error(why));
+    };
+    const timer = window.setTimeout(() => fail("maps script timeout"), MAPS_TIMEOUT_MS);
     const s = document.createElement("script");
     s.id = "gmaps-js";
     s.async = true;
     s.src =
       `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(MAPS_KEY!)}` +
       `&libraries=places&language=uz&region=UZ&loading=async`;
-    s.onload = () => resolve();
-    s.onerror = () => {
-      mapsLoader = null;
-      reject(new Error("maps script error"));
+    s.onload = () => {
+      window.clearTimeout(timer);
+      resolve();
     };
+    s.onerror = () => fail("maps script error");
+    // a tag left over from an earlier failed attempt can never fire again
+    document.getElementById("gmaps-js")?.remove();
     document.head.appendChild(s);
   });
   return mapsLoader;

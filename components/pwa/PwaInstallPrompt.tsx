@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useSyncExternalStore } from 'react';
+// The service worker is registered by <PwaLifecycle> (lib/pwa/lifecycle.ts),
+// not here: this component only owns the install banner.
+import { useSyncExternalStore } from 'react';
 import { useT } from '@/lib/i18n/LanguageContext';
 import {
   dismissInstallPrompt,
@@ -30,15 +32,6 @@ export function PwaInstallPrompt() {
     getInstallPromptVisible,
     getInstallPromptServerSnapshot,
   );
-
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/sw.js', { updateViaCache: 'none' })
-        .then((registration) => registration.update())
-        .catch(() => undefined);
-    }
-  }, []);
 
   if (!visible) return null;
 

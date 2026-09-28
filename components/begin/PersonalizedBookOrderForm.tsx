@@ -46,6 +46,8 @@ import { normalizeOrderPhone } from "@/lib/order/phone";
 import { useFlowScroll } from "@/lib/order/useFlowScroll";
 import { createDraftSaver, gapIsOpen, type FormPhase, type RestoredOrderDraft } from "./orderDraft";
 import { MediaReuploadNotice } from "./MediaReuploadNotice";
+import { registerDraftFlusher } from "@/lib/order/formDraft";
+import { useUpdateBlocker } from "@/lib/pwa/lifecycle";
 import type { Phase01Snapshot } from "./Phase01";
 import type { SubPosition } from "./flowPosition";
 import {
@@ -1128,16 +1130,21 @@ export default function PersonalizedBookOrderForm({
     const onLeave = () => saver.flush();
     document.addEventListener("visibilitychange", onHide);
     window.addEventListener("pagehide", onLeave);
+    // an app update / stale-build recovery flushes this before reloading
+    const unregister = registerDraftFlusher(() => saver.flush());
     return () => {
       document.removeEventListener("visibilitychange", onHide);
       window.removeEventListener("pagehide", onLeave);
-      saver.flush();
+      unregister();
+      void saver.flush();
     };
   }, [saver]);
 
   /** Latched the moment the final submit fires, so a second click /
    *  an Enter race can't send the order twice (spec §6). */
   const [submitting, setSubmitting] = useState(false);
+  // no app-update reload while the order is being sent
+  useUpdateBlocker(submitting);
   const [showStepError, setShowStepError] = useState(false);
   /** Set only on a failed submit attempt; cleared at the start of the next
    *  one. Never carries the raw error — see submitOrderFlow(). */

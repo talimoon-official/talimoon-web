@@ -64,8 +64,25 @@ const securityHeaders = [
   },
 ];
 
+// One identifier per deployment, fixed for the whole build (never a clock
+// value: next.config can be evaluated more than once per build, and the
+// client bundle and /sw.js must agree). It versions the service worker +
+// its caches and labels client diagnostics. APP_BUILD_ID overrides it for
+// local release testing.
+const APP_BUILD =
+  process.env.APP_BUILD_ID ??
+  process.env.VERCEL_DEPLOYMENT_ID ??
+  process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ??
+  "local";
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  env: { NEXT_PUBLIC_APP_BUILD: APP_BUILD },
+  // Version-skew protection: a client still running an older deployment
+  // (an installed PWA left open for days) gets a HARD navigation instead of
+  // a client-side one when the server reports a different deployment — so
+  // old JS never runs against new server output. Only on Vercel builds.
+  ...(process.env.VERCEL_DEPLOYMENT_ID ? { deploymentId: process.env.VERCEL_DEPLOYMENT_ID } : {}),
   async headers() {
     return [
       {

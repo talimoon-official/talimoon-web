@@ -231,3 +231,27 @@ export async function clearDraft(flow: DraftFlow): Promise<void> {
 export async function sweepExpiredDrafts(now = Date.now()): Promise<void> {
   for (const flow of FLOWS) await readDraft(flow, now).catch(() => {});
 }
+
+// ── flushing before a controlled reload ──────────────────────────────────────
+//
+// An app update or stale-build recovery may reload the page. Before it does,
+// every mounted form's pending (debounced) draft save is written and every
+// in-flight IndexedDB write is awaited, so nothing typed is lost. This only
+// WRITES the draft — reloads never clear or delete it.
+
+type Flusher = () => Promise<void> | void;
+const flushers = new Set<Flusher>();
+
+/** A mounted draft saver registers its `flush`; returns the unregister. */
+export function registerDraftFlusher(fn: Flusher): () => void {
+  flushers.add(fn);
+  return () => {
+    flushers.delete(fn);
+  };
+}
+
+/** Writes every pending draft now; resolves when done or after `timeoutMs`. */
+export async function flushDraftWrites(timeoutMs = 2500): Promise<void> {
+  const all = Promise.allSettled([...flushers].map((f) => Promise.resolve().then(f)));
+  await Promise.race([all, new Promise((r) => setTimeout(r, timeoutMs))]);
+}

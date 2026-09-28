@@ -15,6 +15,7 @@
  *    preflight before it ever reached the server.
  */
 
+import { UPLOAD_TIMEOUT_MS, fetchWithTimeout } from "@/lib/net/fetchWithTimeout";
 import {
   isKeepsakeRelationship,
   type KeepsakeRelationship,
@@ -410,11 +411,11 @@ export async function throwApiError(res: Response): Promise<never> {
 }
 
 export async function submitOrder(payload: SubmitOrderPayload): Promise<SubmitOrderResult> {
-  const res = await fetch(apiUrl("/v1/orders"), {
+  const res = await fetchWithTimeout(apiUrl("/v1/orders"), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
-  });
+  }, { label: "order.create" });
   if (!res.ok) return throwApiError(res);
   return (await res.json()) as SubmitOrderResult;
 }
@@ -444,11 +445,11 @@ export async function uploadFile(args: {
   }
   const form = new FormData();
   form.append("file", args.file);
-  const res = await fetch(apiUrl(`/v1/orders/${args.orderCode}/files?${qs.toString()}`), {
+  const res = await fetchWithTimeout(apiUrl(`/v1/orders/${args.orderCode}/files?${qs.toString()}`), {
     method: "POST",
     headers: { authorization: `Bearer ${args.capabilityToken}` },
     body: form,
-  });
+  }, { label: "order.upload", timeoutMs: UPLOAD_TIMEOUT_MS });
   if (!res.ok) await throwApiError(res);
 }
 
@@ -481,14 +482,14 @@ export async function finalizeOrder(args: {
   /** `locale` = the customer's language, for the payment-code message */
   notify?: { customerName?: string; phone?: string; locale?: "uz" | "en" | "ru" };
 }): Promise<FinalizeOrderResult> {
-  const res = await fetch(apiUrl(`/v1/orders/${args.orderCode}/finalize`), {
+  const res = await fetchWithTimeout(apiUrl(`/v1/orders/${args.orderCode}/finalize`), {
     method: "POST",
     headers: {
       "content-type": "application/json",
       authorization: `Bearer ${args.capabilityToken}`,
     },
     body: JSON.stringify({ notify: args.notify }),
-  });
+  }, { label: "order.finalize", timeoutMs: 60_000 });
   if (!res.ok) return throwApiError(res);
   return (await res.json()) as FinalizeOrderResult;
 }

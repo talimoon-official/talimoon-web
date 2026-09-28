@@ -22,6 +22,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, FileText, LoaderCircle, RefreshCw, Send, ShieldCheck, Upload } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { IntakeApiError } from "@/lib/order/api";
+import { useUpdateBlocker } from "@/lib/pwa/lifecycle";
 import {
   exchangePaymentSession,
   getPaymentView,
@@ -292,6 +293,8 @@ function PayForm({
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  // no app-update reload while the receipt is being sent
+  useUpdateBlocker(sending);
   /** one attempt key per page — a retry resumes the SAME attempt */
   const attemptKeyRef = useRef<string | null>(null);
   /** one receipt key per chosen file — a retry of it is a replay, not a 2nd receipt */

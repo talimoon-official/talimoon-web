@@ -438,11 +438,13 @@ export function createDraftSaver(delayMs = 800) {
         if (p && !sealed) void enqueue(p);
       }, delayMs);
     },
-    flush() {
+    /** writes the pending edit now; resolves once every queued write landed */
+    flush(): Promise<void> {
       clearTimeout(timer);
       const p = pending;
       pending = null;
-      if (p && !sealed) void enqueue(p);
+      if (p && !sealed) return enqueue(p);
+      return queue;
     },
     /** order saved: stop for good and delete answers + media */
     async seal(): Promise<void> {

@@ -22,6 +22,7 @@
 
 import { apiUrl, throwApiError } from "@/lib/order/api";
 import type { LifecycleStatus } from "./status";
+import { UPLOAD_TIMEOUT_MS, fetchWithTimeout } from "@/lib/net/fetchWithTimeout";
 
 export const PAYMENT_CSRF_HEADER = "x-talimoon-payment";
 
@@ -55,13 +56,13 @@ async function parse(res: Response): Promise<PaymentView> {
 
 /** Exchange the resume token for a payment session (sets the cookie). */
 export async function exchangePaymentSession(resumeToken: string): Promise<PaymentView> {
-  const res = await fetch(apiUrl("/v1/payment/session"), {
+  const res = await fetchWithTimeout(apiUrl("/v1/payment/session"), {
     method: "POST",
     credentials: "include",
     cache: "no-store",
     headers: { "content-type": "application/json", ...WRITE_HEADERS },
     body: JSON.stringify({ resumeToken }),
-  });
+  }, { label: "payment.session" });
   return parse(res);
 }
 
@@ -71,35 +72,35 @@ export async function exchangePaymentSession(resumeToken: string): Promise<Payme
  * when rate-limited) — the answer never says why.
  */
 export async function exchangePaymentCode(code: string): Promise<PaymentView> {
-  const res = await fetch(apiUrl("/v1/payment/code/session"), {
+  const res = await fetchWithTimeout(apiUrl("/v1/payment/code/session"), {
     method: "POST",
     credentials: "include",
     cache: "no-store",
     headers: { "content-type": "application/json", ...WRITE_HEADERS },
     body: JSON.stringify({ code }),
-  });
+  }, { label: "payment.code" });
   return parse(res);
 }
 
 /** The current session's payment view (cookie only — nothing in the URL). */
 export async function getPaymentView(): Promise<PaymentView> {
-  const res = await fetch(apiUrl("/v1/payment"), {
+  const res = await fetchWithTimeout(apiUrl("/v1/payment"), {
     method: "GET",
     credentials: "include",
     cache: "no-store",
-  });
+  }, { label: "payment.status" });
   return parse(res);
 }
 
 /** Start — or, with the same key, resume — the order's payment attempt. */
 export async function openPaymentAttempt(idempotencyKey: string): Promise<PaymentView> {
-  const res = await fetch(apiUrl("/v1/payment/attempts"), {
+  const res = await fetchWithTimeout(apiUrl("/v1/payment/attempts"), {
     method: "POST",
     credentials: "include",
     cache: "no-store",
     headers: { "content-type": "application/json", ...WRITE_HEADERS },
     body: JSON.stringify({ idempotencyKey }),
-  });
+  }, { label: "payment.attempt" });
   return parse(res);
 }
 
@@ -112,12 +113,12 @@ export async function uploadPaymentReceipt(receiptKey: string, file: File): Prom
   const form = new FormData();
   form.append("file", file);
   const qs = new URLSearchParams({ receiptKey });
-  const res = await fetch(apiUrl(`/v1/payment/receipt?${qs.toString()}`), {
+  const res = await fetchWithTimeout(apiUrl(`/v1/payment/receipt?${qs.toString()}`), {
     method: "POST",
     credentials: "include",
     cache: "no-store",
     headers: { ...WRITE_HEADERS },
     body: form,
-  });
+  }, { label: "payment.receipt", timeoutMs: UPLOAD_TIMEOUT_MS });
   return parse(res);
 }

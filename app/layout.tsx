@@ -11,6 +11,7 @@ import { MaskDefs } from "@/components/ui/MaskDefs";
 import { LanguageProvider } from "@/lib/i18n/LanguageContext";
 import { PwaInstallPrompt } from "@/components/pwa/PwaInstallPrompt";
 import { DraftRetentionSweep } from "@/components/order/DraftRetentionSweep";
+import { PwaLifecycle } from "@/components/pwa/PwaLifecycle";
 
 
 const fraunces = Fraunces({
@@ -89,7 +90,7 @@ export default function RootLayout({
   className={`${fraunces.variable} ${plusJakartaSans.variable} ${geistMono.variable} ${cormorantGaramond.variable} ${manrope.variable} antialiased min-h-full flex flex-col`}
 >
   <MaskDefs />
-  <LanguageProvider>{children}<PwaInstallPrompt /><DraftRetentionSweep /></LanguageProvider>
+  <LanguageProvider>{children}<PwaInstallPrompt /><DraftRetentionSweep /><PwaLifecycle /></LanguageProvider>
 </body>
     </html>
   );

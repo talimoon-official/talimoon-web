@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101A29">
+<title>TALIMOON — Internet aloqasi yo‘q</title>
+<!--
+  Served by the service worker ONLY when a page cannot be fetched (no
+  network, or no answer within 15s). Self-contained: no Next.js chunks, so
+  it can never mix builds. Retries by itself when the connection is back.
+  An unfinished order is safe — it is kept on this device (IndexedDB).
+-->
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: #101A29; color: #F7F3EC;
+    font: 15px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+    box-sizing: border-box; text-align: center;
+  }
+  main { max-width: 360px; }
+  img { width: 72px; height: 72px; }
+  h1 { font-size: 20px; font-weight: 600; margin: 16px 0 8px; }
+  p { margin: 0 0 8px; color: rgba(247,243,236,.72); }
+  button {
+    margin-top: 16px; min-height: 48px; padding: 0 28px; border: 0; border-radius: 999px;
+    background: #D6B770; color: #101A29; font: inherit; font-weight: 700; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<main>
+  <img src="/pwa/prompt-logo-v4.png" alt="TALIMOON">
+  <h1 id="t">Internet aloqasi yo‘q</h1>
+  <p id="b">Aloqa tiklanishi bilan sahifa o‘zi qayta ochiladi. Boshlagan buyurtmangiz shu qurilmada saqlangan.</p>
+  <button id="r" type="button">Qayta urinish</button>
+</main>
+<script>
+  (function () {
+    var L = {
+      en: ["No internet connection", "The page will reopen by itself once you are back online. Your started order is saved on this device.", "Try again"],
+      ru: ["Нет подключения к интернету", "Страница откроется сама, как только появится связь. Начатый заказ сохранён на этом устройстве.", "Повторить"]
+    };
+    try {
+      var lang = (localStorage.getItem("talimoon-language") || navigator.language || "").slice(0, 2).toLowerCase();
+      var c = L[lang];
+      if (c) {
+        document.documentElement.lang = lang;
+        document.getElementById("t").textContent = c[0];
+        document.getElementById("b").textContent = c[1];
+        document.getElementById("r").textContent = c[2];
+      }
+    } catch (e) {}
+    function retry() { location.reload(); }
+    document.getElementById("r").addEventListener("click", retry);
+    window.addEventListener("online", retry);
+  })();
+</script>
+</body>
+</html>
