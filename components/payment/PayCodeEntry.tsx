@@ -15,8 +15,9 @@
  */
 
 import { useLayoutEffect, useRef, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { KeyRound, LoaderCircle, Send } from "lucide-react";
+import { ArrowLeft, KeyRound, LoaderCircle, Send } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { IntakeApiError } from "@/lib/order/api";
 import { exchangePaymentCode } from "@/lib/payment/api";
@@ -28,6 +29,7 @@ import {
   normalizePaymentCodeInput,
 } from "@/lib/payment/code";
 import { PAYMENT_PATH } from "@/lib/payment/link";
+import { ENTRY_PATH } from "@/lib/order/paths";
 import type { PaymentLocale } from "@/lib/payment/status";
 import { CONTACT } from "@/lib/site/social";
 
@@ -89,6 +91,14 @@ export function PayCodeEntry({ onOpened }: { onOpened?: () => void }) {
   return (
     <section className="mx-auto flex min-h-[560px] w-full max-w-container-content flex-col items-center bg-surface-base px-6 py-16 md:py-20 lg:py-24">
       <div className="mx-auto w-full max-w-md">
+        {/* back to the order menu ("Yangi buyurtma" / "Mavjud buyurtma …") */}
+        <Link
+          href={ENTRY_PATH}
+          className="-mt-6 mb-6 inline-flex min-h-[44px] items-center gap-1.5 font-sans text-[13px] text-text-secondary transition-colors duration-200 hover:text-text-primary motion-reduce:transition-none md:-mt-8"
+        >
+          <ArrowLeft size={15} strokeWidth={1.75} aria-hidden="true" className="rtl:-scale-x-100" />
+          {c.payBack}
+        </Link>
         <span className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-accent-primary/[0.14]">
           <KeyRound size={24} strokeWidth={1.75} className="text-accent-primary" />
         </span>

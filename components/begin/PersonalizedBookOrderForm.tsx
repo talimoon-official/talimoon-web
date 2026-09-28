@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, LoaderCircle, MapPin } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowRight, Check, LoaderCircle, MapPin } from "lucide-react";
+import { FlowBackButton } from "./FlowBack";
 import { useLanguage, useT } from "@/lib/i18n/LanguageContext";
 import { toLocale } from "@/lib/journey/types";
 import {
@@ -43,6 +44,7 @@ import { MapLocationPicker } from "./MapLocationPicker";
 import { setMarketPreference, useMarketPreference, marketFromLocation } from "@/lib/order/market";
 import { normalizeOrderPhone } from "@/lib/order/phone";
 import { useFlowScroll } from "@/lib/order/useFlowScroll";
+import { clearFormDraft, peekFormDraft, saveFormDraft } from "@/lib/order/formDraft";
 import {
   additionalCharacterLabel,
   additionalCharacterNamed,
@@ -924,12 +926,26 @@ export function isStepComplete(stepId: StepId, data: FormData): boolean {
 
 // ─── Main component ─────────────────────────────────────────────────────────
 
+type FormPhase = "intro" | "world" | "character" | "heart" | "steps";
+
+/** What survives leaving the form mid-order (see lib/order/formDraft). */
+interface OrderFormDraft {
+  data: FormData;
+  phase: FormPhase;
+  stepIndex: number;
+  marketTouched: boolean;
+}
+
 export default function PersonalizedBookOrderForm({
   onBack,
+  onReturnToMenu,
   initialBookType,
   initialMarket,
 }: {
   onBack: () => void;
+  /** Leaves the saved screen for the order menu (auto-return / system
+   *  Back). Omitted → OrderSaved's own full-page fallback. */
+  onReturnToMenu?: () => void;
   /**
    * Pre-selects the child count when the form is entered from a
    * pricing card that already committed to a book type (e.g.
@@ -1024,14 +1040,25 @@ export default function PersonalizedBookOrderForm({
   //    customer touches the region control, seeding stops — an explicit
   //    action always beats stale saved state (spec §12).
   const { preference: savedMarket } = useMarketPreference();
-  const [marketTouched, setMarketTouched] = useState(false);
+
+  // ── An unfinished order from earlier in this tab (the customer stepped
+  //    Back past the first screen, or followed a link mid-order). Restored
+  //    unless the customer has since chosen a DIFFERENT book type or market
+  //    — that is a new order, and the old draft is dropped.
+  const [restored] = useState<OrderFormDraft | null>(() => {
+    const d = peekFormDraft<OrderFormDraft>();
+    if (!d) return null;
+    const conflicts =
+      (initialBookType && bookTypeForChildCount(d.data.children.length) !== initialBookType) ||
+      (initialMarket && d.data.market !== initialMarket);
+    return conflicts ? null : d;
+  });
+  const [marketTouched, setMarketTouched] = useState(restored?.marketTouched ?? false);
   const resolvedInitialMarket: Market =
     initialMarket ?? marketFromLocation() ?? savedMarket ?? "UZ";
 
-  const [phase, setPhase] = useState<
-    "intro" | "world" | "character" | "heart" | "steps"
-  >("intro");
-  const [stepIndex, setStepIndex] = useState(0);
+  const [phase, setPhase] = useState<FormPhase>(restored?.phase ?? "intro");
+  const [stepIndex, setStepIndex] = useState(restored?.stepIndex ?? 0);
   /** Where the customer lands when the "Yuragingizda qolgan gaplar"
    *  screen opens: "start" going forward, "end" stepping back from
    *  the photos so edits are quick. */
@@ -1039,8 +1066,12 @@ export default function PersonalizedBookOrderForm({
   /** "end" when the customer steps BACK from the first wizard step into
    *  Phase 03, so it opens on its completion screen (spec §03). */
   const [charEntry, setCharEntry] = useState<"start" | "end">("start");
-  const [data, setData] = useState<FormData>(() => emptyForm(resolvedInitialMarket));
-  const [phase01Seeded, setPhase01Seeded] = useState(false);
+  /** "end" when the customer steps BACK from Phase 03 into Phase 02. */
+  const [worldEntry, setWorldEntry] = useState<"start" | "end">("start");
+  const [data, setData] = useState<FormData>(
+    () => restored?.data ?? emptyForm(resolvedInitialMarket),
+  );
+  const [phase01Seeded, setPhase01Seeded] = useState(restored != null);
   /** Set once finalize succeeds: the order is SAVED (not paid, not in
    *  production). `resume` is the backend's order-bound payment capability —
    *  memory only, never persisted. */
@@ -1050,6 +1081,14 @@ export default function PersonalizedBookOrderForm({
     paymentCode: FinalizeOrderResult["paymentCode"];
     paymentCodeDelivery: FinalizeOrderResult["paymentCodeDelivery"];
   } | null>(null);
+  // Keep the unfinished order for a later visit in this tab — only once
+  // Phase 01 has produced something worth keeping, and never after the
+  // order is saved (the completed form must not come back).
+  useEffect(() => {
+    if (saved) clearFormDraft();
+    else if (phase01Seeded) saveFormDraft<OrderFormDraft>({ data, phase, stepIndex, marketTouched });
+  }, [saved, phase01Seeded, data, phase, stepIndex, marketTouched]);
+
   /** Latched the moment the final submit fires, so a second click /
    *  an Enter race can't send the order twice (spec §6). */
   const [submitting, setSubmitting] = useState(false);
@@ -1148,6 +1187,16 @@ export default function PersonalizedBookOrderForm({
   // own useFlowScroll; keep this key stable across them so it fires only
   // on a real step change here.
   useFlowScroll(phase === "steps" ? `step-${step.id}` : "flow");
+
+  // Move focus to the new step's title on every step change (the phases do
+  // the same for their questions), so keyboard / screen-reader users start
+  // each step at its top, after a Back as much as after a Continue.
+  const stepHeadingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (phase !== "steps") return;
+    const id = window.setTimeout(() => stepHeadingRef.current?.focus({ preventScroll: true }), 40);
+    return () => window.clearTimeout(id);
+  }, [phase, stepIndex]);
 
   // THE order total — one deterministic, market-aware derivation the
   // review breakdown AND the payment amount both read (spec §26). The
@@ -1598,6 +1647,9 @@ export default function PersonalizedBookOrderForm({
         notify: { customerName: data.orderer.name, phone: canonicalPhone, locale: bookLoc },
       });
 
+      // The order exists now: drop the draft at once (even if the form has
+      // been unmounted meanwhile), so it can never be sent a second time.
+      clearFormDraft();
       setSaved({
         orderCode: finalized.orderCode,
         resume: finalized.resume ?? null,
@@ -1682,7 +1734,10 @@ export default function PersonalizedBookOrderForm({
     return (
       <Phase01
         onBack={onBack}
-        onComplete={handlePhase01}
+        onComplete={(result) => {
+          setWorldEntry("start");
+          handlePhase01(result);
+        }}
         initialChildCount={
           initialBookType ? (initialBookType === "multi" ? 2 : 1) : undefined
         }
@@ -1706,6 +1761,7 @@ export default function PersonalizedBookOrderForm({
       <Phase02
         childrenIn={data.children}
         onPatchChild={patchChild}
+        entry={worldEntry}
         onBack={() => setPhase("intro")}
         onComplete={() => {
           setCharEntry("start");
@@ -1724,6 +1780,7 @@ export default function PersonalizedBookOrderForm({
         entry={charEntry}
         onBack={() => {
           setCharEntry("start");
+          setWorldEntry("end");
           setPhase("world");
         }}
         onComplete={() => {
@@ -1768,6 +1825,7 @@ export default function PersonalizedBookOrderForm({
         paymentCodeDelivery={saved.paymentCodeDelivery}
         copy={PAYMENT_COPY[bookLoc]}
         locale={bookLoc}
+        onReturnToMenu={onReturnToMenu}
       />
     );
   }
@@ -1823,14 +1881,7 @@ export default function PersonalizedBookOrderForm({
       <div className="mx-auto max-w-xl">
         {/* Chapter header */}
         <div className="mb-8 flex items-center justify-between gap-4">
-          <button
-            type="button"
-            onClick={goBack}
-            className="inline-flex items-center gap-1.5 font-sans text-[13px] font-medium text-text-secondary transition-opacity hover:opacity-70"
-          >
-            <ArrowLeft size={14} strokeWidth={1.75} className="rtl:-scale-x-100" />
-            {t.back}
-          </button>
+          <FlowBackButton onBack={goBack} label={t.back} disabled={submitting} />
           <JourneyProgress locale={locale} current={step.chapter} />
         </div>
 
@@ -1851,7 +1902,10 @@ export default function PersonalizedBookOrderForm({
         >
           <StepIcon size={22} strokeWidth={1.5} className="text-accent-primary" />
         </span>
-        <h2 className="mb-8 text-center font-display text-[26px] font-medium leading-tight text-text-primary">
+        <h2
+          ref={stepHeadingRef}
+          tabIndex={-1}
+          className="mb-8 text-center outline-none font-display text-[26px] font-medium leading-tight text-text-primary">
           {stepTitle}
         </h2>
 

@@ -23,6 +23,10 @@ export interface PaymentCopy {
   payLater: string;
   /** shown only when the backend returned no payment link (older backend) */
   savedNoLink: string;
+  /** quiet line under the actions: the auto-return countdown */
+  autoReturn: (seconds: number) => string;
+  /** the way back to the order menu once the countdown is stopped */
+  returnToMenu: string;
 
   // ── pay later ───────────────────────────────────────────────────────
   laterTitle: string;
@@ -91,6 +95,8 @@ export interface PaymentCopy {
   saveCodeNotice: string;
 
   // ── /pay ────────────────────────────────────────────────────────────
+  /** back to the order menu */
+  payBack: string;
   payTitle: string;
   payDescription: string;
   payInputLabel: string;
@@ -115,6 +121,8 @@ const UZ: PaymentCopy = {
     "Ma’lumotlaringiz va buyurtma raqamingiz saqlandi. Formani qayta to‘ldirishingiz shart emas.",
   payNow: "Hozir to‘lash",
   payLater: "Keyinroq to‘lash",
+  autoReturn: (s) => `${s} soniyadan so‘ng buyurtmalar menyusiga qaytasiz.`,
+  returnToMenu: "Buyurtmalar menyusiga qaytish",
   savedNoLink:
     "To‘lov havolasini jamoamiz Siz ko‘rsatgan telefon raqamiga yuboradi.",
 
@@ -189,6 +197,7 @@ const UZ: PaymentCopy = {
   deliveredWhatsapp: "To‘lov kodi WhatsApp orqali ham yuborildi.",
   saveCodeNotice: "To‘lov kodini saqlab qo‘ying",
 
+  payBack: "Orqaga",
   payTitle: "To‘lov kodini kiriting",
   payDescription:
     "Avval buyurtma formasini yuborgan bo‘lsangiz, SMS yoki WhatsApp orqali olgan to‘lov kodingizni kiriting. Shu kod orqali saqlangan buyurtmangiz ochiladi va to‘lovni davom ettirasiz.",
@@ -214,6 +223,8 @@ const EN: PaymentCopy = {
     "Your details and your order number are saved. You don’t need to fill in the form again.",
   payNow: "Pay now",
   payLater: "Pay later",
+  autoReturn: (s) => `You’ll return to the order menu in ${s} ${s === 1 ? "second" : "seconds"}.`,
+  returnToMenu: "Back to the order menu",
   savedNoLink: "Our team will send the payment link to the phone number you provided.",
 
   laterTitle: "Awaiting payment",
@@ -284,6 +295,7 @@ const EN: PaymentCopy = {
   deliveredWhatsapp: "We’ve also sent the payment code on WhatsApp.",
   saveCodeNotice: "Please keep this payment code",
 
+  payBack: "Back",
   payTitle: "Enter your payment code",
   payDescription:
     "If you’ve already submitted the order form, enter the payment code you received by SMS or WhatsApp. It opens your saved order so you can continue payment.",
@@ -309,6 +321,8 @@ const RU: PaymentCopy = {
     "Ваши данные и номер заказа сохранены. Заполнять форму заново не нужно.",
   payNow: "Оплатить сейчас",
   payLater: "Оплатить позже",
+  autoReturn: (s) => `Через ${s} сек. Вы вернётесь в меню заказов.`,
+  returnToMenu: "Вернуться в меню заказов",
   savedNoLink: "Наша команда отправит ссылку на оплату на указанный Вами номер телефона.",
 
   laterTitle: "Ожидается оплата",
@@ -379,6 +393,7 @@ const RU: PaymentCopy = {
   deliveredWhatsapp: "Код оплаты также отправлен в WhatsApp.",
   saveCodeNotice: "Сохраните код оплаты",
 
+  payBack: "Назад",
   payTitle: "Введите код оплаты",
   payDescription:
     "Если Вы уже отправили форму заказа, введите код оплаты из SMS или WhatsApp. Он откроет Ваш сохранённый заказ, и Вы продолжите оплату.",

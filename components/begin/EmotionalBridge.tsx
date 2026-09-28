@@ -27,7 +27,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { FlowBackButton } from "./FlowBack";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { toLocale, directionFor } from "@/lib/journey/types";
 import type { ChildProfile, EmotionalBridge as Bridge } from "@/lib/order/types";
@@ -164,14 +165,7 @@ export default function EmotionalBridge({
     >
       <div className="mx-auto max-w-xl">
         <div className="mb-14 flex items-start justify-between gap-4">
-          <button
-            type="button"
-            onClick={goPrev}
-            className="inline-flex items-center gap-1.5 font-sans text-[13px] font-medium text-text-secondary outline-none transition-opacity hover:opacity-70 focus-visible:underline"
-          >
-            <ArrowLeft size={14} strokeWidth={1.75} className="rtl:-scale-x-100" />
-            {c.back}
-          </button>
+          <FlowBackButton onBack={goPrev} label={c.back} />
           <JourneyProgress locale={raw} current={3} />
         </div>
 

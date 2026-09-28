@@ -26,7 +26,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { FlowBackButton } from "./FlowBack";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { toLocale, directionFor } from "@/lib/journey/types";
 import {
@@ -58,11 +59,16 @@ export default function Phase02({
   onPatchChild,
   onComplete,
   onBack,
+  entry = "start",
 }: {
   childrenIn: ChildProfile[];
   onPatchChild: (id: string, patch: Partial<ChildProfile>) => void;
   onComplete: () => void;
   onBack: () => void;
+  /** "end" when the customer steps BACK into Phase 02 from Phase 03 — land
+   *  on the last child's completion screen (the screen right before), not
+   *  on the first child's first question. */
+  entry?: "start" | "end";
 }) {
   const { language } = useLanguage();
   const rawLocale = toLocale(language);
@@ -71,8 +77,8 @@ export default function Phase02({
   const c = phase02Copy(locale);
   const reduced = useReducedMotion();
 
-  const [idx, setIdx] = useState(0);
-  const [screen, setScreen] = useState<Screen>("interests");
+  const [idx, setIdx] = useState(entry === "end" ? childrenIn.length - 1 : 0);
+  const [screen, setScreen] = useState<Screen>(entry === "end" ? "child-done" : "interests");
   const [attempted, setAttempted] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
   const [customDraft, setCustomDraft] = useState("");
@@ -243,14 +249,7 @@ export default function Phase02({
     >
       <div className="mx-auto max-w-5xl">
         <div className="mb-10 flex items-start justify-between gap-4">
-          <button
-            type="button"
-            onClick={goPrev}
-            className="inline-flex items-center gap-1.5 font-sans text-[13px] font-medium text-text-secondary outline-none transition-opacity hover:opacity-70 focus-visible:underline"
-          >
-            <ArrowLeft size={14} strokeWidth={1.75} className="rtl:-scale-x-100" />
-            {c.back}
-          </button>
+          <FlowBackButton onBack={goPrev} label={c.back} />
           <JourneyProgress locale={toLocale(language)} current={1} />
         </div>
 

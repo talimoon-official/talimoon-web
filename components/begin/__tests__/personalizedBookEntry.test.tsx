@@ -241,10 +241,12 @@ describe("routing", () => {
     expect(price).not.toMatch(/PersonalizedBookEntry/);
   });
 
-  it("the form's back step returns to the pricing page", () => {
-    expect(read("app/begin/personalized-book/form/PersonalizedBookFormRoute.tsx")).toMatch(
-      /router\.push\("\/begin\/personalized-book\/price"\)/,
-    );
+  it("the form's back step returns to the pricing page without pushing a new entry", () => {
+    const route = read("app/begin/personalized-book/form/PersonalizedBookFormRoute.tsx");
+    // steps back through history when pricing is behind the form, else REPLACES
+    expect(route).toMatch(/createFormHistoryGuard\(/);
+    expect(route).toMatch(/router\.replace\(PRICE_PATH\)/);
+    expect(route).not.toMatch(/router\.push\(/);
   });
 });
 

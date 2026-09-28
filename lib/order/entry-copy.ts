@@ -6,6 +6,8 @@
  */
 
 export interface EntryCopy {
+  /** back to the product choice (/begin) */
+  back: string;
   eyebrow: string;
   heading: string;
   subheading: string;
@@ -22,6 +24,7 @@ export interface EntryCopy {
 }
 
 const UZ: EntryCopy = {
+  back: "Orqaga",
   eyebrow: "Shaxsiylashtirilgan kitoblar",
   heading: "Buyurtmani qanday davom ettirmoqchisiz?",
   subheading:
@@ -39,6 +42,7 @@ const UZ: EntryCopy = {
 };
 
 const EN: EntryCopy = {
+  back: "Back",
   eyebrow: "Personalized books",
   heading: "How would you like to continue?",
   subheading: "Start a new book order, or continue payment for an order you’ve already submitted.",
@@ -55,6 +59,7 @@ const EN: EntryCopy = {
 };
 
 const RU: EntryCopy = {
+  back: "Назад",
   eyebrow: "Персональные книги",
   heading: "Как Вы хотите продолжить?",
   subheading: "Оформите новый заказ книги или продолжите оплату уже отправленного заказа.",

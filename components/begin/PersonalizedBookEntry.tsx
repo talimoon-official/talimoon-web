@@ -12,17 +12,22 @@
  *   B · Mavjud buyurtma uchun to‘lov → /pay (payment code). NEVER the form.
  *
  * Both cards are plain links: no inline reveal, no state on this screen.
+ * "Orqaga" returns to the product choice (`/begin`). This is also where the
+ * saved-order screen returns to (auto-return / Back); focus then lands on
+ * the heading (lib/order/menuReturn).
  *
  * Visual language: the existing TALIMOON tokens — warm paper surfaces, navy
  * contrast, gold as an accent only, display serif titles, restrained depth.
  * Motion: 240ms colour / 2px lift, off under reduced motion.
  */
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { ArrowRight, BookOpen, Check, KeyRound } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Check, KeyRound } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { ENTRY_COPY } from "@/lib/order/entry-copy";
 import { PAY_PATH, PRICE_PATH } from "@/lib/order/paths";
+import { consumeReturnedToMenu } from "@/lib/order/menuReturn";
 
 /**
  * Keyboard focus for the cards: a ring (box-shadow) that follows each card's
@@ -36,18 +41,32 @@ const focusRing =
 export default function PersonalizedBookEntry() {
   const { language } = useLanguage();
   const c = ENTRY_COPY[language === "UZ" ? "uz" : language === "RU" ? "ru" : "en"];
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (consumeReturnedToMenu()) headingRef.current?.focus({ preventScroll: true });
+  }, []);
 
   return (
     <section aria-labelledby="order-entry-heading" className="w-full bg-surface-base">
-      <div className="mx-auto max-w-[1440px] px-5 pb-16 pt-12 md:px-10 md:pb-24 md:pt-20 lg:px-16">
+      <div className="mx-auto max-w-[1440px] px-5 pb-16 pt-8 md:px-10 md:pb-24 md:pt-12 lg:px-16">
+        <Link
+          href="/begin"
+          className="inline-flex min-h-[44px] items-center gap-1.5 font-sans text-[13px] text-text-secondary transition-colors duration-200 hover:text-text-primary motion-reduce:transition-none"
+        >
+          <ArrowLeft size={15} strokeWidth={1.75} aria-hidden="true" className="rtl:-scale-x-100" />
+          {c.back}
+        </Link>
+
         {/* ── context ─────────────────────────────────────────────── */}
-        <header className="mx-auto max-w-xl text-center">
+        <header className="mx-auto mt-4 max-w-xl text-center md:mt-8">
           <p className="mb-3 font-sans text-[12px] font-medium uppercase tracking-[0.2em] text-accent-primary">
             {c.eyebrow}
           </p>
           <h1
+            ref={headingRef}
+            tabIndex={-1}
             id="order-entry-heading"
-            className="font-display text-[28px] font-medium leading-[1.15] tracking-tight text-text-primary sm:text-[36px]"
+            className="outline-none font-display text-[28px] font-medium leading-[1.15] tracking-tight text-text-primary sm:text-[36px]"
           >
             {c.heading}
           </h1>

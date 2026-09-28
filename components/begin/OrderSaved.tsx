@@ -13,6 +13,15 @@
  *                       customer's PAYMENT CODE and talimoon.com/pay — the way
  *                       back to payment only, never to the form
  *
+ * The screen does not stay forever: it counts down AUTO_RETURN_SECONDS (10) seconds
+ * and then returns to the order menu (ENTRY_PATH — "Yangi buyurtma" /
+ * "Mavjud buyurtma uchun to‘lov"). ANY action on the screen (a button, a
+ * link, copying the code) cancels the countdown for good; leaving the screen
+ * cancels it through unmount. It pauses while the app is in the background,
+ * so a PWA brought back to the front never fires a stale redirect. The order
+ * is already saved: returning to the menu creates nothing and resubmits
+ * nothing — the payment code and /pay remain the way back to payment.
+ *
  * Nothing here says the book is being prepared: production starts only
  * after the payment is confirmed AND an admin starts it.
  *
@@ -21,16 +30,20 @@
  * of the payment link.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from "react";
 import { Check, Clock, Copy, Send, ShieldCheck } from "lucide-react";
 import type { PaymentCopy } from "@/lib/payment/copy";
 import { lifecycleStatusLabel, type PaymentLocale } from "@/lib/payment/status";
 import { paymentPath, paymentUrl } from "@/lib/payment/link";
 import { CONTACT } from "@/lib/site/social";
 import { PaymentCodeCard } from "@/components/payment/PaymentCodeCard";
+import { ENTRY_PATH } from "@/lib/order/paths";
+import { useFlowBackHandler } from "./FlowBack";
 
 export const PAY_ENTRY_PATH = "/pay";
 const PAY_ENTRY_DISPLAY = "talimoon.com/pay";
+/** how long the saved screen waits before returning to the order menu */
+export const AUTO_RETURN_SECONDS = 10;
 
 export interface OrderSavedProps {
   orderCode: string;
@@ -48,6 +61,9 @@ export interface OrderSavedProps {
   /** injectable for tests; defaults to a full-page replace() so "Back" from
    *  the payment page never lands on an empty form */
   navigate?: (path: string) => void;
+  /** returns to the order menu (auto-return, "back to menu", system Back);
+   *  defaults to `navigate(ENTRY_PATH)` */
+  onReturnToMenu?: () => void;
 }
 
 function formatDate(iso: string): string {
@@ -71,10 +87,65 @@ export function OrderSaved({
   copy: c,
   locale,
   navigate,
+  onReturnToMenu,
 }: OrderSavedProps) {
   const [mode, setMode] = useState<"decide" | "later">("decide");
   const go = navigate ?? ((path: string) => window.location.replace(path));
   const canPayNow = resume != null || paymentCode != null;
+
+  // ── return to the order menu — exactly once, from whichever trigger wins
+  const returnToMenu = onReturnToMenu ?? (() => go(ENTRY_PATH));
+  const returnRef = useRef(returnToMenu);
+  useLayoutEffect(() => {
+    returnRef.current = returnToMenu;
+  });
+  const returnedRef = useRef(false);
+  function leaveToMenu() {
+    if (returnedRef.current) return;
+    returnedRef.current = true;
+    returnRef.current();
+  }
+  // System / browser Back on this screen goes to the menu too — never back
+  // into the completed form.
+  useFlowBackHandler(leaveToMenu);
+
+  // ── the countdown: one timeout at a time, keyed on the remaining seconds;
+  //    stops for good on any action, pauses while the page is hidden.
+  const [secondsLeft, setSecondsLeft] = useState(AUTO_RETURN_SECONDS);
+  const [autoReturn, setAutoReturn] = useState(true);
+  const [pageVisible, setPageVisible] = useState(
+    () => typeof document === "undefined" || document.visibilityState !== "hidden",
+  );
+  useEffect(() => {
+    const sync = () => setPageVisible(document.visibilityState !== "hidden");
+    document.addEventListener("visibilitychange", sync);
+    return () => document.removeEventListener("visibilitychange", sync);
+  }, []);
+  const counting = autoReturn && mode === "decide" && pageVisible;
+  useEffect(() => {
+    if (!counting) return;
+    if (secondsLeft <= 0) {
+      if (!returnedRef.current) {
+        returnedRef.current = true;
+        returnRef.current();
+      }
+      return;
+    }
+    const id = window.setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
+    return () => window.clearTimeout(id);
+  }, [counting, secondsLeft]);
+
+  /** Any button or link on the screen (Pay now, Pay later, copy code, the
+   *  /pay link, Telegram…) means the customer is acting: stop the timer. */
+  function cancelOnAction(e: MouseEvent) {
+    if ((e.target as Element).closest?.("button, a")) setAutoReturn(false);
+  }
+
+  // Focus the title when the screen opens and when it switches to "later".
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    titleRef.current?.focus({ preventScroll: true });
+  }, [mode]);
 
   function payNow() {
     // the resume link opens the payment page directly; without one, the
@@ -93,6 +164,7 @@ export function OrderSaved({
   return (
     <section
       data-order-flow=""
+      onClickCapture={cancelOnAction}
       className="mx-auto flex min-h-[560px] w-full max-w-container-content flex-col items-center bg-surface-base px-6 py-16 md:py-20 lg:py-28"
     >
       <div className="mx-auto w-full max-w-md text-center">
@@ -104,7 +176,7 @@ export function OrderSaved({
           )}
         </span>
 
-        <h2 className="font-display text-[26px] font-medium leading-tight text-text-primary">
+        <h2 ref={titleRef} tabIndex={-1} className="font-display outline-none text-[26px] font-medium leading-tight text-text-primary">
           {mode === "decide" ? c.savedTitle : c.laterTitle}
         </h2>
         <p className="mt-4 font-sans text-[14px] leading-[1.65] text-text-secondary">
@@ -181,6 +253,25 @@ export function OrderSaved({
         ) : (
           <PayLaterDetails copy={c} resume={resume} hasCode={paymentCode != null} onPayNow={payNow} />
         )}
+
+        {/* Quiet by design: no progress bar, no live-region announcement per
+            tick (screen readers read it when they reach it). Once the timer
+            is stopped, the same spot offers the way back to the menu. */}
+        <div className="mt-6 flex min-h-[44px] items-center justify-center">
+          {autoReturn && mode === "decide" ? (
+            <p data-auto-return="" className="font-sans text-[12.5px] leading-[1.6] text-text-muted tabular-nums">
+              {c.autoReturn(Math.max(secondsLeft, 1))}
+            </p>
+          ) : (
+            <button
+              type="button"
+              onClick={leaveToMenu}
+              className="inline-flex min-h-[44px] items-center px-2 font-sans text-[13px] font-medium text-text-secondary underline-offset-4 outline-none hover:text-text-primary hover:underline focus-visible:underline"
+            >
+              {c.returnToMenu}
+            </button>
+          )}
+        </div>
       </div>
     </section>
   );
