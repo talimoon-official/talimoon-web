@@ -14,12 +14,17 @@
  *
  *   SENSITIVE BUT NECESSARY FOR RECOVERY — personal data the customer would
  *   otherwise have to re-enter / re-upload. Kept only on this device, only
- *   until the order is sent, max 7 days:
- *     orderer name + honorific, phone, delivery address (+ map pin),
- *     child names, storyGiverDisplayName, personalMessage, each child's
- *     private emotional context (emotionalBridge), additional characters'
- *     names/relations, child + character photos, the keepsake photo, the
- *     voice note (+ duration).
+ *   until the order is sent (or a new order is started):
+ *     answers record, 7 days after the last activity —
+ *       orderer name + honorific, phone, delivery address (+ map pin),
+ *       child names, storyGiverDisplayName, personalMessage, each child's
+ *       private emotional context (emotionalBridge), additional
+ *       characters' names/relations, and a MANIFEST of which files existed
+ *       (counts / flags only);
+ *     media record, 48 hours after the last activity —
+ *       child + character photos, the keepsake photo, the voice note
+ *       (+ duration). Past 48h the answers still restore, and exactly the
+ *       expired files are asked for again (MediaGap).
  *
  *   NEVER PERSISTED
  *     consentAuthority / consentPrivacy / consentTerms and the drawn
@@ -34,12 +39,11 @@
 import type { FormData } from "./PersonalizedBookOrderForm";
 import type { BookType } from "./orderFormData";
 import { MAX_MAIN_CHILDREN } from "@/lib/order/types";
-import { clearDraft, readDraft, writeDraft } from "@/lib/order/formDraft";
+import { clearDraft, readDraft, writeDraft, writeDraftMedia } from "@/lib/order/formDraft";
 import type { SubPosition } from "./flowPosition";
 
 export type FormPhase = "intro" | "world" | "character" | "heart" | "steps";
 const PHASES: readonly FormPhase[] = ["intro", "world", "character", "heart", "steps"];
-
 
 /** The fields that are NEVER written (see the audit above). */
 export const NEVER_PERSISTED = [
@@ -53,8 +57,36 @@ export const NEVER_PERSISTED = [
 type NeverPersisted = (typeof NEVER_PERSISTED)[number];
 export type PersistedFormData = Omit<FormData, NeverPersisted>;
 
+/** The files, stored in their OWN record (48h retention), keyed by the
+ *  stable child / character id — never by array position. */
+export interface OrderDraftMedia {
+  children: Record<string, File[]>;
+  characters: Record<string, File[]>;
+  specialPhoto: File | null;
+  finalVoice: File | null;
+  finalVoiceDurationSec: number | null;
+}
+
+/** What files existed, kept WITH the answers (7 days), so that once the media
+ *  has expired the form can say exactly which files to add again. Counts and
+ *  flags only — never file contents or names. */
+export interface MediaManifest {
+  children: Record<string, number>;
+  characters: Record<string, number>;
+  specialPhoto: boolean;
+  finalVoice: boolean;
+}
+
+/** One file slot that must be added again after the media expired. */
+export type MediaGap =
+  | { kind: "child"; id: string; name: string; count: number }
+  | { kind: "character"; id: string; name: string; count: number }
+  | { kind: "special" }
+  | { kind: "voice" };
+
 export interface OrderDraft {
   bookType: BookType;
+  /** the answers — with every file slot EMPTY (files live in the media record) */
   data: PersistedFormData;
   phase: FormPhase;
   stepIndex: number;
@@ -66,6 +98,7 @@ export interface OrderDraft {
   phase01?: unknown;
   /** Sub-screen inside the current per-child phase. */
   pos?: SubPosition;
+  media?: MediaManifest;
 }
 
 const FLOW = "personalized-book" as const;
@@ -76,6 +109,69 @@ export function toPersisted(data: FormData): PersistedFormData {
   for (const k of NEVER_PERSISTED) delete copy[k];
   return copy as PersistedFormData;
 }
+
+/** Splits the answers from the files: answers (file slots emptied), the
+ *  media record, and the manifest of what existed. */
+export function splitMedia(data: PersistedFormData): {
+  text: PersistedFormData;
+  media: OrderDraftMedia;
+  manifest: MediaManifest;
+} {
+  const media: OrderDraftMedia = {
+    children: {},
+    characters: {},
+    specialPhoto: data.specialPhoto ?? null,
+    finalVoice: data.finalVoice ?? null,
+    finalVoiceDurationSec: data.finalVoice ? (data.finalVoiceDurationSec ?? null) : null,
+  };
+  const manifest: MediaManifest = {
+    children: {},
+    characters: {},
+    specialPhoto: media.specialPhoto != null,
+    finalVoice: media.finalVoice != null,
+  };
+  for (const c of data.children) {
+    const photos = c.photos ?? [];
+    if (photos.length) {
+      media.children[c.id] = photos;
+      manifest.children[c.id] = photos.length;
+    }
+  }
+  for (const c of data.additionalCharacters) {
+    if (c.photos.length) {
+      media.characters[c.id] = c.photos;
+      manifest.characters[c.id] = c.photos.length;
+    }
+  }
+  const text: PersistedFormData = {
+    ...data,
+    children: data.children.map((c) => ({ ...c, photos: [] })),
+    additionalCharacters: data.additionalCharacters.map((c) => ({ ...c, photos: [] })),
+    specialPhoto: null,
+    finalVoice: null,
+    finalVoiceDurationSec: null,
+  };
+  return { text, media, manifest };
+}
+
+function mediaIsEmpty(m: OrderDraftMedia): boolean {
+  return (
+    !m.specialPhoto &&
+    !m.finalVoice &&
+    Object.keys(m.children).length === 0 &&
+    Object.keys(m.characters).length === 0
+  );
+}
+
+/** Identity of the stored files — the same File objects mean no rewrite. */
+function mediaRefs(m: OrderDraftMedia): unknown[] {
+  const refs: unknown[] = [m.specialPhoto, m.finalVoice, m.finalVoiceDurationSec];
+  for (const k of Object.keys(m.children).sort()) refs.push(k, ...m.children[k]!);
+  for (const k of Object.keys(m.characters).sort()) refs.push(k, ...m.characters[k]!);
+  return refs;
+}
+const sameRefs = (a: unknown[] | null, b: unknown[]) =>
+  a != null && a.length === b.length && a.every((x, i) => x === b[i]);
 
 // ── safe read-back ───────────────────────────────────────────────────────────
 
@@ -90,29 +186,78 @@ function sameType<T>(stored: unknown, fallback: T): T {
   return typeof stored === typeof fallback ? (stored as T) : fallback;
 }
 
-/**
- * Rebuilds FormData from a stored draft over a fresh `base`. Anything
- * missing or mistyped falls back to the base value; never-persisted fields
- * always come from the base (unticked, unsigned). Returns null when the
- * record cannot be trusted at all.
- */
-export type RestoredOrderDraft = Omit<OrderDraft, "data"> & { data: FormData };
+function readMedia(raw: unknown): OrderDraftMedia {
+  const m = isObj(raw) ? raw : {};
+  const map = (v: unknown) =>
+    Object.fromEntries(Object.entries(isObj(v) ? v : {}).map(([k, files]) => [k, blobs(files)]));
+  return {
+    children: map(m.children),
+    characters: map(m.characters),
+    specialPhoto: isBlob(m.specialPhoto) ? m.specialPhoto : null,
+    finalVoice: isBlob(m.finalVoice) ? m.finalVoice : null,
+    finalVoiceDurationSec: typeof m.finalVoiceDurationSec === "number" ? m.finalVoiceDurationSec : null,
+  };
+}
 
+function readManifest(raw: unknown): MediaManifest {
+  const m = isObj(raw) ? raw : {};
+  const counts = (v: unknown) =>
+    Object.fromEntries(
+      Object.entries(isObj(v) ? v : {}).filter((e): e is [string, number] => typeof e[1] === "number" && e[1] > 0),
+    );
+  return {
+    children: counts(m.children),
+    characters: counts(m.characters),
+    specialPhoto: m.specialPhoto === true,
+    finalVoice: m.finalVoice === true,
+  };
+}
+
+export type RestoredOrderDraft = Omit<OrderDraft, "data" | "media"> & {
+  data: FormData;
+  /** files the customer had added that are no longer here (48h retention
+   *  passed, or storage refused them) — only these need adding again */
+  mediaGaps: MediaGap[];
+};
+
+/**
+ * Rebuilds FormData from the stored answers (+ the media record, when still
+ * within its 48 hours) over a fresh `base`. Anything missing or mistyped
+ * falls back to the base value; never-persisted fields always come from the
+ * base (unticked, unsigned). Missing media never blocks a restore: the
+ * answers and position come back, and `mediaGaps` lists what to re-add.
+ * Returns null when the answers record cannot be trusted at all.
+ */
 export function restoreOrderDraft(
   raw: unknown,
   base: FormData,
   stepCount: number,
+  rawMedia?: unknown,
 ): RestoredOrderDraft | null {
   try {
     if (!isObj(raw) || !isObj(raw.data)) return null;
     const d = raw.data;
     if (!Array.isArray(d.children) || d.children.length === 0) return null;
     const phase01Seeded = raw.phase01Seeded === true;
+    const media = readMedia(rawMedia);
+    const manifest = readManifest(raw.media);
+
     const children = d.children
       .slice(0, MAX_MAIN_CHILDREN)
       .filter((c): c is Record<string, unknown> => isObj(c) && typeof c.id === "string" && typeof c.name === "string")
-      .map((c) => ({ ...c, photos: blobs(c.photos) }) as unknown as FormData["children"][number]);
+      .map((c) => ({ ...c, photos: media.children[c.id as string] ?? [] }) as unknown as FormData["children"][number]);
     if (children.length === 0) return null;
+
+    const characters = Array.isArray(d.additionalCharacters)
+      ? d.additionalCharacters
+          .filter((c): c is Record<string, unknown> => isObj(c) && typeof c.id === "string")
+          .map((c) => ({
+            id: c.id as string,
+            relation: typeof c.relation === "string" ? c.relation : "",
+            name: typeof c.name === "string" ? c.name : "",
+            photos: media.characters[c.id as string] ?? [],
+          }))
+      : [];
 
     const o = isObj(d.orderer) ? d.orderer : {};
     const addr = isObj(o.deliveryAddress) ? o.deliveryAddress : {};
@@ -142,20 +287,11 @@ export function restoreOrderDraft(
       storyGiverCustomLabel: sameType(d.storyGiverCustomLabel, base.storyGiverCustomLabel),
       storyGiverDisplayName: sameType(d.storyGiverDisplayName, base.storyGiverDisplayName),
       keepsakeWantsVoice: typeof d.keepsakeWantsVoice === "boolean" ? d.keepsakeWantsVoice : null,
-      finalVoice: isBlob(d.finalVoice) ? d.finalVoice : null,
-      finalVoiceDurationSec: typeof d.finalVoiceDurationSec === "number" ? d.finalVoiceDurationSec : null,
+      finalVoice: media.finalVoice,
+      finalVoiceDurationSec: media.finalVoice ? media.finalVoiceDurationSec : null,
       wantsCharacters: d.wantsCharacters === true,
-      additionalCharacters: Array.isArray(d.additionalCharacters)
-        ? d.additionalCharacters
-            .filter((c): c is Record<string, unknown> => isObj(c) && typeof c.id === "string")
-            .map((c) => ({
-              id: c.id as string,
-              relation: typeof c.relation === "string" ? c.relation : "",
-              name: typeof c.name === "string" ? c.name : "",
-              photos: blobs(c.photos),
-            }))
-        : [],
-      specialPhoto: isBlob(d.specialPhoto) ? d.specialPhoto : null,
+      additionalCharacters: characters,
+      specialPhoto: media.specialPhoto,
       bookLanguageCode: sameType(d.bookLanguageCode, base.bookLanguageCode) as FormData["bookLanguageCode"],
       copies: typeof d.copies === "number" && d.copies >= 1 ? d.copies : base.copies,
       // consent + signature: ALWAYS fresh
@@ -165,6 +301,21 @@ export function restoreOrderDraft(
       consentDrawnSignature: "",
       giftFrom: base.giftFrom,
     };
+
+    // Which files the customer had, that are no longer here.
+    const mediaGaps: MediaGap[] = [];
+    for (const c of children) {
+      const had = manifest.children[c.id] ?? 0;
+      if (had > (c.photos?.length ?? 0)) mediaGaps.push({ kind: "child", id: c.id, name: c.name, count: had });
+    }
+    if (data.wantsCharacters) {
+      for (const c of characters) {
+        const had = manifest.characters[c.id] ?? 0;
+        if (had > c.photos.length) mediaGaps.push({ kind: "character", id: c.id, name: c.name, count: had });
+      }
+    }
+    if (manifest.specialPhoto && !data.specialPhoto) mediaGaps.push({ kind: "special" });
+    if (manifest.finalVoice && !data.finalVoice && data.keepsakeWantsVoice === true) mediaGaps.push({ kind: "voice" });
 
     // a draft that never completed Phase 01 can only live in Phase 01
     const phase =
@@ -187,60 +338,96 @@ export function restoreOrderDraft(
       phase01Seeded,
       phase01: raw.phase01,
       pos,
+      mediaGaps,
     };
   } catch {
     return null;
   }
 }
 
-// ── read / write / clear ─────────────────────────────────────────────────────
-
-export function loadOrderDraft(): Promise<unknown> {
-  return readDraft<unknown>(FLOW).catch(() => undefined);
+/** Is this gap still open against the CURRENT answers? (Re-adding the
+ *  files — or switching the voice off — closes it.) */
+export function gapIsOpen(g: MediaGap, data: FormData): boolean {
+  switch (g.kind) {
+    case "child":
+      return (data.children.find((c) => c.id === g.id)?.photos?.length ?? 0) === 0;
+    case "character":
+      return (
+        data.wantsCharacters &&
+        (data.additionalCharacters.find((c) => c.id === g.id)?.photos.length ?? -1) === 0
+      );
+    case "special":
+      return data.specialPhoto == null;
+    case "voice":
+      return data.keepsakeWantsVoice === true && data.finalVoice == null;
+  }
 }
 
+// ── read / write / clear ─────────────────────────────────────────────────────
+
+export interface LoadedOrderDraft {
+  payload: unknown;
+  media: unknown;
+}
+
+export async function loadOrderDraft(): Promise<LoadedOrderDraft | undefined> {
+  const r = await readDraft<unknown, unknown>(FLOW).catch(() => undefined);
+  return r ? { payload: r.payload, media: r.media } : undefined;
+}
+
+/** Deletes the answers AND all stored media. */
 export function clearOrderDraft(): Promise<void> {
   return clearDraft(FLOW);
 }
 
 /**
  * Debounced writer. Many edits → one write after `delayMs` of quiet; `flush`
- * writes the pending one now (page hidden / leaving). `seal` cancels anything
- * pending and blocks every later write — used the moment the order is saved,
- * so a late debounce can never resurrect the draft.
+ * writes the pending one now (page hidden / leaving). The answers are
+ * rewritten each time (refreshing the retention clock); the media record
+ * only when the files actually changed. Writes run one at a time, in order.
+ * `seal` cancels anything pending, blocks every later write and deletes
+ * answers + media — used the moment the order is saved (and when the
+ * customer starts a new order), so a late debounce can never resurrect it.
  */
 export function createDraftSaver(delayMs = 800) {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let pending: OrderDraft | null = null;
   let sealed = false;
+  let lastMedia: unknown[] | null = null;
+  let queue: Promise<void> = Promise.resolve();
 
   async function write(d: OrderDraft) {
-    const payload: OrderDraft = { ...d, data: toPersisted(d.data as FormData) };
+    if (sealed) return;
+    const { text, media, manifest } = splitMedia(toPersisted(d.data as FormData));
     try {
-      await writeDraft(FLOW, payload);
+      await writeDraft(FLOW, { ...d, data: text, media: manifest } satisfies OrderDraft);
     } catch {
-      // Quota exceeded (many large photos): keep at least the answers —
-      // unless the order was saved meanwhile (never write after seal).
-      if (sealed) return;
-      try {
-        await writeDraft(FLOW, {
-          ...payload,
-          data: {
-            ...payload.data,
-            children: payload.data.children.map((c) => ({ ...c, photos: [] })),
-            additionalCharacters: payload.data.additionalCharacters.map((c) => ({ ...c, photos: [] })),
-            specialPhoto: null,
-            finalVoice: null,
-            finalVoiceDurationSec: null,
-          },
-        });
-      } catch {
-        /* storage unavailable — the form keeps working in memory */
-      }
+      return; // storage unavailable — the form keeps working in memory
+    }
+    if (sealed) return;
+    const refs = mediaRefs(media);
+    if (sameRefs(lastMedia, refs)) return;
+    try {
+      await writeDraftMedia(FLOW, mediaIsEmpty(media) ? null : media);
+      lastMedia = refs;
+    } catch {
+      // Quota exceeded (many large photos): keep the answers, drop the
+      // media record. The manifest still says what existed, so a restore
+      // asks for exactly those files again.
+      await writeDraftMedia(FLOW, null).catch(() => {});
+      lastMedia = null;
     }
   }
+  const enqueue = (d: OrderDraft) => {
+    queue = queue.then(() => write(d)).catch(() => {});
+    return queue;
+  };
 
   return {
+    /** the files a restored draft already has on disk — no rewrite needed */
+    seedMedia(data: FormData) {
+      lastMedia = mediaRefs(splitMedia(toPersisted(data)).media);
+    },
     schedule(d: OrderDraft) {
       if (sealed) return;
       pending = d;
@@ -248,25 +435,22 @@ export function createDraftSaver(delayMs = 800) {
       timer = setTimeout(() => {
         const p = pending;
         pending = null;
-        if (p && !sealed) void write(p);
+        if (p && !sealed) void enqueue(p);
       }, delayMs);
     },
     flush() {
       clearTimeout(timer);
       const p = pending;
       pending = null;
-      if (p && !sealed) void write(p);
+      if (p && !sealed) void enqueue(p);
     },
-    /** order saved: stop for good and delete the stored draft */
-    seal(): Promise<void> {
+    /** order saved: stop for good and delete answers + media */
+    async seal(): Promise<void> {
       sealed = true;
       clearTimeout(timer);
       pending = null;
-      return clearOrderDraft();
-    },
-    /** unmount without saving state changes (pending edits are flushed) */
-    dispose() {
-      this.flush();
+      await queue; // let an in-flight write land first, then delete it
+      await clearOrderDraft();
     },
   };
 }

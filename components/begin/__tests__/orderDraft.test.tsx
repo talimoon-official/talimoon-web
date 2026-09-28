@@ -11,9 +11,12 @@ import { STEPS } from "../orderFormData";
 import {
   NEVER_PERSISTED,
   createDraftSaver,
+  gapIsOpen,
   restoreOrderDraft,
+  splitMedia,
   toPersisted,
   type OrderDraft,
+  type OrderDraftMedia,
 } from "../orderDraft";
 import { resolveDraftLoad } from "@/app/begin/personalized-book/form/PersonalizedBookFormRoute";
 import Phase01, { type Phase01Snapshot } from "../Phase01";
@@ -21,7 +24,8 @@ import EmotionalBridge from "../EmotionalBridge";
 import type { SubPosition } from "../flowPosition";
 import type { ChildProfile } from "@/lib/order/types";
 
-const photo = (n: string) => new File(["x"], n, { type: "image/jpeg" });
+const FLOW = "personalized-book";
+const photo = (n: string) => new File(["PIXELDATA-" + n], n, { type: "image/jpeg" });
 
 function filledForm(): FormData {
   const f = emptyForm("UZ");
@@ -29,10 +33,14 @@ function filledForm(): FormData {
     ...f,
     orderer: { ...f.orderer, honorific: "mr", name: "Sherzod", phone: "+998901234567" },
     children: [{ id: "c1", name: "Nodira", age: 7, phase02Done: true, photos: [photo("a.jpg"), photo("b.jpg"), photo("c.jpg")] }],
+    wantsCharacters: true,
+    additionalCharacters: [{ id: "k1", relation: "Bobo", name: "Karim", photos: [photo("k1.jpg"), photo("k2.jpg")] }],
     personalMessage: "Seni yaxshi ko‘ramiz",
     keepsakeRelationship: "father",
     storyGiverDisplayName: "Sherzod",
     keepsakeWantsVoice: true,
+    finalVoice: new File(["VOICEDATA"], "voice.webm", { type: "audio/webm" }),
+    finalVoiceDurationSec: 12,
     specialPhoto: photo("keepsake.jpg"),
     bookLanguageCode: "uz" as FormData["bookLanguageCode"],
     consentAuthority: true,
@@ -54,6 +62,13 @@ function draftOf(data: FormData, extra: Partial<OrderDraft> = {}): OrderDraft {
   };
 }
 
+/** What the saver stores: the answers record (file slots emptied + a
+ *  manifest) and the separate media record. */
+function stored(data: FormData, extra: Partial<OrderDraft> = {}) {
+  const { text, media, manifest } = splitMedia(toPersisted(data));
+  return { payload: { ...draftOf(data, extra), data: text, media: manifest }, media };
+}
+
 let store: DraftStorage;
 beforeEach(() => {
   store = memoryStorage();
@@ -62,26 +77,47 @@ beforeEach(() => {
 afterEach(() => {
   setDraftStorage(null);
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
-describe("what is persisted", () => {
+async function saveNow(data: FormData, extra: Partial<OrderDraft> = {}) {
+  const saver = createDraftSaver(0);
+  saver.schedule(draftOf(data, extra));
+  saver.flush();
+  await vi.waitFor(async () => expect(await store.get(`${FLOW}:media`)).toBeDefined());
+  return saver;
+}
+
+describe("what is persisted, and where", () => {
   it("never persists consent ticks or the signature", () => {
     const p = toPersisted(filledForm()) as Record<string, unknown>;
     for (const k of NEVER_PERSISTED) expect(k in p).toBe(false);
-    expect(p.orderer).toBeDefined();
-    expect((p.children as ChildProfile[])[0]!.photos).toHaveLength(3);
+  });
+
+  it("files live ONLY in the media record; the answers record holds counts, never contents", async () => {
+    await saveNow(filledForm());
+    const answers = (await store.get(FLOW)) as { payload: OrderDraft };
+    const media = (await store.get(`${FLOW}:media`)) as { payload: OrderDraftMedia };
+    const d = answers.payload.data;
+    expect(d.children[0]!.photos).toEqual([]);
+    expect(d.additionalCharacters[0]!.photos).toEqual([]);
+    expect(d.specialPhoto).toBeNull();
+    expect(d.finalVoice).toBeNull();
+    expect(answers.payload.media).toEqual({ children: { c1: 3 }, characters: { k1: 2 }, specialPhoto: true, finalVoice: true });
+    // no Blob anywhere in the answers record
+    const hasBlob = (v: unknown): boolean =>
+      v instanceof Blob || (typeof v === "object" && v !== null && Object.values(v).some(hasBlob));
+    expect(hasBlob(answers)).toBe(false);
+    expect(media.payload.children.c1).toHaveLength(3);
+    expect(media.payload.specialPhoto).toBeInstanceOf(Blob);
+    expect(media.payload.finalVoiceDurationSec).toBe(12);
   });
 
   it("no payment / access / capability token ever reaches storage", async () => {
-    vi.useFakeTimers();
-    const saver = createDraftSaver(100);
-    saver.schedule(draftOf(filledForm()));
-    vi.advanceTimersByTime(100);
-    await vi.waitFor(async () => expect(await readDraft("personalized-book")).toBeDefined());
-    const raw = await store.get("personalized-book");
-    const text = JSON.stringify(raw);
-    for (const needle of ["token", "capability", "paymentCode", "resume", "idempotency", "consentDrawnSignature", "consentTerms", "turnstile"]) {
-      expect(text.toLowerCase()).not.toContain(needle.toLowerCase());
+    await saveNow(filledForm());
+    const text = JSON.stringify([await store.get(FLOW), await store.get(`${FLOW}:media`)]).toLowerCase();
+    for (const needle of ["token", "capability", "paymentcode", "resume", "idempotency", "consentdrawnsignature", "consentterms", "turnstile"]) {
+      expect(text).not.toContain(needle);
     }
   });
 
@@ -90,55 +126,124 @@ describe("what is persisted", () => {
     const call = form.slice(form.indexOf("saver.schedule({"), form.indexOf("});", form.indexOf("saver.schedule({")));
     expect(call).not.toMatch(/orderSession|capabilityToken|idempotency|saved|resume|paymentCode|turnstile/i);
   });
+
+  it("no media content leaks to logs, web storage, network or the URL during save + restore", async () => {
+    const spies = [
+      vi.spyOn(console, "log"),
+      vi.spyOn(console, "info"),
+      vi.spyOn(console, "warn"),
+      vi.spyOn(console, "error"),
+      vi.spyOn(console, "debug"),
+    ];
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    const beacon = vi.fn();
+    Object.defineProperty(navigator, "sendBeacon", { value: beacon, configurable: true });
+    const href = window.location.href;
+
+    await saveNow(filledForm());
+    const loaded = await readDraft(FLOW);
+    restoreOrderDraft(loaded!.payload, emptyForm(), STEPS.length, loaded!.media);
+
+    for (const s of spies) expect(s).not.toHaveBeenCalled();
+    expect(setItem).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(beacon).not.toHaveBeenCalled();
+    expect(window.location.href).toBe(href);
+    vi.unstubAllGlobals();
+  });
+
+  it("the draft modules contain no logging, analytics or web-storage calls at all", () => {
+    for (const f of ["../orderDraft.ts", "../../../lib/order/formDraft.ts", "../MediaReuploadNotice.tsx"]) {
+      const src = readFileSync(resolve(__dirname, f), "utf8");
+      expect(src).not.toMatch(/console\.|sendBeacon|fetch\(|localStorage\.|sessionStorage\.|createObjectURL/);
+    }
+  });
 });
 
 describe("restore", () => {
-  it("restores the exact step, answers and files — consent always fresh", () => {
-    const stored = draftOf(filledForm(), { stepIndex: 2, pos: undefined });
-    const r = restoreOrderDraft(stored, emptyForm(), STEPS.length)!;
+  it("within 48h: exact step, answers AND files come back; consent always fresh", () => {
+    const s = stored(filledForm(), { stepIndex: 2 });
+    const r = restoreOrderDraft(s.payload, emptyForm(), STEPS.length, s.media)!;
     expect(r.phase).toBe("steps");
     expect(r.stepIndex).toBe(2);
-    expect(r.data.orderer.name).toBe("Sherzod");
     expect(r.data.orderer.phone).toBe("+998901234567");
-    expect(r.data.children[0]!.name).toBe("Nodira");
     expect(r.data.children[0]!.photos).toHaveLength(3);
+    expect(r.data.additionalCharacters[0]!.photos).toHaveLength(2);
     expect(r.data.specialPhoto).toBeInstanceOf(Blob);
-    expect(r.data.personalMessage).toBe("Seni yaxshi ko‘ramiz");
+    expect(r.data.finalVoice).toBeInstanceOf(Blob);
+    expect(r.data.finalVoiceDurationSec).toBe(12);
+    expect(r.mediaGaps).toEqual([]);
     expect(r.data.consentTerms).toBe(false);
     expect(r.data.consentDrawnSignature).toBe("");
   });
 
+  it("media expired: every answer + the position survive, and ONLY the files are listed to re-add", () => {
+    const s = stored(filledForm(), { stepIndex: 1 });
+    const r = restoreOrderDraft(s.payload, emptyForm(), STEPS.length, undefined)!;
+    expect(r.phase).toBe("steps");
+    expect(r.stepIndex).toBe(1);
+    expect(r.data.orderer.name).toBe("Sherzod");
+    expect(r.data.personalMessage).toBe("Seni yaxshi ko‘ramiz");
+    expect(r.data.additionalCharacters[0]!.name).toBe("Karim");
+    expect(r.data.children[0]!.photos).toEqual([]);
+    expect(r.data.finalVoice).toBeNull();
+    expect(r.mediaGaps).toEqual([
+      { kind: "child", id: "c1", name: "Nodira", count: 3 },
+      { kind: "character", id: "k1", name: "Karim", count: 2 },
+      { kind: "special" },
+      { kind: "voice" },
+    ]);
+  });
+
+  it("a gap closes as soon as the file is added again (or the voice is switched off)", () => {
+    const s = stored(filledForm());
+    const r = restoreOrderDraft(s.payload, emptyForm(), STEPS.length, undefined)!;
+    const d = r.data;
+    const child = r.mediaGaps.find((g) => g.kind === "child")!;
+    expect(gapIsOpen(child, d)).toBe(true);
+    expect(gapIsOpen(child, { ...d, children: [{ ...d.children[0]!, photos: [photo("new.jpg")] }] })).toBe(false);
+    const voice = r.mediaGaps.find((g) => g.kind === "voice")!;
+    expect(gapIsOpen(voice, { ...d, keepsakeWantsVoice: false })).toBe(false);
+  });
+
+  it("files are matched by stable id, never by position", () => {
+    const f = filledForm();
+    const s = stored(f);
+    // the stored answers list the child under its id; media keyed the same
+    const r = restoreOrderDraft(s.payload, emptyForm(), STEPS.length, { ...s.media, children: { other: s.media.children.c1 } })!;
+    expect(r.data.children[0]!.photos).toEqual([]);
+    expect(r.mediaGaps[0]).toMatchObject({ kind: "child", id: "c1" });
+  });
+
   it("clamps a stale step index and a stale child index", () => {
-    const r = restoreOrderDraft(
-      draftOf(filledForm(), { phase: "world", stepIndex: 99, pos: { idx: 7, screen: "dream" } }),
-      emptyForm(),
-      STEPS.length,
-    )!;
+    const s = stored(filledForm(), { phase: "world", stepIndex: 99, pos: { idx: 7, screen: "dream" } });
+    const r = restoreOrderDraft(s.payload, emptyForm(), STEPS.length, s.media)!;
     expect(r.stepIndex).toBe(STEPS.length - 1);
     expect(r.pos).toEqual({ idx: 0, screen: "dream" });
   });
 
   it("a draft that never finished Phase 01 always reopens in Phase 01", () => {
-    const r = restoreOrderDraft(
-      draftOf(filledForm(), { phase: "steps", phase01Seeded: false }),
-      emptyForm(),
-      STEPS.length,
-    )!;
-    expect(r.phase).toBe("intro");
+    const s = stored(filledForm(), { phase: "steps", phase01Seeded: false });
+    expect(restoreOrderDraft(s.payload, emptyForm(), STEPS.length, s.media)!.phase).toBe("intro");
   });
 
-  it("garbage / foreign shapes return null instead of throwing", () => {
+  it("garbage / foreign shapes return null instead of throwing (media garbage is ignored)", () => {
     for (const bad of [null, 1, "x", {}, { data: {} }, { data: { children: [] } }, { data: { children: [{ nope: 1 }] } }]) {
-      expect(restoreOrderDraft(bad, emptyForm(), STEPS.length)).toBeNull();
+      expect(restoreOrderDraft(bad, emptyForm(), STEPS.length, "junk")).toBeNull();
     }
+    const s = stored(filledForm());
+    expect(restoreOrderDraft(s.payload, emptyForm(), STEPS.length, { children: "x", specialPhoto: 5 })).not.toBeNull();
   });
 
   it("mistyped fields fall back to defaults", () => {
-    const stored = draftOf(filledForm()) as unknown as { data: Record<string, unknown> };
-    stored.data.copies = "many";
-    stored.data.market = "MARS";
-    stored.data.personalMessage = 42;
-    const r = restoreOrderDraft(stored, emptyForm(), STEPS.length)!;
+    const s = stored(filledForm());
+    const d = s.payload.data as unknown as Record<string, unknown>;
+    d.copies = "many";
+    d.market = "MARS";
+    d.personalMessage = 42;
+    const r = restoreOrderDraft(s.payload, emptyForm(), STEPS.length, s.media)!;
     expect(r.data.copies).toBe(1);
     expect(r.data.market).toBe("UZ");
     expect(r.data.personalMessage).toBe("");
@@ -146,17 +251,16 @@ describe("restore", () => {
 });
 
 describe("book-type scoping (route)", () => {
-  const single = draftOf(filledForm(), { bookType: "single" });
+  const single = stored(filledForm(), { bookType: "single" });
   it("same (or no) chosen type → restore without asking", () => {
     expect(resolveDraftLoad(single, "single")).toMatchObject({ ask: false, discard: false });
     expect(resolveDraftLoad(single, undefined).restored?.data.orderer.name).toBe("Sherzod");
   });
   it("a DIFFERENT chosen type never silently reuses the draft — the customer is asked", () => {
-    const r = resolveDraftLoad(single, "multi");
-    expect(r.ask).toBe(true);
+    expect(resolveDraftLoad(single, "multi").ask).toBe(true);
   });
   it("an unreadable draft is discarded", () => {
-    expect(resolveDraftLoad({ junk: true }, "single")).toEqual({ restored: null, ask: false, discard: true });
+    expect(resolveDraftLoad({ payload: { junk: true }, media: undefined }, "single")).toEqual({ restored: null, ask: false, discard: true });
     expect(resolveDraftLoad(undefined, "single")).toEqual({ restored: null, ask: false, discard: false });
   });
 });
@@ -171,53 +275,57 @@ describe("debounced saver", () => {
     vi.advanceTimersByTime(799);
     expect(put).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);
-    await vi.waitFor(() => expect(put).toHaveBeenCalledTimes(1));
+    vi.useRealTimers();
+    await vi.waitFor(() => expect(put).toHaveBeenCalledTimes(2)); // answers + media, once each
   });
 
-  it("flush writes the pending edit now (page hidden / PWA backgrounded)", async () => {
+  it("text edits do not rewrite unchanged files", async () => {
+    const f = filledForm();
+    const saver = await saveNow(f);
     const put = vi.spyOn(store, "put");
-    const saver = createDraftSaver(10_000);
-    saver.schedule(draftOf(filledForm()));
+    saver.schedule(draftOf({ ...f, personalMessage: "yangi" }));
     saver.flush();
-    await vi.waitFor(() => expect(put).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(put).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 20));
+    expect(put.mock.calls.map((c) => c[0])).toEqual([FLOW]);
   });
 
-  it("seal (order saved) deletes the draft and blocks any later write", async () => {
+  it("submission: seal deletes answers AND media and blocks any later write", async () => {
     vi.useFakeTimers();
     const saver = createDraftSaver(500);
     saver.schedule(draftOf(filledForm()));
     vi.advanceTimersByTime(500);
-    await vi.waitFor(async () => expect(await store.get("personalized-book")).toBeDefined());
+    vi.useRealTimers();
+    await vi.waitFor(async () => expect(await store.get(`${FLOW}:media`)).toBeDefined());
     saver.schedule(draftOf(filledForm(), { stepIndex: 3 })); // a late edit pending
     await saver.seal();
-    vi.advanceTimersByTime(5000);
     saver.schedule(draftOf(filledForm()));
     saver.flush();
-    vi.advanceTimersByTime(5000);
-    await Promise.resolve();
-    expect(await store.get("personalized-book")).toBeUndefined();
+    await new Promise((r) => setTimeout(r, 30));
+    expect(await store.get(FLOW)).toBeUndefined();
+    expect(await store.get(`${FLOW}:media`)).toBeUndefined();
   });
 
-  it("when storage is full, the answers are still kept without the media", async () => {
-    let calls = 0;
-    const kept: unknown[] = [];
+  it("when storage refuses the files, the answers are kept and those files become gaps", async () => {
+    const kept = new Map<string, unknown>();
     setDraftStorage({
-      get: async () => kept.at(-1),
-      put: async (_k, v) => {
-        calls++;
-        if (calls === 1) throw new DOMException("full", "QuotaExceededError");
-        kept.push(v);
+      get: async (k) => kept.get(k),
+      put: async (k, v) => {
+        if (k.endsWith(":media")) throw new DOMException("full", "QuotaExceededError");
+        kept.set(k, v);
       },
-      delete: async () => {},
+      delete: async (k) => void kept.delete(k),
     });
     const saver = createDraftSaver(0);
     saver.schedule(draftOf(filledForm()));
     saver.flush();
-    await vi.waitFor(() => expect(kept).toHaveLength(1));
-    const payload = (kept[0] as { payload: OrderDraft }).payload;
-    expect(payload.data.orderer.name).toBe("Sherzod");
-    expect(payload.data.children[0]!.photos).toEqual([]);
-    expect(payload.data.specialPhoto).toBeNull();
+    await vi.waitFor(() => expect(kept.has(FLOW)).toBe(true));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(kept.has(`${FLOW}:media`)).toBe(false);
+    const loaded = await readDraft(FLOW);
+    const r = restoreOrderDraft(loaded!.payload, emptyForm(), STEPS.length, loaded!.media)!;
+    expect(r.data.orderer.name).toBe("Sherzod");
+    expect(r.mediaGaps.map((g) => g.kind)).toEqual(["child", "character", "special", "voice"]);
   });
 
   it("the form seals the draft right after finalize, before the saved screen", () => {
@@ -251,9 +359,8 @@ describe("remount recovery", () => {
     expect(screen.getByRole("heading", { name: /kim uchun tayyorlayapsiz/ })).toBeInTheDocument();
     first.unmount();
 
-    // the stored snapshot goes through storage and back
-    const stored = JSON.parse(JSON.stringify(snap));
-    render(<Phase01Harness resume={stored} onSnap={() => {}} />);
+    const storedSnap = JSON.parse(JSON.stringify(snap));
+    render(<Phase01Harness resume={storedSnap} onSnap={() => {}} />);
     expect(screen.getByRole("heading", { name: /kim uchun tayyorlayapsiz/ })).toBeInTheDocument();
     await u.click(screen.getByRole("button", { name: /Orqaga/ }));
     expect(screen.getByRole("textbox")).toHaveValue("Sherzod");
@@ -289,7 +396,6 @@ describe("remount recovery", () => {
     await new Promise((r) => setTimeout(r, 60)); // let the heading focus land
     await u.type(screen.getByRole("textbox"), "Yangi maktab");
     const heading = screen.getByRole("heading").textContent;
-    // capture the patched child the form would have persisted
     kidsNow = [{ id: "c1", name: "Nodira", age: 7, emotionalBridge: { privateContext: "Yangi maktab" } }];
     first.unmount();
 

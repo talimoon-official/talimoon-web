@@ -44,7 +44,8 @@ import { MapLocationPicker } from "./MapLocationPicker";
 import { setMarketPreference, useMarketPreference, marketFromLocation } from "@/lib/order/market";
 import { normalizeOrderPhone } from "@/lib/order/phone";
 import { useFlowScroll } from "@/lib/order/useFlowScroll";
-import { createDraftSaver, type FormPhase, type RestoredOrderDraft } from "./orderDraft";
+import { createDraftSaver, gapIsOpen, type FormPhase, type RestoredOrderDraft } from "./orderDraft";
+import { MediaReuploadNotice } from "./MediaReuploadNotice";
 import type { Phase01Snapshot } from "./Phase01";
 import type { SubPosition } from "./flowPosition";
 import {
@@ -1080,7 +1081,26 @@ export default function PersonalizedBookOrderForm({
   //    entered something, never after the order is saved. Flushed when the
   //    page is hidden / left (a backgrounded PWA may be killed) and on
   //    unmount.
-  const [saver] = useState(() => createDraftSaver());
+  const [saver] = useState(() => {
+    const s = createDraftSaver();
+    // the restored files are already on disk — no immediate rewrite
+    if (restored) s.seedMedia(restored.data);
+    return s;
+  });
+  // Files that expired (48h) while the answers survived: only these are
+  // asked for again — a banner once, and inline on the step that owns them.
+  const [mediaGaps] = useState(() => restored?.mediaGaps ?? []);
+  const [gapBannerOpen, setGapBannerOpen] = useState(true);
+  const openGaps = mediaGaps.filter((g) => gapIsOpen(g, data));
+  const reuploadBanner =
+    gapBannerOpen && openGaps.length > 0 ? (
+      <MediaReuploadNotice
+        gaps={openGaps}
+        loc={bookLoc}
+        variant="banner"
+        onDismiss={() => setGapBannerOpen(false)}
+      />
+    ) : null;
   const hasProgress =
     phase01Seeded ||
     (phase01Snap != null && (phase01Snap.honorific != null || phase01Snap.ordererName.trim() !== ""));
@@ -1759,6 +1779,8 @@ export default function PersonalizedBookOrderForm({
   // ── Phase 01: the conversational opening ──────────────────────────────────
   if (phase === "intro") {
     return (
+      <>
+      {reuploadBanner}
       <Phase01
         onBack={onBack}
         resume={resumeFor("intro")?.phase01}
@@ -1781,12 +1803,15 @@ export default function PersonalizedBookOrderForm({
             : undefined
         }
       />
+      </>
     );
   }
 
   // ── Phase 02: the child's world ──────────────────────────────────────────
   if (phase === "world") {
     return (
+      <>
+      {reuploadBanner}
       <Phase02
         childrenIn={data.children}
         onPatchChild={patchChild}
@@ -1799,12 +1824,15 @@ export default function PersonalizedBookOrderForm({
           setPhase("character");
         }}
       />
+      </>
     );
   }
 
   // ── Phase 03: the child's character ─────────────────────────────────────
   if (phase === "character") {
     return (
+      <>
+      {reuploadBanner}
       <Phase03
         childrenIn={data.children}
         onPatchChild={patchChild}
@@ -1822,6 +1850,7 @@ export default function PersonalizedBookOrderForm({
           setShowStepError(false);
         }}
       />
+      </>
     );
   }
 
@@ -1829,6 +1858,8 @@ export default function PersonalizedBookOrderForm({
   //    A quiet screen between "a personal touch" and the photo upload.
   if (phase === "heart") {
     return (
+      <>
+      {reuploadBanner}
       <EmotionalBridge
         childrenIn={data.children}
         entry={heartEntry}
@@ -1846,6 +1877,7 @@ export default function PersonalizedBookOrderForm({
           setShowStepError(false);
         }}
       />
+      </>
     );
   }
 
@@ -1882,6 +1914,8 @@ export default function PersonalizedBookOrderForm({
     .filter((n) => n.length > 0);
 
   return (
+    <>
+    {reuploadBanner}
     <section
       data-order-flow=""
       className="mx-auto w-full max-w-container-content bg-surface-base px-6 py-16 sm:px-8 md:py-20 lg:px-16 lg:py-28"
@@ -1952,6 +1986,11 @@ export default function PersonalizedBookOrderForm({
 
           {step.id === "personal-touch" && (
             <>
+              <MediaReuploadNotice
+                gaps={openGaps.filter((g) => g.kind === "special" || g.kind === "voice")}
+                loc={bookLoc}
+                variant="inline"
+              />
               {/* "Bu sovg'a kimdan?" (giftFrom) is no longer collected here —
                   it duplicated the Esdalik author question. The backend
                   `giftFrom` contract is untouched (it stays optional and
@@ -2013,6 +2052,11 @@ export default function PersonalizedBookOrderForm({
 
           {step.id === "photos" && (
             <>
+              <MediaReuploadNotice
+                gaps={openGaps.filter((g) => g.kind === "child" || g.kind === "character")}
+                loc={bookLoc}
+                variant="inline"
+              />
               {/* ── SURAT BO‘YICHA QO‘LLANMA — the premium guidance block,
                      always ABOVE the upload fields so the customer grasps
                      the requirement before opening their photo library. */}
@@ -2772,5 +2816,6 @@ export default function PersonalizedBookOrderForm({
         </div>
       </div>
     </section>
+    </>
   );
 }

@@ -13,6 +13,7 @@ import {
   clearOrderDraft,
   loadOrderDraft,
   restoreOrderDraft,
+  type LoadedOrderDraft,
   type RestoredOrderDraft,
 } from "@/components/begin/orderDraft";
 import DraftChoice from "@/components/begin/DraftChoice";
@@ -44,11 +45,13 @@ type Load =
 const LOAD_TIMEOUT_MS = 2500;
 
 export function resolveDraftLoad(
-  raw: unknown,
+  loaded: LoadedOrderDraft | undefined,
   chosenBookType: BookType | undefined,
 ): { restored: RestoredOrderDraft | null; ask: boolean; discard: boolean } {
-  const restored = restoreOrderDraft(raw, emptyForm(), STEPS.length);
-  if (!restored) return { restored: null, ask: false, discard: raw != null };
+  const restored = loaded
+    ? restoreOrderDraft(loaded.payload, emptyForm(), STEPS.length, loaded.media)
+    : null;
+  if (!restored) return { restored: null, ask: false, discard: loaded != null };
   if (chosenBookType && restored.bookType !== chosenBookType) {
     return { restored, ask: true, discard: false };
   }
@@ -69,10 +72,10 @@ export default function PersonalizedBookFormRoute() {
     const timeout = window.setTimeout(() => {
       if (live) setLoad((s) => (s.status === "loading" ? { status: "ready", restored: null } : s));
     }, LOAD_TIMEOUT_MS);
-    void loadOrderDraft().then((raw) => {
+    void loadOrderDraft().then((loaded) => {
       if (!live) return;
       window.clearTimeout(timeout);
-      const r = resolveDraftLoad(raw, initialBookType);
+      const r = resolveDraftLoad(loaded, initialBookType);
       if (r.discard) void clearOrderDraft();
       setLoad((s) => {
         if (s.status !== "loading") return s;
@@ -131,8 +134,9 @@ export default function PersonalizedBookFormRoute() {
         onBack={leaveToPricing}
         onContinue={() => setLoad({ status: "ready", restored: draft })}
         onStartNew={() => {
-          void clearOrderDraft();
-          setLoad({ status: "ready", restored: null });
+          // The customer chose a NEW order: the old answers AND all its
+          // stored media are deleted first, then a fresh form opens.
+          void clearOrderDraft().then(() => setLoad({ status: "ready", restored: null }));
         }}
       />
     );
