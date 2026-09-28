@@ -136,6 +136,58 @@ describe("the whole form reopens where the customer left it", () => {
   });
 });
 
+describe("world → character: the removed bridge screen", () => {
+  const BRIDGE = /dunyosiga ancha yaqinlashdik/;
+  function withDream(extra: Partial<OrderDraft>) {
+    const d = seededData();
+    d.children = [{ ...d.children[0]!, childDream: "Uchuvchi" }];
+    const s = storedParts(extra, d);
+    return restoreOrderDraft(JSON.parse(JSON.stringify(s.payload)), emptyForm(), STEPS.length, s.media)!;
+  }
+  const h2 = () => screen.getByRole("heading", { level: 2 }).textContent ?? "";
+
+  it("the last world question continues straight into 'NODIRANING XARAKTERI'", async () => {
+    const u = userEvent.setup();
+    mount(withDream({ phase: "world", pos: { idx: 0, screen: "dream" } }));
+    expect(h2()).toMatch(/Nodira.*kim bo‘lmoqchi/);
+    await u.click(screen.getByRole("button", { name: "Davom etish" }));
+    expect(h2()).toMatch(/Endi Nodiraning o‘ziga xos jihatlarini/);
+    expect(screen.getAllByText(/Nodiraning xarakteri/i).length).toBeGreaterThan(0);
+    expect(document.body.textContent).not.toMatch(BRIDGE);
+  });
+
+  it("Back from Character returns to the last real question, answer kept", async () => {
+    const u = userEvent.setup();
+    mount(withDream({ phase: "character", pos: { idx: 0, screen: "intro" } }));
+    expect(h2()).toMatch(/jihatlarini/);
+    await u.click(screen.getByRole("button", { name: "Orqaga" }));
+    expect(h2()).toMatch(/Nodira.*kim bo‘lmoqchi/);
+    expect(screen.getByDisplayValue("Uchuvchi")).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(BRIDGE);
+  });
+
+  it("a draft saved on the removed screen restores to the dream question and re-saves that position", async () => {
+    const r = withDream({ phase: "world", pos: { idx: 0, screen: "child-done" } });
+    expect(r.pos).toEqual({ idx: 0, screen: "dream" });
+    mount(r);
+    expect(h2()).toMatch(/Nodira.*kim bo‘lmoqchi/);
+    expect(document.body.textContent).not.toMatch(BRIDGE);
+    await vi.waitFor(async () => {
+      const d = (await readDraft<OrderDraft>(FLOW))?.payload;
+      expect(d?.phase).toBe("world");
+      expect(d?.pos).toEqual({ idx: 0, screen: "dream" });
+    }, { timeout: 3000 });
+  });
+
+  it("between two children the stored 'child-done' of a NON-last child is kept", () => {
+    const d = seededData();
+    d.children = [d.children[0]!, { id: "c2", name: "Vali", age: 5 }];
+    const s = storedParts({ bookType: "multi", phase: "world", pos: { idx: 0, screen: "child-done" } }, d);
+    const r = restoreOrderDraft(JSON.parse(JSON.stringify(s.payload)), emptyForm(), STEPS.length, s.media)!;
+    expect(r.pos).toEqual({ idx: 0, screen: "child-done" });
+  });
+});
+
 describe("'Yangi buyurtma boshlash' deletes the previous draft AND its media", () => {
   it("through the real route: choice screen → start new → both records gone", async () => {
     const u = userEvent.setup();

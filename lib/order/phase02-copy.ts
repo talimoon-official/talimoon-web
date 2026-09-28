@@ -249,9 +249,7 @@ export interface Phase02Copy {
   pHope: string;
   portraitEmpty: string;
 
-  // Milestone / bridge
-  milestoneHeading: (name: string) => string;
-  milestoneBridge: (name: string) => string;
+  // Between two children (the last child goes straight on to Phase 03)
   nextChildLead: (doneName: string) => string;
   nextChildBridge: (nextName: string) => string;
   nextChildCta: (nextName: string) => string;
@@ -320,9 +318,6 @@ const uz: Phase02Copy = {
   pHope: "SIZNING TILAGINGIZ",
   portraitEmpty: "Uni birga kashf etamiz.",
 
-  milestoneHeading: (name) => `${name.trim()}ning dunyosiga ancha yaqinlashdik.`,
-  milestoneBridge: (name) =>
-    `Endi ${name.trim()}ning o‘ziga xos xarakterini yaxshiroq bilib olamiz.`,
   nextChildLead: (doneName) => `${doneName.trim()}ning dunyosiga ancha yaqinlashdik.`,
   nextChildBridge: (nextName) => `Endi ${nextName.trim()} bilan davom etamiz.`,
   nextChildCta: (nextName) => `${nextName.trim()} bilan tanishamiz`,
@@ -391,9 +386,6 @@ const en: Phase02Copy = {
   pHope: "YOUR HOPE",
   portraitEmpty: "We'll discover it together.",
 
-  milestoneHeading: (name) => `We've come a long way into ${name.trim()}'s world.`,
-  milestoneBridge: (name) =>
-    `Now let's get to know ${name.trim()}'s own character a little better.`,
   nextChildLead: (doneName) => `We've come a long way into ${doneName.trim()}'s world.`,
   nextChildBridge: (nextName) => `Now let's carry on with ${nextName.trim()}.`,
   nextChildCta: (nextName) => `Meet ${nextName.trim()}`,
@@ -463,9 +455,6 @@ const ru: Phase02Copy = {
   pHope: "ВАШЕ ПОЖЕЛАНИЕ",
   portraitEmpty: "Откроем это вместе.",
 
-  milestoneHeading: (name) => `Мы заметно ближе к миру ${name.trim()}.`,
-  milestoneBridge: (name) =>
-    `Теперь узнаем характер ${name.trim()} немного лучше.`,
   nextChildLead: (doneName) => `Мы заметно ближе к миру ${doneName.trim()}.`,
   nextChildBridge: (nextName) => `Теперь продолжим с ${nextName.trim()}.`,
   nextChildCta: (nextName) => `Познакомиться с ${nextName.trim()}`,

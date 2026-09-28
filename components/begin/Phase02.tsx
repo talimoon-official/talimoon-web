@@ -9,8 +9,10 @@
  *   optional) → SEVIMLI MASHG‘ULOTI (the activity they actually do)
  *   → ORZUSI (their dream, told directly — or, if there isn't one
  *   yet, the adult's own hope). Alongside it a quiet portrait —
- *   "FAYZBEKNING DUNYOSI" — fills in as the adult answers. Ends with a
- *   bridge toward the child's character.
+ *   "FAYZBEKNING DUNYOSI" — fills in as the adult answers. The last
+ *   child's last question leads straight into Phase 03's "FAYZBEKNING
+ *   XARAKTERI" — no bridge screen in between (it only repeated Phase 03's
+ *   own intro); a short "child-done" beat remains only BETWEEN children.
  *
  * There is no per-child intro screen here any more (spec §02): the
  * merged "Demak, qahramonimiz — N yoshli X... Endi uning dunyosiga
@@ -85,11 +87,16 @@ export default function Phase02({
   const c = phase02Copy(locale);
   const reduced = useReducedMotion();
 
-  const [start] = useState(() =>
-    startPosition<Screen>(resume, SCREENS, childrenIn.length, entry === "end"
-      ? { idx: childrenIn.length - 1, screen: "child-done" }
-      : { idx: 0, screen: "interests" }),
-  );
+  const [start] = useState(() => {
+    const at = startPosition<Screen>(resume, SCREENS, childrenIn.length, entry === "end"
+      ? { idx: childrenIn.length - 1, screen: "dream" }
+      : { idx: 0, screen: "interests" });
+    // A draft saved before the last child's bridge was removed may still
+    // point at it: reopen on that child's last real question instead.
+    return at.screen === "child-done" && at.idx >= childrenIn.length - 1
+      ? { idx: at.idx, screen: "dream" as const }
+      : at;
+  });
   const [idx, setIdx] = useState(start.idx);
   const [screen, setScreen] = useState<Screen>(start.screen);
   usePositionReport(idx, screen, onPosition);
@@ -200,16 +207,15 @@ export default function Phase02({
         break;
       case "dream":
         patch({ phase02Done: true });
-        setScreen("child-done");
+        // The last child goes straight on to "X'NING XARAKTERI": a bridge
+        // here only repeated what Phase 03's own intro says next.
+        if (isLastChild) onComplete();
+        else setScreen("child-done");
         break;
       case "child-done":
-        if (isLastChild) {
-          onComplete();
-        } else {
-          setIdx((i) => i + 1);
-          setScreen("interests");
-          setDetailsAcknowledged(false);
-        }
+        setIdx((i) => i + 1);
+        setScreen("interests");
+        setDetailsAcknowledged(false);
         break;
     }
   }
@@ -247,13 +253,9 @@ export default function Phase02({
         transition: { duration: 0.26, ease: EASE },
       };
 
-  const worldOnly = screen === "child-done";
-  const ctaLabel =
-    screen === "child-done"
-      ? isLastChild
-        ? c.continue
-        : c.nextChildCta(nextChild.name)
-      : c.continue;
+  // "child-done" exists only BETWEEN two children (never after the last).
+  const worldOnly = screen === "child-done" && !!nextChild;
+  const ctaLabel = worldOnly ? c.nextChildCta(nextChild.name) : c.continue;
 
   return (
     <section
@@ -537,7 +539,7 @@ export default function Phase02({
 
           {/* The portrait */}
           {worldOnly ? (
-            // A quiet milestone beat between children / phases — an
+            // A quiet milestone beat between two children — an
             // affirming line and the "Davom etish" action only. The
             // full ChildWorld portrait that used to sit here was removed
             // (2026-09-09): it re-showed the exact profile fields the
@@ -547,15 +549,9 @@ export default function Phase02({
             // changed — only this presentational card is gone.
             <motion.div key={`done-${idx}`} {...enter}>
               <Heading headingRef={headingRef} size="xl">
-                {isLastChild
-                  ? c.milestoneHeading(child.name)
-                  : c.nextChildLead(child.name)}
+                {c.nextChildLead(child.name)}
               </Heading>
-              <Supporting>
-                {isLastChild
-                  ? c.milestoneBridge(child.name)
-                  : c.nextChildBridge(nextChild.name)}
-              </Supporting>
+              <Supporting>{c.nextChildBridge(nextChild.name)}</Supporting>
             </motion.div>
           ) : (
             <aside className="lg:sticky lg:top-[100px] lg:self-start">

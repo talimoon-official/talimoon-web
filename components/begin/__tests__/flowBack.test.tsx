@@ -108,19 +108,76 @@ describe("Back walks every screen and keeps the answers", () => {
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
-  it("Phase02 entered with entry='end' (Back from Phase 03) opens on the last child's completion", () => {
+  it("Phase02 entered with entry='end' (Back from Phase 03) opens on the last child's LAST QUESTION", async () => {
+    const u = userEvent.setup();
     const kids: ChildProfile[] = [
-      { id: "a", name: "Ali", age: 6, phase02Done: true },
-      { id: "b", name: "Vali", age: 8, phase02Done: true },
+      { id: "a", name: "Ali", age: 6, phase02Done: true, childDream: "Uchuvchi" },
+      { id: "b", name: "Vali", age: 8, phase02Done: true, childDream: "Shifokor" },
     ];
     render(
       <LanguageProvider>
         <Phase02 childrenIn={kids} onPatchChild={() => {}} onComplete={() => {}} onBack={() => {}} entry="end" />
       </LanguageProvider>,
     );
-    // the last child's completion screen: no "next child" CTA, no question fieldset
-    expect(document.querySelector("fieldset")).toBeNull();
-    expect(screen.queryByRole("button", { name: /Ali|Vali/ })).toBeNull();
+    // Vali's dream question — never the removed "dunyosiga ancha yaqinlashdik" bridge
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toMatch(/Vali.*kim bo‘lmoqchi/);
+    expect(screen.getByDisplayValue("Shifokor")).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/Vali[a-z]*ning dunyosiga ancha yaqinlashdik/);
     expect(screen.getAllByRole("button", BACK)).toHaveLength(1);
+    await u.click(screen.getByRole("button", BACK)); // → Vali's activity question
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toMatch(/Vali/);
+    expect(screen.queryByDisplayValue("Shifokor")).toBeNull();
+  });
+});
+
+describe("Phase02 → Phase03: no bridge screen after the last child", () => {
+  const BRIDGE = /dunyosiga ancha yaqinlashdik|xarakterini yaxshiroq bilib olamiz/;
+
+  function mountP2(kids: ChildProfile[], extra: Partial<React.ComponentProps<typeof Phase02>> = {}) {
+    const onComplete = vi.fn();
+    const onPosition = vi.fn();
+    render(
+      <LanguageProvider>
+        <Phase02 childrenIn={kids} onPatchChild={() => {}} onComplete={onComplete} onBack={() => {}} onPosition={onPosition} {...extra} />
+      </LanguageProvider>,
+    );
+    return { onComplete, onPosition };
+  }
+
+  it("the last child's dream question continues straight into Character (one click, no bridge)", async () => {
+    const u = userEvent.setup();
+    const { onComplete, onPosition } = mountP2(
+      [{ id: "f", name: "Fayzbek", age: 6, childDream: "Uchuvchi" }],
+      { resume: { idx: 0, screen: "dream" } },
+    );
+    await u.click(screen.getByRole("button", NEXT));
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(document.body.textContent).not.toMatch(BRIDGE);
+    // no position was ever reported on the removed screen
+    expect(onPosition.mock.calls.map(([p]) => p.screen)).not.toContain("child-done");
+  });
+
+  it("between two children the short 'next child' beat stays", async () => {
+    const u = userEvent.setup();
+    const { onComplete } = mountP2(
+      [
+        { id: "a", name: "Ali", age: 6, childDream: "Uchuvchi" },
+        { id: "b", name: "Vali", age: 8 },
+      ],
+      { resume: { idx: 0, screen: "dream" } },
+    );
+    await u.click(screen.getByRole("button", NEXT));
+    expect(onComplete).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: /Vali bilan tanishamiz/ })).toBeInTheDocument();
+  });
+
+  it("a stored position on the removed screen reopens on the last real question", () => {
+    const { onPosition } = mountP2(
+      [{ id: "f", name: "Fayzbek", age: 6, childDream: "Uchuvchi" }],
+      { resume: { idx: 0, screen: "child-done" } },
+    );
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toMatch(/Fayzbek.*kim bo‘lmoqchi/);
+    expect(document.body.textContent).not.toMatch(BRIDGE);
+    expect(onPosition).toHaveBeenLastCalledWith({ idx: 0, screen: "dream" });
   });
 });

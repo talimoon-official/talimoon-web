@@ -324,10 +324,15 @@ export function restoreOrderDraft(
       typeof raw.stepIndex === "number" && Number.isInteger(raw.stepIndex)
         ? Math.min(Math.max(raw.stepIndex, 0), stepCount - 1)
         : 0;
-    const pos =
+    let pos =
       isObj(raw.pos) && typeof raw.pos.idx === "number" && typeof raw.pos.screen === "string"
         ? { idx: Math.min(Math.max(Math.trunc(raw.pos.idx), 0), children.length - 1), screen: raw.pos.screen }
         : undefined;
+    // The last child's world→character bridge was removed; an older draft
+    // parked on it reopens on that child's last real question.
+    if (phase === "world" && pos?.screen === "child-done" && pos.idx === children.length - 1) {
+      pos = { idx: pos.idx, screen: "dream" };
+    }
     const bookType = raw.bookType === "multi" ? "multi" : "single";
     return {
       bookType,
