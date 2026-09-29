@@ -61,17 +61,13 @@ describe("saved screen — payment code", () => {
     expect(screen.getByText(/To‘lov kodi SMS orqali ham yuborildi\./)).toBeInTheDocument();
   });
 
-  it("pay later: order code, payment code, talimoon.com/pay, calm copy — no refill, no production claim", () => {
+  it("pay later (with a code): the code stays on screen while the card is saved — no refill, no production claim, no personal link", () => {
     mount();
     fireEvent.click(screen.getByRole("button", { name: "Keyinroq to‘lash" }));
-    expect(screen.getByRole("heading", { name: "To‘lov kutilmoqda" })).toBeInTheDocument();
-    expect(screen.getByText("Buyurtmangiz saqlangan. Uni qayta to‘ldirishingiz shart emas.")).toBeInTheDocument();
-    expect(screen.getByText("Tayyorlash jarayoni to‘lov tasdiqlangandan keyin boshlanadi.")).toBeInTheDocument();
+    // jsdom cannot draw the card: the screen stays, code visible, fallback offered
     expect(screen.getByText("TAL-2026-0013")).toBeInTheDocument();
     expect(screen.getByText("K7M 4P2")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "talimoon.com/pay" })).toHaveAttribute("href", "/pay");
-    expect(screen.getByText(/To‘lov kodini saqlab qo‘ying\. Keyinroq shu kod orqali saqlangan buyurtmangizni ochib, to‘lovni davom ettirasiz\./)).toBeInTheDocument();
-    // with a code, the long personal link is no longer the main path
+    expect(screen.getByRole("button", { name: c.saveReceipt })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: c.copyLink })).toBeNull();
     expect(document.body.textContent).not.toMatch(/Tayyorlanmoqda|Ishlab chiqarish boshlandi|7[–-]10 kun/);
   });

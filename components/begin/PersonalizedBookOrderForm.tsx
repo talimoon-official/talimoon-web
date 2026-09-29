@@ -954,7 +954,7 @@ export default function PersonalizedBookOrderForm({
   initialMarket,
 }: {
   onBack: () => void;
-  /** Leaves the saved screen for the order menu (auto-return / system
+  /** Leaves the saved screen for the order menu ("Keyinroq to‘lash" / system
    *  Back). Omitted → OrderSaved's own full-page fallback. */
   onReturnToMenu?: () => void;
   /** The unfinished order from this device (components/begin/orderDraft),

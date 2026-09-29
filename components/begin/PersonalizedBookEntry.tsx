@@ -13,7 +13,7 @@
  *
  * Both cards are plain links: no inline reveal, no state on this screen.
  * "Orqaga" returns to the product choice (`/begin`). This is also where the
- * saved-order screen returns to (auto-return / Back); focus then lands on
+ * saved-order screen returns to (after "Keyinroq to‘lash" / Back); focus lands on
  * the heading (lib/order/menuReturn).
  *
  * Visual language: the existing TALIMOON tokens — warm paper surfaces, navy

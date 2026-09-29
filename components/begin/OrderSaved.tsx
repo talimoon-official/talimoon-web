@@ -4,46 +4,54 @@
  * TALIMOON — ORDER — the screen after a successful submit.
  * ----------------------------------------------------------------
  * The form is done and the order is SAVED (lifecycle AWAITING_PAYMENT).
- * Payment is a separate stage, so this screen only offers the choice:
+ * Payment is a separate stage, so this screen asks the customer to CHOOSE —
+ * and waits for that choice (no timer, no auto-return):
  *
- *   "Hozir to‘lash"   → the separate payment page, opened through the
- *                       order-bound resume capability (URL fragment only —
- *                       see lib/payment/link.ts)
- *   "Keyinroq to‘lash" → a calm confirmation that nothing is lost, with the
- *                       customer's PAYMENT CODE and talimoon.com/pay — the way
- *                       back to payment only, never to the form
+ *   "Hozir to‘lash"    → the payment page of THIS order, opened through the
+ *                        order-bound resume capability (URL fragment only —
+ *                        see lib/payment/link.ts). No code re-entry.
+ *   "Keyinroq to‘lash" → ONE tap: the TALIMOON payment-code card (PNG, see
+ *                        lib/payment/receipt.ts) is drawn from the ORIGINAL
+ *                        code finalize returned and its save starts from that
+ *                        same tap (download; the share sheet on iPhone); a
+ *                        short confirmation, then back to the order menu.
+ *                        If the save could not start, the customer stays here
+ *                        with "Chekni saqlash"; in an in-app browser (where
+ *                        downloads are often dropped) the card is shown
+ *                        inline for press-and-hold instead.
  *
- * The screen does not stay forever: it counts down AUTO_RETURN_SECONDS (10) seconds
- * and then returns to the order menu (ENTRY_PATH — "Yangi buyurtma" /
- * "Mavjud buyurtma uchun to‘lov"). ANY action on the screen (a button, a
- * link, copying the code) cancels the countdown for good; leaving the screen
- * cancels it through unmount. It pauses while the app is in the background,
- * so a PWA brought back to the front never fires a stale redirect. The order
- * is already saved: returning to the menu creates nothing and resubmits
- * nothing — the payment code and /pay remain the way back to payment.
+ * Nothing here talks to the backend: no finalize, no new code, no new order,
+ * no Telegram message. A choice, once made, cannot be made twice (double tap).
  *
  * Nothing here says the book is being prepared: production starts only
  * after the payment is confirmed AND an admin starts it.
  *
  * The raw resume token and payment code live only in props (memory). They
- * are never written to storage; the token only leaves memory as the fragment
- * of the payment link.
+ * are never written to storage or a URL query; the token only leaves memory
+ * as the fragment of the payment link, the code only inside the card.
  */
 
-import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from "react";
-import { Check, Clock, Copy, Send, ShieldCheck } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Check, Clock, Copy, Download, Send, ShieldCheck } from "lucide-react";
 import type { PaymentCopy } from "@/lib/payment/copy";
 import { lifecycleStatusLabel, type PaymentLocale } from "@/lib/payment/status";
 import { paymentPath, paymentUrl } from "@/lib/payment/link";
 import { CONTACT } from "@/lib/site/social";
 import { PaymentCodeCard } from "@/components/payment/PaymentCodeCard";
 import { ENTRY_PATH } from "@/lib/order/paths";
+import {
+  renderReceiptPng,
+  startReceiptSave,
+  type ReceiptContent,
+  type ReceiptSaveOutcome,
+} from "@/lib/payment/receipt";
 import { useFlowBackHandler } from "./FlowBack";
 
 export const PAY_ENTRY_PATH = "/pay";
 const PAY_ENTRY_DISPLAY = "talimoon.com/pay";
-/** how long the saved screen waits before returning to the order menu */
-export const AUTO_RETURN_SECONDS = 10;
+/** After the receipt save STARTED: a short technical pause so leaving the
+ *  page can never cancel the download (not a countdown). */
+export const LEAVE_AFTER_SAVE_MS = 1200;
 
 export interface OrderSavedProps {
   orderCode: string;
@@ -61,10 +69,16 @@ export interface OrderSavedProps {
   /** injectable for tests; defaults to a full-page replace() so "Back" from
    *  the payment page never lands on an empty form */
   navigate?: (path: string) => void;
-  /** returns to the order menu (auto-return, "back to menu", system Back);
+  /** returns to the order menu (after "Keyinroq to‘lash", system Back);
    *  defaults to `navigate(ENTRY_PATH)` */
   onReturnToMenu?: () => void;
+  /** injectable for tests: draws the card (sync) */
+  renderReceipt?: (c: ReceiptContent) => File;
+  /** injectable for tests: starts saving the card (called inside the tap) */
+  saveReceipt?: (file: File) => Promise<ReceiptSaveOutcome>;
 }
+
+type LaterState = "idle" | "working" | "started" | "inline" | "failed";
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -88,6 +102,8 @@ export function OrderSaved({
   locale,
   navigate,
   onReturnToMenu,
+  renderReceipt = renderReceiptPng,
+  saveReceipt = startReceiptSave,
 }: OrderSavedProps) {
   const [mode, setMode] = useState<"decide" | "later">("decide");
   const go = navigate ?? ((path: string) => window.location.replace(path));
@@ -109,37 +125,26 @@ export function OrderSaved({
   // into the completed form.
   useFlowBackHandler(leaveToMenu);
 
-  // ── the countdown: one timeout at a time, keyed on the remaining seconds;
-  //    stops for good on any action, pauses while the page is hidden.
-  const [secondsLeft, setSecondsLeft] = useState(AUTO_RETURN_SECONDS);
-  const [autoReturn, setAutoReturn] = useState(true);
-  const [pageVisible, setPageVisible] = useState(
-    () => typeof document === "undefined" || document.visibilityState !== "hidden",
+  // ── one choice only: a double tap can never navigate twice or start a
+  //    second save (nothing here reaches the backend either way)
+  const choiceRef = useRef<"now" | "later" | null>(null);
+  const [choice, setChoice] = useState<"now" | "later" | null>(null);
+  /** a save is in flight or has started (blocks a second one) */
+  const savingRef = useRef(false);
+  const [later, setLater] = useState<LaterState>("idle");
+  const receiptRef = useRef<File | null>(null);
+  const [inlineUrl, setInlineUrl] = useState<string | null>(null);
+  const leaveTimer = useRef<number | undefined>(undefined);
+  useEffect(
+    () => () => {
+      window.clearTimeout(leaveTimer.current);
+    },
+    [],
   );
   useEffect(() => {
-    const sync = () => setPageVisible(document.visibilityState !== "hidden");
-    document.addEventListener("visibilitychange", sync);
-    return () => document.removeEventListener("visibilitychange", sync);
-  }, []);
-  const counting = autoReturn && mode === "decide" && pageVisible;
-  useEffect(() => {
-    if (!counting) return;
-    if (secondsLeft <= 0) {
-      if (!returnedRef.current) {
-        returnedRef.current = true;
-        returnRef.current();
-      }
-      return;
-    }
-    const id = window.setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
-    return () => window.clearTimeout(id);
-  }, [counting, secondsLeft]);
-
-  /** Any button or link on the screen (Pay now, Pay later, copy code, the
-   *  /pay link, Telegram…) means the customer is acting: stop the timer. */
-  function cancelOnAction(e: MouseEvent) {
-    if ((e.target as Element).closest?.("button, a")) setAutoReturn(false);
-  }
+    if (!inlineUrl) return;
+    return () => URL.revokeObjectURL(inlineUrl);
+  }, [inlineUrl]);
 
   // Focus the title when the screen opens and when it switches to "later".
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -148,10 +153,90 @@ export function OrderSaved({
   }, [mode]);
 
   function payNow() {
-    // the resume link opens the payment page directly; without one, the
-    // payment code on /pay is the way in
+    if (choiceRef.current) return;
+    choiceRef.current = "now";
+    setChoice("now");
+    // the resume link opens THIS order's payment page directly; only a
+    // backend that issued no link falls back to the code on /pay
     if (resume) go(paymentPath(resume.token));
     else if (paymentCode) go(PAY_ENTRY_PATH);
+  }
+
+  /** The card, drawn ONCE from the original code (kept for a retry). */
+  function receiptFile(): File {
+    if (!receiptRef.current) {
+      receiptRef.current = renderReceipt({
+        orderCode,
+        paymentCode: paymentCode!.code,
+        labels: {
+          order: c.receiptOrderLabel,
+          code: c.receiptCodeLabel,
+          status: lifecycleStatusLabel("AWAITING_PAYMENT", locale),
+          instruction: c.receiptInstruction,
+        },
+      });
+    }
+    return receiptRef.current;
+  }
+
+  /** Runs INSIDE the tap: draw (sync) → start the save (sync call) → only
+   *  once it started, confirm and leave. Any failure keeps the customer here
+   *  with the code on screen and "Chekni saqlash". */
+  function saveAndLeave() {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    /** not started: stay, code on screen, "Chekni saqlash" + "Hozir to‘lash" */
+    const failed = () => {
+      savingRef.current = false;
+      choiceRef.current = null;
+      setChoice(null);
+      setLater("failed");
+    };
+    let pending: Promise<ReceiptSaveOutcome>;
+    try {
+      pending = saveReceipt(receiptFile());
+    } catch {
+      failed();
+      return;
+    }
+    setLater("working");
+    pending.then(
+      (outcome) => {
+        if (outcome === "download" || outcome === "shared") {
+          setLater("started");
+          leaveTimer.current = window.setTimeout(leaveToMenu, LEAVE_AFTER_SAVE_MS);
+        } else if (outcome === "inline") {
+          setInlineUrl(URL.createObjectURL(receiptFile()));
+          setLater("inline");
+        } else {
+          failed(); // share sheet closed without saving
+        }
+      },
+      failed,
+    );
+  }
+
+  function payLater() {
+    if (choiceRef.current) return;
+    choiceRef.current = "later";
+    setChoice("later");
+    // an older backend without a payment code: the resume-link details
+    // (not a final choice — "Hozir to‘lash" stays available there)
+    if (!paymentCode) {
+      choiceRef.current = null;
+      setChoice(null);
+      setMode("later");
+      return;
+    }
+    saveAndLeave();
+  }
+
+  /** "Chekni saqlash" — a fresh tap, the same card (never a new code). */
+  function retrySave() {
+    if (choiceRef.current) return;
+    choiceRef.current = "later";
+    setChoice("later");
+    saveAndLeave();
   }
 
   const delivered =
@@ -164,7 +249,6 @@ export function OrderSaved({
   return (
     <section
       data-order-flow=""
-      onClickCapture={cancelOnAction}
       className="mx-auto flex min-h-[560px] w-full max-w-container-content flex-col items-center bg-surface-base px-6 py-16 md:py-20 lg:py-28"
     >
       <div className="mx-auto w-full max-w-md text-center">
@@ -239,12 +323,30 @@ export function OrderSaved({
           <div className="mt-8 flex flex-col gap-3">
             {canPayNow ? (
               <>
-                <button type="button" onClick={payNow} className={primaryBtn}>
+                <button
+                  type="button"
+                  onClick={payNow}
+                  disabled={choice !== null}
+                  className={`${primaryBtn} disabled:opacity-50`}
+                >
                   {c.payNow}
                 </button>
-                <button type="button" onClick={() => setMode("later")} className={secondaryBtn}>
-                  {c.payLater}
-                </button>
+                {later === "failed" ? (
+                  <button type="button" onClick={retrySave} disabled={choice !== null} className={`${secondaryBtn} gap-2 disabled:opacity-50`}>
+                    <Download size={15} strokeWidth={1.75} aria-hidden="true" />
+                    {c.saveReceipt}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={payLater}
+                    disabled={choice !== null}
+                    aria-busy={later === "working" || undefined}
+                    className={`${secondaryBtn} disabled:opacity-50`}
+                  >
+                    {later === "working" ? c.receiptWorking : c.payLater}
+                  </button>
+                )}
               </>
             ) : (
               <p className="font-sans text-[13px] leading-[1.6] text-text-secondary">{c.savedNoLink}</p>
@@ -254,24 +356,35 @@ export function OrderSaved({
           <PayLaterDetails copy={c} resume={resume} hasCode={paymentCode != null} onPayNow={payNow} />
         )}
 
-        {/* Quiet by design: no progress bar, no live-region announcement per
-            tick (screen readers read it when they reach it). Once the timer
-            is stopped, the same spot offers the way back to the menu. */}
-        <div className="mt-6 flex min-h-[44px] items-center justify-center">
-          {autoReturn && mode === "decide" ? (
-            <p data-auto-return="" className="font-sans text-[12.5px] leading-[1.6] text-text-muted tabular-nums">
-              {c.autoReturn(Math.max(secondsLeft, 1))}
+        {later === "started" && (
+          <p
+            role="status"
+            data-receipt-confirm=""
+            className="mt-6 flex items-start gap-2.5 rounded-lg border border-accent-primary/40 bg-accent-primary/[0.08] px-4 py-3 text-left font-sans text-[13px] leading-[1.6] text-text-primary"
+          >
+            <Check size={16} strokeWidth={2} className="mt-0.5 shrink-0 text-accent-primary" aria-hidden="true" />
+            <span>{c.laterConfirm}</span>
+          </p>
+        )}
+
+        {later === "failed" && (
+          <p role="alert" data-receipt-failed="" className="mt-6 text-left font-sans text-[13px] leading-[1.6] text-text-secondary">
+            {c.receiptFailed}
+          </p>
+        )}
+
+        {later === "inline" && inlineUrl && (
+          <div data-receipt-inline="" className="mt-6 space-y-3 text-left">
+            <p role="status" className="font-sans text-[13px] leading-[1.6] text-text-primary">
+              {c.laterConfirm} {c.receiptInAppHint}
             </p>
-          ) : (
-            <button
-              type="button"
-              onClick={leaveToMenu}
-              className="inline-flex min-h-[44px] items-center px-2 font-sans text-[13px] font-medium text-text-secondary underline-offset-4 outline-none hover:text-text-primary hover:underline focus-visible:underline"
-            >
+            {/* eslint-disable-next-line @next/next/no-img-element -- a local blob: URL, not an optimisable asset */}
+            <img src={inlineUrl} alt={c.receiptAlt} className="w-full rounded-lg border border-border-default" />
+            <button type="button" onClick={leaveToMenu} className={`${secondaryBtn} w-full`}>
               {c.returnToMenu}
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </section>
   );

@@ -23,10 +23,25 @@ export interface PaymentCopy {
   payLater: string;
   /** shown only when the backend returned no payment link (older backend) */
   savedNoLink: string;
-  /** quiet line under the actions: the auto-return countdown */
-  autoReturn: (seconds: number) => string;
-  /** the way back to the order menu once the countdown is stopped */
+  /** the way back to the order menu (receipt fallbacks) */
   returnToMenu: string;
+
+  // ── "Keyinroq to‘lash": the payment-code card (PNG) ─────────────────
+  receiptOrderLabel: string;
+  receiptCodeLabel: string;
+  receiptInstruction: string;
+  /** accessible name of the card image */
+  receiptAlt: string;
+  /** while the card is being prepared (a fraction of a second) */
+  receiptWorking: string;
+  /** after the save / share started — truthful: the browser cannot tell us
+   *  that the file physically landed, so "ready", never "saved" */
+  laterConfirm: string;
+  /** the fallback button — only when the automatic save did not start */
+  saveReceipt: string;
+  receiptFailed: string;
+  /** in-app browsers (Telegram, Instagram…): the card is shown inline */
+  receiptInAppHint: string;
 
   // ── pay later ───────────────────────────────────────────────────────
   laterTitle: string;
@@ -121,8 +136,18 @@ const UZ: PaymentCopy = {
     "Ma’lumotlaringiz va buyurtma raqamingiz saqlandi. Formani qayta to‘ldirishingiz shart emas.",
   payNow: "Hozir to‘lash",
   payLater: "Keyinroq to‘lash",
-  autoReturn: (s) => `${s} soniyadan so‘ng buyurtmalar menyusiga qaytasiz.`,
   returnToMenu: "Buyurtmalar menyusiga qaytish",
+  receiptOrderLabel: "Buyurtma",
+  receiptCodeLabel: "To‘lov kodi",
+  receiptInstruction: "Ushbu kod orqali to‘lovni istalgan vaqtda amalga oshirishingiz mumkin.",
+  receiptAlt: "TALIMOON to‘lov kodi cheki",
+  receiptWorking: "Chek yaratilmoqda…",
+  laterConfirm:
+    "Keyinroq to‘lash tanlandi. Ushbu chekdagi to‘lov kodi orqali to‘lovni istalgan vaqtda amalga oshirishingiz mumkin. Chek yuklab olish uchun tayyorlandi.",
+  saveReceipt: "Chekni saqlash",
+  receiptFailed:
+    "Chekni avtomatik saqlab bo‘lmadi. «Chekni saqlash» tugmasi orqali qayta urinib ko‘ring — to‘lov kodingiz yuqorida ko‘rsatilgan.",
+  receiptInAppHint: "Chek quyida. Rasmni bosib turing va «Saqlash»ni tanlang.",
   savedNoLink:
     "To‘lov havolasini jamoamiz Siz ko‘rsatgan telefon raqamiga yuboradi.",
 
@@ -223,8 +248,18 @@ const EN: PaymentCopy = {
     "Your details and your order number are saved. You don’t need to fill in the form again.",
   payNow: "Pay now",
   payLater: "Pay later",
-  autoReturn: (s) => `You’ll return to the order menu in ${s} ${s === 1 ? "second" : "seconds"}.`,
   returnToMenu: "Back to the order menu",
+  receiptOrderLabel: "Order",
+  receiptCodeLabel: "Payment code",
+  receiptInstruction: "You can pay at any time using this code.",
+  receiptAlt: "TALIMOON payment code receipt",
+  receiptWorking: "Preparing your receipt…",
+  laterConfirm:
+    "You chose to pay later. You can pay at any time with the payment code on this receipt. Your receipt is ready to save.",
+  saveReceipt: "Save the receipt",
+  receiptFailed:
+    "The receipt couldn’t be saved automatically. Try again with “Save the receipt” — your payment code is shown above.",
+  receiptInAppHint: "Your receipt is below. Press and hold the image, then choose “Save”.",
   savedNoLink: "Our team will send the payment link to the phone number you provided.",
 
   laterTitle: "Awaiting payment",
@@ -321,8 +356,18 @@ const RU: PaymentCopy = {
     "Ваши данные и номер заказа сохранены. Заполнять форму заново не нужно.",
   payNow: "Оплатить сейчас",
   payLater: "Оплатить позже",
-  autoReturn: (s) => `Через ${s} сек. Вы вернётесь в меню заказов.`,
   returnToMenu: "Вернуться в меню заказов",
+  receiptOrderLabel: "Заказ",
+  receiptCodeLabel: "Код оплаты",
+  receiptInstruction: "С помощью этого кода вы можете оплатить заказ в любое время.",
+  receiptAlt: "Чек TALIMOON с кодом оплаты",
+  receiptWorking: "Готовим чек…",
+  laterConfirm:
+    "Вы выбрали оплату позже. Оплатить заказ можно в любое время по коду оплаты с этого чека. Чек подготовлен для сохранения.",
+  saveReceipt: "Сохранить чек",
+  receiptFailed:
+    "Не удалось сохранить чек автоматически. Попробуйте ещё раз кнопкой «Сохранить чек» — ваш код оплаты указан выше.",
+  receiptInAppHint: "Чек ниже. Нажмите на изображение и удерживайте, затем выберите «Сохранить».",
   savedNoLink: "Наша команда отправит ссылку на оплату на указанный Вами номер телефона.",
 
   laterTitle: "Ожидается оплата",
