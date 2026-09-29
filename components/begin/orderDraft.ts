@@ -78,11 +78,19 @@ export interface MediaManifest {
 }
 
 /** One file slot that must be added again after the media expired. */
+/**
+ * A file slot the customer must fill again. `reason` "expired" (the default)
+ * = the 48h media record was deleted; "unreadable" = the browser could no
+ * longer read the selected file at submit time (it was removed from the
+ * form). For photos, `expected` is the count the set needs to reach again —
+ * absent = the whole set is missing.
+ */
+export type GapReason = "expired" | "unreadable";
 export type MediaGap =
-  | { kind: "child"; id: string; name: string; count: number }
-  | { kind: "character"; id: string; name: string; count: number }
-  | { kind: "special" }
-  | { kind: "voice" };
+  | { kind: "child"; id: string; name: string; count: number; reason?: GapReason; expected?: number }
+  | { kind: "character"; id: string; name: string; count: number; reason?: GapReason; expected?: number }
+  | { kind: "special"; reason?: GapReason }
+  | { kind: "voice"; reason?: GapReason };
 
 export interface OrderDraft {
   bookType: BookType;
@@ -354,13 +362,17 @@ export function restoreOrderDraft(
  *  files — or switching the voice off — closes it.) */
 export function gapIsOpen(g: MediaGap, data: FormData): boolean {
   switch (g.kind) {
-    case "child":
-      return (data.children.find((c) => c.id === g.id)?.photos?.length ?? 0) === 0;
-    case "character":
-      return (
-        data.wantsCharacters &&
-        (data.additionalCharacters.find((c) => c.id === g.id)?.photos.length ?? -1) === 0
-      );
+    case "child": {
+      const child = data.children.find((c) => c.id === g.id);
+      if (!child) return false;
+      const n = child.photos?.length ?? 0;
+      return g.expected != null ? n < g.expected : n === 0;
+    }
+    case "character": {
+      const character = data.additionalCharacters.find((c) => c.id === g.id);
+      if (!data.wantsCharacters || !character) return false;
+      return g.expected != null ? character.photos.length < g.expected : character.photos.length === 0;
+    }
     case "special":
       return data.specialPhoto == null;
     case "voice":

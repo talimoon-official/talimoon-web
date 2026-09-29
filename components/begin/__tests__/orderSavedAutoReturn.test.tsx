@@ -184,7 +184,7 @@ describe("OrderSaved — 10-second return to the order menu", () => {
 describe("saved order state is protected", () => {
   const form = readFileSync(resolve(__dirname, "../PersonalizedBookOrderForm.tsx"), "utf8");
   it("the draft is dropped the moment the order is finalized, before the saved screen", () => {
-    const fin = form.indexOf("await finalizeOrder(");
+    const fin = form.indexOf("() => finalizeOrder(");
     const clear = form.indexOf("await saver.seal();", fin);
     const setSaved = form.indexOf("setSaved({", fin);
     expect(fin).toBeGreaterThan(0);

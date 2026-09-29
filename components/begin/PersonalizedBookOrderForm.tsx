@@ -44,7 +44,22 @@ import { MapLocationPicker } from "./MapLocationPicker";
 import { setMarketPreference, useMarketPreference, marketFromLocation } from "@/lib/order/market";
 import { normalizeOrderPhone } from "@/lib/order/phone";
 import { useFlowScroll } from "@/lib/order/useFlowScroll";
-import { createDraftSaver, gapIsOpen, type FormPhase, type RestoredOrderDraft } from "./orderDraft";
+import { createDraftSaver, gapIsOpen, type FormPhase, type MediaGap, type RestoredOrderDraft } from "./orderDraft";
+import {
+  UnreadableMediaError,
+  findUnreadable,
+  mergeGaps,
+  pendingMedia,
+  stageOf,
+  withoutUnreadable,
+  type PendingMedia,
+} from "./submitMedia";
+import { FileUnreadableError, materializeFile } from "@/lib/order/fileReadability";
+import {
+  classifySubmitError,
+  reportSubmitDiagnostic,
+  type SubmitStage,
+} from "@/lib/order/submitDiagnostics";
 import { MediaReuploadNotice } from "./MediaReuploadNotice";
 import { registerDraftFlusher } from "@/lib/order/formDraft";
 import { useUpdateBlocker } from "@/lib/pwa/lifecycle";
@@ -1091,7 +1106,7 @@ export default function PersonalizedBookOrderForm({
   });
   // Files that expired (48h) while the answers survived: only these are
   // asked for again — a banner once, and inline on the step that owns them.
-  const [mediaGaps] = useState(() => restored?.mediaGaps ?? []);
+  const [mediaGaps, setMediaGaps] = useState<MediaGap[]>(() => restored?.mediaGaps ?? []);
   const [gapBannerOpen, setGapBannerOpen] = useState(true);
   const openGaps = mediaGaps.filter((g) => gapIsOpen(g, data));
   const reuploadBanner =
@@ -1159,20 +1174,16 @@ export default function PersonalizedBookOrderForm({
   const consentAcceptedAtRef = useRef<string | null>(null);
   /** The capability token lives ONLY here — component memory for the
    *  active flow. Never written to localStorage/sessionStorage/cookies,
-   *  never logged. Per-item `*Done` flags let a retry (after e.g. an
-   *  upload fails) resume without re-sending artifacts that already
-   *  landed — resending an already-stored photo would get a NEW sequential
-   *  filename server-side and create a duplicate, not a harmless no-op. */
+   *  never logged. `uploaded` (keyed by the File itself — see submitMedia)
+   *  lets a retry (after e.g. an upload fails) resume without re-sending
+   *  artifacts that already landed — resending an already-stored photo
+   *  would get a NEW sequential filename server-side and create a
+   *  duplicate, not a harmless no-op. */
   const orderSessionRef = useRef<{
     orderCode: string;
     capabilityToken: string;
     childSlots: Array<{ childRef: string }>;
-    /** [childIndex][photoIndex] — one done-flag per child's own photo, not
-     *  a single flat pool (see planChildPhotoUploads). */
-    childPhotoDone: boolean[][];
-    specialPhotoDone: boolean;
-    finalVoiceDone: boolean;
-    characterPhotoDone: boolean[];
+    uploaded: WeakSet<Blob>;
   } | null>(null);
 
   // Switching market is ONE atomic transition (spec §17): currency,
@@ -1477,6 +1488,39 @@ export default function PersonalizedBookOrderForm({
     setShowStepError(false);
   }
 
+  /** Run one network stage; on failure send ONE privacy-safe diagnostic
+   *  (stage + error category + file type only) and rethrow unchanged. */
+  async function atStage<T>(stage: SubmitStage, file: Blob | null, run: () => Promise<T>): Promise<T> {
+    try {
+      return await run();
+    } catch (err) {
+      reportSubmitDiagnostic(classifySubmitError(stage, err, file));
+      throw err;
+    }
+  }
+
+  /** Remove exactly the unreadable files, mark their slots, and take the
+   *  customer to the step that owns them. Answers and every other file stay;
+   *  the submission session (and what already uploaded) is kept. */
+  function recoverFromUnreadable(items: Array<PendingMedia & { errorName: string }>) {
+    for (const m of items) {
+      reportSubmitDiagnostic(
+        classifySubmitError(stageOf(m), new FileUnreadableError(m.errorName), m.file),
+      );
+    }
+    const { data: next, gaps } = withoutUnreadable(data, items);
+    setData(next);
+    setMediaGaps((prev) => mergeGaps(prev, gaps));
+    setGapBannerOpen(true);
+    setShowStepError(false);
+    setSubmitError(null);
+    setSubmitting(false);
+    const owners = items.map((m) =>
+      m.kind === "special" || m.kind === "voice" ? PERSONAL_TOUCH_STEP : PHOTOS_STEP,
+    );
+    setStepIndex(Math.min(...owners));
+  }
+
   /**
    * The real submit path: Turnstile → create order → upload every
    * declared artifact → finalize → the existing success screen. Safe to
@@ -1505,6 +1549,17 @@ export default function PersonalizedBookOrderForm({
       // how this single number is reached.
       const canonicalPhone =
         normalizeOrderPhone(data.orderer.phone, data.market).e164 ?? data.orderer.phone.trim();
+
+      // Every file still to send must be READABLE before any network — so a
+      // dead gallery / Google Photos file is caught before the order is even
+      // created, and only that file is asked for again.
+      const pendingBefore = pendingMedia(
+        data,
+        namedCharacters,
+        orderSessionRef.current?.uploaded ?? new WeakSet<Blob>(),
+      );
+      const unreadable = await findUnreadable(pendingBefore);
+      if (unreadable.length > 0) throw new UnreadableMediaError(unreadable);
 
       let session = orderSessionRef.current;
       if (!session) {
@@ -1612,20 +1667,38 @@ export default function PersonalizedBookOrderForm({
         },
         });
 
-        const result = await submitOrder(payload);
+        const result = await atStage("order_create", null, () => submitOrder(payload));
         session = {
           orderCode: result.orderCode,
           capabilityToken: result.capabilityToken,
           childSlots: result.childSlots,
-          childPhotoDone: data.children.map((c) => (c.photos ?? []).map(() => false)),
-          specialPhotoDone: false,
-          finalVoiceDone: false,
-          characterPhotoDone: namedCharacters.flatMap((c) => c.photos.map(() => false)),
+          uploaded: new WeakSet<Blob>(),
         };
         orderSessionRef.current = session;
       }
 
       const { orderCode, capabilityToken, childSlots } = session;
+      const uploaded = session.uploaded;
+
+      // Upload ONE file: read it fully into memory first (the upload body can
+      // then no longer be pulled out from under the request), then send the
+      // in-memory copy. Marked done by the ORIGINAL File.
+      const send = async (
+        m: PendingMedia,
+        args: Omit<Parameters<typeof uploadFile>[0], "orderCode" | "capabilityToken" | "file">,
+      ) => {
+        let body: File;
+        try {
+          body = await materializeFile(m.file);
+        } catch (err) {
+          if (err instanceof FileUnreadableError) {
+            throw new UnreadableMediaError([{ ...m, errorName: err.errorName }]);
+          }
+          throw err;
+        }
+        await atStage(stageOf(m), m.file, () => uploadFile({ ...args, orderCode, capabilityToken, file: body }));
+        uploaded.add(m.file);
+      };
 
       // Each child has its own photos and its own backend childRef (see
       // planChildPhotoUploads for the proven childSlots[i] <-> children[i]
@@ -1634,71 +1707,56 @@ export default function PersonalizedBookOrderForm({
       const childPhotoTasks = planChildPhotoUploads(
         data.children.map((c) => ({ photos: c.photos ?? [] })),
         childSlots,
-        session.childPhotoDone,
+        data.children.map((c) => (c.photos ?? []).map((p) => uploaded.has(p))),
       );
       for (const task of childPhotoTasks) {
-        await uploadFile({
-          orderCode,
-          capabilityToken,
-          kind: "child_photo",
-          file: task.file,
-          childRef: task.childRef,
-        });
-        session.childPhotoDone[task.childIndex][task.photoIndex] = true;
+        const child = data.children[task.childIndex];
+        await send(
+          { kind: "child", childIndex: task.childIndex, childId: child.id, file: task.file },
+          { kind: "child_photo", childRef: task.childRef },
+        );
       }
 
-      if (data.specialPhoto && !session.specialPhotoDone) {
-        await uploadFile({ orderCode, capabilityToken, kind: "special_photo", file: data.specialPhoto });
-        session.specialPhotoDone = true;
+      if (data.specialPhoto && !uploaded.has(data.specialPhoto)) {
+        await send({ kind: "special", file: data.specialPhoto }, { kind: "special_photo" });
       }
 
       // The keepsake author's optional voice recording — uploaded ONLY when
       // the customer explicitly chose "Ha" and a take is held. A recording
       // left over from a "Ha" that was later switched to "Yo'q" is never
       // uploaded (and was never declared, so finalize does not expect it).
-      if (
-        data.keepsakeWantsVoice === true &&
-        data.finalVoice &&
-        !session.finalVoiceDone
-      ) {
-        await uploadFile({
-          orderCode,
-          capabilityToken,
-          kind: "final_voice",
-          file: data.finalVoice,
-          durationSec: data.finalVoiceDurationSec ?? undefined,
-        });
-        session.finalVoiceDone = true;
+      if (data.keepsakeWantsVoice === true && data.finalVoice && !uploaded.has(data.finalVoice)) {
+        await send(
+          { kind: "voice", file: data.finalVoice },
+          { kind: "final_voice", durationSec: data.finalVoiceDurationSec ?? undefined },
+        );
       }
 
-      let charIdx = 0;
       for (const character of namedCharacters) {
         for (const photo of character.photos) {
-          const k = charIdx++;
-          if (session.characterPhotoDone[k]) continue;
-          await uploadFile({
-            orderCode,
-            capabilityToken,
-            kind: "character_photo",
-            file: photo,
-            // Lets the backend name the stored file after this character
-            // (e.g. "Singlisi_Madina_01.png") instead of a generic number.
-            characterRole: character.relation.trim(),
-            characterName: character.name.trim(),
-          });
-          session.characterPhotoDone[k] = true;
+          if (uploaded.has(photo)) continue;
+          await send(
+            { kind: "character", characterId: character.id, file: photo },
+            {
+              kind: "character_photo",
+              // Lets the backend name the stored file after this character
+              // (e.g. "Singlisi_Madina_01.png") instead of a generic number.
+              characterRole: character.relation.trim(),
+              characterName: character.name.trim(),
+            },
+          );
         }
       }
 
       // Finalize = the order is SAVED (lifecycle AWAITING_PAYMENT). No
       // receipt is part of intake; the backend returns the order-bound
       // payment/resume capability, held in memory only for the next screen.
-      const finalized = await finalizeOrder({
+      const finalized = await atStage("finalize", null, () => finalizeOrder({
         orderCode,
         capabilityToken,
         // bookLoc = the customer's own language, for the payment-code message
         notify: { customerName: data.orderer.name, phone: canonicalPhone, locale: bookLoc },
-      });
+      }));
 
       // The order exists now: stop and delete the stored draft at once (even
       // if the form has been unmounted meanwhile), so the completed order can
@@ -1711,6 +1769,12 @@ export default function PersonalizedBookOrderForm({
         paymentCodeDelivery: finalized.paymentCodeDelivery ?? null,
       });
     } catch (err) {
+      // A selected file the browser can no longer read: ask for ONLY that
+      // file again, on the step that owns it. Nothing else is touched.
+      if (err instanceof UnreadableMediaError) {
+        recoverFromUnreadable(err.items);
+        return;
+      }
       // Never surface the raw error (status text, validation detail) to the
       // customer — same "never leak internals" posture as the backend. The
       // ONE exception: an over-length voice note, where a specific hint

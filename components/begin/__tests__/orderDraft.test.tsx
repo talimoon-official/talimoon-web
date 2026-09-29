@@ -330,7 +330,7 @@ describe("debounced saver", () => {
 
   it("the form seals the draft right after finalize, before the saved screen", () => {
     const form = readFileSync(resolve(__dirname, "../PersonalizedBookOrderForm.tsx"), "utf8");
-    const fin = form.indexOf("await finalizeOrder(");
+    const fin = form.indexOf("() => finalizeOrder(");
     const seal = form.indexOf("await saver.seal();", fin);
     expect(fin).toBeGreaterThan(0);
     expect(seal).toBeGreaterThan(fin);
