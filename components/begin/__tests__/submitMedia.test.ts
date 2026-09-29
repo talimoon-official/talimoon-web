@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { findUnreadable, mergeGaps, pendingMedia, withoutUnreadable, type MediaSource } from "../submitMedia";
 import { gapIsOpen, type MediaGap } from "../orderDraft";
-import { materializeFile, probeReadable, FileUnreadableError } from "@/lib/order/fileReadability";
+import { MATERIALIZE_MAX_BYTES, materializeFile, probeReadable, FileUnreadableError } from "@/lib/order/fileReadability";
+import { MAX_PHOTO_BYTES } from "../formPrimitives";
 import type { FormData } from "../PersonalizedBookOrderForm";
 
 const photo = (n: string, type = "image/jpeg") => new File([`bytes-${n}`], n, { type });
@@ -51,6 +52,55 @@ describe("fileReadability", () => {
     expect(await probeReadable(dead("x"))).toEqual({ ok: false, errorName: "NotReadableError" });
     expect(await probeReadable(new File([], "e.jpg"))).toEqual({ ok: false, errorName: "EmptyFile" });
     await expect(materializeFile(dead("x"))).rejects.toBeInstanceOf(FileUnreadableError);
+  });
+
+  it("above 16 MiB (only a picked voice file can be) it is read END TO END in chunks and the ORIGINAL returned — no 2× copy", async () => {
+    const size = MATERIALIZE_MAX_BYTES + 1;
+    const chunk = new Uint8Array(new ArrayBuffer(64 * 1024));
+    const streamed: number[] = [];
+    class BigFile extends File {
+      override arrayBuffer(): Promise<ArrayBuffer> {
+        throw new Error("must not be copied into memory");
+      }
+      override stream(): ReadableStream<Uint8Array<ArrayBuffer>> {
+        let sent = 0;
+        return new ReadableStream<Uint8Array<ArrayBuffer>>({
+          pull(ctrl) {
+            if (sent >= size) return ctrl.close();
+            const n = Math.min(chunk.byteLength, size - sent);
+            sent += n;
+            streamed.push(n);
+            ctrl.enqueue(new Uint8Array(chunk.buffer, 0, n));
+          },
+        });
+      }
+    }
+    const big = new BigFile(["x"], "long.wav", { type: "audio/wav" });
+    Object.defineProperty(big, "size", { value: size });
+    expect(await materializeFile(big)).toBe(big);
+    expect(streamed.reduce((a, b) => a + b, 0)).toBe(size); // every byte was read
+    expect(Math.max(...streamed)).toBeLessThanOrEqual(64 * 1024); // never more than a chunk at a time
+
+    // a big file that dies half-way, or is shorter than picked, is refused
+    class BigDead extends BigFile {
+      override stream(): ReadableStream<Uint8Array<ArrayBuffer>> {
+        return new ReadableStream<Uint8Array<ArrayBuffer>>({ pull: (c) => c.error(new DOMException("gone", "NotReadableError")) });
+      }
+    }
+    const dead = new BigDead(["x"], "long.wav", { type: "audio/wav" });
+    Object.defineProperty(dead, "size", { value: size });
+    await expect(materializeFile(dead)).rejects.toMatchObject({ errorName: "NotReadableError" });
+    const short = new BigFile(["x"], "long.wav", { type: "audio/wav" });
+    Object.defineProperty(short, "size", { value: size + 10 });
+    await expect(materializeFile(short)).rejects.toMatchObject({ errorName: "FileChanged" });
+  });
+
+  it("a photo at the 15 MB limit is still copied into memory (detached from the original)", async () => {
+    const p = new File([new Uint8Array(MAX_PHOTO_BYTES)], "big.jpg", { type: "image/jpeg" });
+    expect(MAX_PHOTO_BYTES).toBeLessThanOrEqual(MATERIALIZE_MAX_BYTES);
+    const copy = await materializeFile(p);
+    expect(copy).not.toBe(p);
+    expect(copy.size).toBe(MAX_PHOTO_BYTES);
   });
 
   it("a file that changed size after it was picked is refused", async () => {

@@ -55,8 +55,40 @@ export async function probeReadable(file: Blob): Promise<{ ok: true } | { ok: fa
   }
 }
 
-/** The whole file, copied into memory. Throws FileUnreadableError. */
+/**
+ * Largest file copied into memory. Every photo is ≤ 15 MB (MAX_PHOTO_BYTES),
+ * so photos are always copied; only a picked voice file (≤ 60 MiB) can be
+ * larger. A copy briefly costs ~2× the file (read buffer + in-memory File),
+ * so above this size the file is instead READ END TO END in chunks that are
+ * dropped at once (proves it is readable, ~64 KB at a time) and the original
+ * is uploaded. Files are materialized strictly one at a time.
+ */
+export const MATERIALIZE_MAX_BYTES = 16 * 1024 * 1024;
+
+/** Read every byte in small chunks, keeping none. Returns the byte count. */
+async function readThrough(file: Blob): Promise<number> {
+  const reader = file.stream().getReader();
+  let n = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) return n;
+    n += value.byteLength;
+  }
+}
+
+/** The whole file, copied into memory (or, above MATERIALIZE_MAX_BYTES,
+ *  verified end to end and returned as is). Throws FileUnreadableError. */
 export async function materializeFile(file: File): Promise<File> {
+  if (file.size > MATERIALIZE_MAX_BYTES && typeof file.stream === "function") {
+    let n: number;
+    try {
+      n = await readThrough(file);
+    } catch (err) {
+      throw new FileUnreadableError(errorNameOf(err));
+    }
+    if (n !== file.size) throw new FileUnreadableError("FileChanged");
+    return file;
+  }
   let buf: ArrayBuffer;
   try {
     buf = await readBytes(file);
