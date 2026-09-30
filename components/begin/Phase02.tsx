@@ -156,20 +156,15 @@ export default function Phase02({
   function removeInterest(id: string) {
     patch({ interests: removeAnswer(interests, id) });
   }
-  /** Typing a detail un-chooses "nothing more to add"; choosing it
-   *  clears every detail — the two are never stored together. */
+  /** "Nothing more to add" is offered only while every detail is empty:
+   *  typing any detail un-chooses and hides it, clearing them all brings
+   *  it back. The card never touches typed text. */
+  const hasInterestDetail = interests.some((a) => (a.detail ?? "").trim().length > 0);
   function setInterestDetail(id: string, detail: string) {
     patch({
       interests: interests.map((a) => (a.id === id ? { ...a, detail } : a)),
-      noInterestDetails: false,
+      ...(detail.trim().length > 0 ? { noInterestDetails: false } : {}),
     });
-  }
-  function setNoInterestDetails(on: boolean) {
-    patch(
-      on
-        ? { noInterestDetails: true, interests: interests.map((a) => ({ ...a, detail: "" })) }
-        : { noInterestDetails: false },
-    );
   }
 
   // ── validity per scene ────────────────────────────────────────
@@ -403,13 +398,15 @@ export default function Phase02({
                       ))}
                     </div>
 
-                    <AlternativeAnswer
-                      id={`p2-no-details-${child.id}`}
-                      selected={!!child.noInterestDetails}
-                      onChange={setNoInterestDetails}
-                      label={c.q2NothingToAdd}
-                      locale={locale}
-                    />
+                    {!hasInterestDetail && (
+                      <AlternativeAnswer
+                        id={`p2-no-details-${child.id}`}
+                        selected={!!child.noInterestDetails}
+                        onChange={(on) => patch({ noInterestDetails: on })}
+                        label={c.q2NothingToAdd}
+                        locale={locale}
+                      />
+                    )}
                   </div>
                 )}
 

@@ -160,19 +160,80 @@ describe("Phase 02 — the ready answers", () => {
     ],
   };
 
-  it("details screen: 'nothing more to add' clears every detail; typing un-chooses it", async () => {
+  const NOTHING = "Qo‘shimcha aytadigan gapim yo‘q";
+  const empty: ChildProfile = {
+    ...base,
+    interests: [
+      { id: "football", source: "preset" },
+      { id: "books", source: "preset" },
+    ],
+  };
+
+  it("details: the card shows while every detail is empty, and choosing it deletes nothing", async () => {
     const u = userEvent.setup();
     const seen: ChildProfile[][] = [];
-    render(<Kids Comp={Phase02} initial={[base]} resume={{ idx: 0, screen: "deepen" }} seen={seen} />);
+    render(<Kids Comp={Phase02} initial={[empty]} resume={{ idx: 0, screen: "deepen" }} seen={seen} />);
     expect(screen.getByText("YOKI")).toBeInTheDocument();
-    const card = screen.getByRole("checkbox", { name: "Qo‘shimcha aytadigan gapim yo‘q" });
+    const card = screen.getByRole("checkbox", { name: NOTHING });
     await u.click(card);
+    expect(card).toBeChecked();
     expect(last(seen).noInterestDetails).toBe(true);
-    expect(last(seen).interests!.every((a) => (a.detail ?? "") === "")).toBe(true);
-
-    await u.type(screen.getAllByRole("textbox")[1]!, "Ranglar");
-    expect(card).not.toBeChecked();
+    await u.click(card);
     expect(last(seen).noInterestDetails).toBe(false);
+  });
+
+  it("details: typing into any field un-chooses and hides the card; clearing all brings it back", async () => {
+    const u = userEvent.setup();
+    const seen: ChildProfile[][] = [];
+    render(<Kids Comp={Phase02} initial={[empty]} resume={{ idx: 0, screen: "deepen" }} seen={seen} />);
+    await new Promise((r) => setTimeout(r, 80)); // let the heading focus land first
+    await u.click(screen.getByRole("checkbox", { name: NOTHING }));
+
+    const second = screen.getAllByRole("textbox")[1]!;
+    await u.type(second, "Ranglar");
+    expect(screen.queryByRole("checkbox", { name: NOTHING })).not.toBeInTheDocument();
+    expect(screen.queryByText("YOKI")).not.toBeInTheDocument();
+    expect(last(seen).noInterestDetails).toBe(false);
+    expect(last(seen).interests![1]!.detail).toBe("Ranglar");
+
+    await u.clear(second);
+    const back = screen.getByRole("checkbox", { name: NOTHING });
+    expect(back).not.toBeChecked();
+  });
+
+  it("details: typed text is never deleted — the card is simply not offered", async () => {
+    const seen: ChildProfile[][] = [];
+    render(<Kids Comp={Phase02} initial={[base]} resume={{ idx: 0, screen: "deepen" }} seen={seen} />);
+    expect(screen.queryByRole("checkbox", { name: NOTHING })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("textbox")[0]).toHaveValue("Darvozabon bo‘lish");
+    expect(last(seen).interests![0]!.detail).toBe("Darvozabon bo‘lish");
+  });
+
+  it("details: a stale/contradictory draft (flag + text) keeps the text and hides the card", () => {
+    render(
+      <Kids
+        Comp={Phase02}
+        initial={[{ ...base, noInterestDetails: true }]}
+        resume={{ idx: 0, screen: "deepen" }}
+      />,
+    );
+    expect(screen.getAllByRole("textbox")[0]).toHaveValue("Darvozabon bo‘lish");
+    expect(screen.queryByRole("checkbox", { name: NOTHING })).not.toBeInTheDocument();
+  });
+
+  it("details: Back from the next question keeps typed text and the choice", async () => {
+    const u = userEvent.setup();
+    const settle = () => new Promise((r) => setTimeout(r, 80)); // heading focus lands at 40ms
+    render(<Kids Comp={Phase02} initial={[base]} resume={{ idx: 0, screen: "deepen" }} />);
+    await settle();
+    await u.type(screen.getAllByRole("textbox")[1]!, "Sarguzasht");
+    await u.click(cont());
+    await settle();
+    await u.click(await screen.findByRole("button", { name: /Orqaga/ }));
+    await settle();
+    const boxes = await screen.findAllByRole("textbox");
+    expect(boxes[0]).toHaveValue("Darvozabon bo‘lish");
+    expect(boxes[1]).toHaveValue("Sarguzasht");
   });
 
   it("activity: the card satisfies the required step and is exclusive with the text", async () => {
@@ -192,6 +253,7 @@ describe("Phase 02 — the ready answers", () => {
 
     // Back keeps the choice
     await u.click(screen.getByRole("button", { name: /Orqaga/ }));
+    await new Promise((r) => setTimeout(r, 80)); // heading focus lands at 40ms
     expect(screen.getByRole("checkbox", { name: "Aniq bittasini ayta olmayman" })).toBeChecked();
     await u.type(screen.getByRole("textbox"), "Rasm");
     expect(screen.getByRole("checkbox", { name: "Aniq bittasini ayta olmayman" })).not.toBeChecked();
@@ -313,6 +375,21 @@ describe("draft & payload compatibility", () => {
       appreciatedQualities: [{ noDetail: true }],
       emotionalBridge: { noSituation: true, experienceUnsure: true, feelingTrusted: true, noSensitivities: true },
     });
+  });
+
+  it("reload: typed interest details come back verbatim, with the card hidden", () => {
+    const typed: ChildProfile = {
+      ...child,
+      noInterestDetails: false,
+      interests: [{ id: "football", source: "preset", detail: "Darvozabon bo‘lish" }],
+    };
+    const s = stored([typed]);
+    const r = restoreOrderDraft(JSON.parse(JSON.stringify(s.payload)), emptyForm(), STEPS.length, s.media)!;
+    const c = r.data.children[0]!;
+    expect(c.interests![0]!.detail).toBe("Darvozabon bo‘lish");
+    render(<Kids Comp={Phase02} initial={[c]} resume={{ idx: 0, screen: "deepen" }} />);
+    expect(screen.getByRole("textbox")).toHaveValue("Darvozabon bo‘lish");
+    expect(screen.queryByRole("checkbox", { name: "Qo‘shimcha aytadigan gapim yo‘q" })).not.toBeInTheDocument();
   });
 
   it("an old draft (pre-card: skip links stored nothing) restores unchanged, nothing reset", () => {
