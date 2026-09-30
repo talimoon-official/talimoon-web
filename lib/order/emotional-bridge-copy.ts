@@ -47,24 +47,26 @@ export interface EmotionalBridgeCopy {
   s1Q: (name: string, multi: boolean) => string;
   s1Help: string;
   s1Placeholder: (name: string) => string;
-  s1Skip: string;
+  /** Alternative answers (one per step) — short, in the parent's voice. */
+  s1Alt: string;
 
   // ---- Step 2 — the child's POSSIBLE experience (parent observation) ----
   s2Q: (name: string, multi: boolean) => string;
   s2Help: string;
   s2Placeholder: string;
-  s2Skip: string;
+  s2Alt: string;
 
   // ---- Step 3 — desired emotional direction ----
   s3Q: (name: string, multi: boolean) => string;
   s3Help: string;
   s3Placeholder: string;
+  s3Alt: string;
 
   // ---- Step 4 — sensitivity / boundaries ----
   s4Q: string;
   s4Help: string;
   s4Placeholder: string;
-  s4Skip: string;
+  s4Alt: string;
 
   // ---- completion ----
   ackHeading: string;
@@ -100,7 +102,7 @@ const uz: EmotionalBridgeCopy = {
     const n = name.trim() || "farzandim";
     return `Masalan: "Men boshqa davlatda ishlayman. ${n} bilan har kuni gaplashishga harakat qilaman, lekin ba’zan u mening uzoqda ekanimni uni kamroq yaxshi ko‘rishim deb tushunayotgandek tuyuladi. Bu holatni unga qanday tushuntirishni har doim ham bilmayman."`;
   },
-  s1Skip: "Alohida vaziyat yo‘q",
+  s1Alt: "Bunday vaziyat yo‘q",
 
   s2Q: (name, multi) =>
     multi
@@ -110,7 +112,7 @@ const uz: EmotionalBridgeCopy = {
     "Masalan, xafa bo‘lishi, sog‘inishi, o‘zini tushunilmayotgandek his qilishi, xavotirlanishi yoki aksincha, buni umuman muammo deb bilmasligi mumkin. Aniq bilmasangiz ham hechqisi yo‘q.",
   s2Placeholder:
     "Masalan: Menimcha, u ba’zan meni sog‘inadi va nima uchun uzoqda ekanimni tushunmay qoladi. Lekin bu haqda ochiq gapirmaydi.",
-  s2Skip: "Bilmayman yoki aniq ayta olmayman",
+  s2Alt: "Aniq ayta olmayman",
 
   s3Q: (name, multi) =>
     multi
@@ -120,13 +122,14 @@ const uz: EmotionalBridgeCopy = {
     "Bu yerda gap aniq bir jumla yoki nasihat haqida emas. Biz hikoyaning hissiy yo‘nalishini tushunmoqchimiz. Masalan: mehr, doimo yonida ekanlik, faxr, sog‘inch, ishonch, o‘zini qadrli yoki xotirjam his qilish, oilaga tegishlilik.",
   s3Placeholder:
     "Masalan: U men uzoqda bo‘lsam ham mehrim kamaymaganini, uni sog‘inishimni va doimo uning tarafida ekanimni his qilishini istayman.",
+  s3Alt: "Bu borada sizga ishonaman",
 
   s4Q: "Hikoyada biz ayniqsa nimaga ehtiyotkor yondashishimizni istardingiz?",
   s4Help:
     "Ba’zi mavzularni ochiq tilga olishni istamasligingiz yoki farzandingiz uchun nozik bo‘lgan holatlar bo‘lishi mumkin. Xohlasangiz, bizga nimani ehtiyotkorlik bilan yondashishimiz yoki ochiq tilga olmasligimiz kerakligini ayting.",
   s4Placeholder:
     "Masalan: Ajralish haqida to‘g‘ridan-to‘g‘ri gapirilmasin. Otasi uzoqda ekaniga ortiqcha urg‘u berilmasin. Hikoyada ko‘proq mehr, ishonch va yaqinlik sezilsin.",
-  s4Skip: "Alohida cheklov yo‘q",
+  s4Alt: "Bu borada xavotirim yo‘q",
 
   ackHeading:
     "Rahmat. Bu ma’lumotlar hikoyaning hissiy yondashuvini farzandingizga mosroq tanlashimizga yordam beradi.",
@@ -162,7 +165,7 @@ const en: EmotionalBridgeCopy = {
     const n = name.trim() || "my child";
     return `For example: "I work in another country. I try to talk to ${n} every day, but sometimes it seems like they take my being far away to mean I love them less. I don't always know how to explain it to them."`;
   },
-  s1Skip: "Nothing in particular",
+  s1Alt: "There's nothing like that",
 
   s2Q: (name, multi) =>
     multi
@@ -172,7 +175,7 @@ const en: EmotionalBridgeCopy = {
     "For example: sadness, missing you, feeling misunderstood, worry, or, on the contrary, not seeing it as a problem at all. It is completely fine if you are not sure.",
   s2Placeholder:
     "For example: I think they miss me sometimes and don't quite understand why I am far away. But they don't talk about it openly.",
-  s2Skip: "I don't know, or can't say for sure",
+  s2Alt: "I can't say for sure",
 
   s3Q: (name, multi) =>
     multi
@@ -182,13 +185,14 @@ const en: EmotionalBridgeCopy = {
     "This is not about a specific sentence or a piece of advice. We want to understand the story's emotional direction. For example: warmth, always being there for them, pride, longing, trust, feeling valued or calm, a sense of belonging in the family.",
   s3Placeholder:
     "For example: I want them to feel that my love hasn't faded even though I'm far away, that I miss them, and that I'm always on their side.",
+  s3Alt: "I'll trust you with this",
 
   s4Q: "Is there anything you would especially like us to handle with care in the story?",
   s4Help:
     "There may be topics you would rather we did not name openly, or situations that are delicate for your child. If you like, tell us what to approach carefully or leave unstated.",
   s4Placeholder:
     "For example: please don't talk about the separation directly. Don't over-emphasise the father being far away. Let the story carry more warmth, trust and closeness.",
-  s4Skip: "No particular limits",
+  s4Alt: "Nothing I'm worried about",
 
   ackHeading:
     "Thank you. This helps us choose the story's emotional approach so it fits your child better.",
@@ -224,7 +228,7 @@ const ru: EmotionalBridgeCopy = {
     const n = name.trim() || "мой ребёнок";
     return `Например: «Я работаю в другой стране. Я стараюсь разговаривать с ${n} каждый день, но иногда кажется, что он воспринимает мою удалённость как то, что я люблю его меньше. Я не всегда знаю, как ему это объяснить».`;
   },
-  s1Skip: "Ничего особенного",
+  s1Alt: "Такой ситуации нет",
 
   s2Q: (name, multi) =>
     multi
@@ -234,7 +238,7 @@ const ru: EmotionalBridgeCopy = {
     "Например: грусть, тоску по вам, чувство, что его не понимают, тревогу — или, наоборот, он может вовсе не считать это проблемой. Если вы не уверены — это совершенно нормально.",
   s2Placeholder:
     "Например: мне кажется, он иногда скучает по мне и не совсем понимает, почему я далеко. Но открыто об этом не говорит.",
-  s2Skip: "Не знаю или не могу сказать точно",
+  s2Alt: "Не могу сказать точно",
 
   s3Q: (name, multi) =>
     multi
@@ -244,13 +248,14 @@ const ru: EmotionalBridgeCopy = {
     "Речь не о конкретной фразе или наставлении. Мы хотим понять эмоциональное направление истории. Например: тепло, ощущение, что вы всегда рядом, гордость, тоску, доверие, чувство собственной ценности или спокойствия, принадлежность к семье.",
   s3Placeholder:
     "Например: я хочу, чтобы он чувствовал, что моя любовь не стала меньше, даже если я далеко, что я скучаю по нему и всегда на его стороне.",
+  s3Alt: "Здесь полагаюсь на вас",
 
   s4Q: "Есть ли что-то, к чему нам стоит отнестись особенно бережно в истории?",
   s4Help:
     "Могут быть темы, которые вы не хотели бы называть открыто, или ситуации, деликатные для вашего ребёнка. Если хотите, скажите, к чему подойти осторожно или что оставить без прямого упоминания.",
   s4Placeholder:
     "Например: пожалуйста, не говорите о расставании напрямую. Не делайте лишнего акцента на том, что отец далеко. Пусть в истории будет больше тепла, доверия и близости.",
-  s4Skip: "Без особых ограничений",
+  s4Alt: "Здесь у меня нет опасений",
 
   ackHeading:
     "Спасибо. Это поможет нам выбрать эмоциональный подход истории так, чтобы он лучше подошёл вашему ребёнку.",

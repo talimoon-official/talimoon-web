@@ -48,7 +48,7 @@ import { useFlowScroll } from "@/lib/order/useFlowScroll";
 import { JourneyProgress } from "./JourneyProgress";
 import { ChildWorld } from "./ChildWorld";
 import { SelectionTray } from "./SelectionTray";
-import { CheckRow } from "./CheckRow";
+import { AlternativeAnswer } from "./AlternativeAnswer";
 
 type Screen =
   | "intro"
@@ -474,14 +474,16 @@ export default function Phase03({
                               className={box}
                             />
                           </div>
-                          <div className="mt-3">
-                            <CheckRow
-                              id={`p3-quality-none-${a.id}`}
-                              checked={!!a.noDetail}
-                              onChange={(checked) => setQualityItemNoDetail(a.id, checked)}
-                              label={c.q2ItemNone}
-                            />
-                          </div>
+                          <AlternativeAnswer
+                            id={`p3-quality-none-${child.id}-${a.id}`}
+                            selected={!!a.noDetail}
+                            onChange={(checked) => {
+                              setQualityItemNoDetail(a.id, checked);
+                              if (checked) setAttempted(false);
+                            }}
+                            label={c.q2ItemNone}
+                            locale={locale}
+                          />
                         </div>
                       ))}
                     </div>
@@ -569,13 +571,17 @@ export default function Phase03({
                     {/* The exclusive alternative — set apart from the
                         behaviour list so it never reads as one more of
                         them (spec §19–20). */}
-                    <div className="mt-6 border-t border-border-subtle pt-5">
-                      <CheckRow
-                        id="p3-no-growth"
-                        checked={!!child.noGrowthArea}
-                        onChange={(checked) => patch(reconcileGrowth(!checked))}
-                        label={c.q3None}
-                        support={c.q3NoneHelp}
+                    <div className="mt-2">
+                      <AlternativeAnswer
+                        id={`p3-no-growth-${child.id}`}
+                        selected={!!child.noGrowthArea}
+                        onChange={(checked) => {
+                          patch(reconcileGrowth(!checked));
+                          if (checked) setAttempted(false);
+                        }}
+                        label={c.q3NoneAnswer}
+                        locale={locale}
+                        support={growthBehaviors.length > 0 ? c.q3NoneHelp : undefined}
                       />
                     </div>
                     <ErrorLine>{showError}</ErrorLine>
@@ -614,14 +620,13 @@ export default function Phase03({
                               className={box}
                             />
                           </div>
-                          <div className="mt-3">
-                            <CheckRow
-                              id={`p3-no-context-${a.id}`}
-                              checked={!!a.noSpecificContext}
-                              onChange={(checked) => setBehaviorNoContext(a.id, checked)}
-                              label={c.q4ItemNone}
-                            />
-                          </div>
+                          <AlternativeAnswer
+                            id={`p3-no-context-${child.id}-${a.id}`}
+                            selected={!!a.noSpecificContext}
+                            onChange={(checked) => setBehaviorNoContext(a.id, checked)}
+                            label={c.q4ItemNone}
+                            locale={locale}
+                          />
                         </div>
                       ))}
                     </div>

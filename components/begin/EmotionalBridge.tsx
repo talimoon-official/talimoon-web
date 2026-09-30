@@ -32,7 +32,15 @@ import { ArrowRight } from "lucide-react";
 import { FlowBackButton } from "./FlowBack";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { toLocale, directionFor } from "@/lib/journey/types";
-import type { ChildProfile, EmotionalBridge as Bridge } from "@/lib/order/types";
+import {
+  setBridgeAlternative,
+  setBridgeText,
+  BRIDGE_ALTERNATIVE,
+  type BridgeTextField,
+  type ChildProfile,
+  type EmotionalBridge as Bridge,
+} from "@/lib/order/types";
+import { AlternativeAnswer } from "./AlternativeAnswer";
 import type { RecipientRelationship } from "@/lib/order/relationship";
 import { emotionalBridgeCopy, type Locale } from "@/lib/order/emotional-bridge-copy";
 import { useFlowScroll } from "@/lib/order/useFlowScroll";
@@ -92,6 +100,38 @@ export default function EmotionalBridge({
   const bridge: Bridge = child.emotionalBridge ?? {};
   const setBridge = (p: Partial<Bridge>) =>
     onPatchChild(child.id, { emotionalBridge: { ...bridge, ...p } });
+
+  /** One optional step: its textarea, then "YOKI" and the alternative
+   *  answer card. Text and card are exclusive — never both stored. */
+  function answer(field: BridgeTextField, placeholder: string, alt: string) {
+    const flag = BRIDGE_ALTERNATIVE[field];
+    return (
+      <>
+        <div className="mt-6">
+          <textarea
+            rows={4}
+            value={bridge[field] ?? ""}
+            onChange={(e) =>
+              onPatchChild(child.id, {
+                emotionalBridge: setBridgeText(bridge, field, e.target.value),
+              })
+            }
+            placeholder={placeholder}
+            className={box}
+          />
+        </div>
+        <AlternativeAnswer
+          id={`eb-${flag}-${child.id}`}
+          selected={!!bridge[flag]}
+          onChange={(on) =>
+            onPatchChild(child.id, { emotionalBridge: setBridgeAlternative(bridge, field, on) })
+          }
+          label={alt}
+          locale={locale}
+        />
+      </>
+    );
+  }
 
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
@@ -217,16 +257,7 @@ export default function EmotionalBridge({
             <div>
               <Heading headingRef={headingRef}>{c.s1Q(name, multi)}</Heading>
               <Help>{c.s1Help}</Help>
-              <div className="mt-6">
-                <textarea
-                  rows={4}
-                  value={bridge.privateContext ?? ""}
-                  onChange={(e) => setBridge({ privateContext: e.target.value })}
-                  placeholder={c.s1Placeholder(name)}
-                  className={box}
-                />
-              </div>
-              <SkipButton onClick={goNext}>{c.s1Skip}</SkipButton>
+              {answer("privateContext", c.s1Placeholder(name), c.s1Alt)}
             </div>
           )}
 
@@ -235,16 +266,7 @@ export default function EmotionalBridge({
             <div>
               <Heading headingRef={headingRef}>{c.s2Q(name, multi)}</Heading>
               <Help>{c.s2Help}</Help>
-              <div className="mt-6">
-                <textarea
-                  rows={4}
-                  value={bridge.childExperience ?? ""}
-                  onChange={(e) => setBridge({ childExperience: e.target.value })}
-                  placeholder={c.s2Placeholder}
-                  className={box}
-                />
-              </div>
-              <SkipButton onClick={goNext}>{c.s2Skip}</SkipButton>
+              {answer("childExperience", c.s2Placeholder, c.s2Alt)}
             </div>
           )}
 
@@ -253,15 +275,7 @@ export default function EmotionalBridge({
             <div>
               <Heading headingRef={headingRef}>{c.s3Q(name, multi)}</Heading>
               <Help>{c.s3Help}</Help>
-              <div className="mt-6">
-                <textarea
-                  rows={4}
-                  value={bridge.intendedFeeling ?? ""}
-                  onChange={(e) => setBridge({ intendedFeeling: e.target.value })}
-                  placeholder={c.s3Placeholder}
-                  className={box}
-                />
-              </div>
+              {answer("intendedFeeling", c.s3Placeholder, c.s3Alt)}
             </div>
           )}
 
@@ -270,16 +284,7 @@ export default function EmotionalBridge({
             <div>
               <Heading headingRef={headingRef}>{c.s4Q}</Heading>
               <Help>{c.s4Help}</Help>
-              <div className="mt-6">
-                <textarea
-                  rows={4}
-                  value={bridge.sensitivities ?? ""}
-                  onChange={(e) => setBridge({ sensitivities: e.target.value })}
-                  placeholder={c.s4Placeholder}
-                  className={box}
-                />
-              </div>
-              <SkipButton onClick={goNext}>{c.s4Skip}</SkipButton>
+              {answer("sensitivities", c.s4Placeholder, c.s4Alt)}
             </div>
           )}
 
@@ -337,16 +342,5 @@ function Help({ children }: { children: React.ReactNode }) {
   );
 }
 
-function SkipButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button type="button" onClick={onClick} className={skipClass}>
-      {children}
-      <ArrowRight size={13} strokeWidth={1.75} className="rtl:-scale-x-100" />
-    </button>
-  );
-}
-
 const box =
   "w-full resize-none rounded-md border border-border-default bg-transparent px-4 py-3 font-sans text-[16px] leading-[1.6] text-text-primary outline-none transition-colors placeholder:text-text-muted focus:border-accent-primary";
-const skipClass =
-  "mt-3 inline-flex items-center gap-1.5 font-sans text-[13.5px] font-medium text-text-secondary outline-none transition-colors hover:text-text-primary focus-visible:underline";

@@ -271,10 +271,47 @@ export interface EmotionalBridge {
   /** Step 4 — themes TALIMOON should avoid stating openly or handle with
    *  extra care. */
   sensitivities?: string;
+  /** The alternative answers, one per step — each exclusive with its own
+   *  text field (see `setBridgeText` / `setBridgeAlternative`). UI state
+   *  only: never serialised, because an empty field already tells
+   *  production the same thing. */
+  noSituation?: boolean;
+  experienceUnsure?: boolean;
+  feelingTrusted?: boolean;
+  noSensitivities?: boolean;
   /** True once this child's section has been seen through to the end.
    *  The section is optional, so this can be true with every field
    *  left blank. */
   done?: boolean;
+}
+
+/** Each "Ko'ngil so'zlari" text field and its alternative answer. */
+export const BRIDGE_ALTERNATIVE = {
+  privateContext: "noSituation",
+  childExperience: "experienceUnsure",
+  intendedFeeling: "feelingTrusted",
+  sensitivities: "noSensitivities",
+} as const;
+export type BridgeTextField = keyof typeof BRIDGE_ALTERNATIVE;
+
+/** Typing an answer un-chooses that step's alternative. */
+export function setBridgeText(
+  b: EmotionalBridge,
+  field: BridgeTextField,
+  text: string,
+): EmotionalBridge {
+  return { ...b, [field]: text, [BRIDGE_ALTERNATIVE[field]]: false };
+}
+
+/** Choosing the alternative clears that step's text — never both. */
+export function setBridgeAlternative(
+  b: EmotionalBridge,
+  field: BridgeTextField,
+  on: boolean,
+): EmotionalBridge {
+  return on
+    ? { ...b, [field]: "", [BRIDGE_ALTERNATIVE[field]]: true }
+    : { ...b, [BRIDGE_ALTERNATIVE[field]]: false };
 }
 
 export interface ChildProfile {
@@ -298,6 +335,10 @@ export interface ChildProfile {
   /** Up to 3 primary interests — preset and custom answers side by
    *  side in one array (spec: they must have equal status). */
   interests?: InterestAnswer[];
+  /** "Nothing more to add" on the optional per-interest details screen.
+   *  Exclusive with every `interests[].detail` — UI state only, never
+   *  part of the order payload (empty details already mean the same). */
+  noInterestDetails?: boolean;
   /** The absorbing activity, in the adult's words (question 03). */
   favoriteActivity?: string;
   /** Set when the adult says there is no single absorbing activity. */

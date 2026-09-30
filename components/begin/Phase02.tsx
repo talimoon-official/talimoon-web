@@ -51,7 +51,7 @@ import { useFlowScroll } from "@/lib/order/useFlowScroll";
 import { JourneyProgress } from "./JourneyProgress";
 import { ChildWorld } from "./ChildWorld";
 import { SelectionTray } from "./SelectionTray";
-import { CheckRow } from "./CheckRow";
+import { AlternativeAnswer } from "./AlternativeAnswer";
 
 type Screen = "interests" | "deepen" | "activity" | "dream" | "child-done";
 const SCREENS: readonly Screen[] = ["interests", "deepen", "activity", "dream", "child-done"];
@@ -103,9 +103,6 @@ export default function Phase02({
   const [attempted, setAttempted] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
   const [customDraft, setCustomDraft] = useState("");
-  /** Purely a courtesy acknowledgment on the optional "deepen" screen —
-   *  it gates nothing, so it isn't persisted onto the child. */
-  const [detailsAcknowledged, setDetailsAcknowledged] = useState(false);
 
   const child = childrenIn[idx];
   const nextChild = childrenIn[idx + 1];
@@ -159,8 +156,20 @@ export default function Phase02({
   function removeInterest(id: string) {
     patch({ interests: removeAnswer(interests, id) });
   }
+  /** Typing a detail un-chooses "nothing more to add"; choosing it
+   *  clears every detail — the two are never stored together. */
   function setInterestDetail(id: string, detail: string) {
-    patch({ interests: interests.map((a) => (a.id === id ? { ...a, detail } : a)) });
+    patch({
+      interests: interests.map((a) => (a.id === id ? { ...a, detail } : a)),
+      noInterestDetails: false,
+    });
+  }
+  function setNoInterestDetails(on: boolean) {
+    patch(
+      on
+        ? { noInterestDetails: true, interests: interests.map((a) => ({ ...a, detail: "" })) }
+        : { noInterestDetails: false },
+    );
   }
 
   // ── validity per scene ────────────────────────────────────────
@@ -215,7 +224,6 @@ export default function Phase02({
       case "child-done":
         setIdx((i) => i + 1);
         setScreen("interests");
-        setDetailsAcknowledged(false);
         break;
     }
   }
@@ -395,15 +403,13 @@ export default function Phase02({
                       ))}
                     </div>
 
-                    <div className="mt-7">
-                      <CheckRow
-                        id="p2-deepen-ack"
-                        checked={detailsAcknowledged}
-                        onChange={setDetailsAcknowledged}
-                        label={c.q2SkipLabel}
-                        support={c.q2SkipSupport}
-                      />
-                    </div>
+                    <AlternativeAnswer
+                      id={`p2-no-details-${child.id}`}
+                      selected={!!child.noInterestDetails}
+                      onChange={setNoInterestDetails}
+                      label={c.q2NothingToAdd}
+                      locale={locale}
+                    />
                   </div>
                 )}
 
@@ -428,19 +434,19 @@ export default function Phase02({
                         aria-invalid={showError ? true : undefined}
                       />
                     </div>
-                    <div className="mt-3">
-                      <CheckRow
-                        id="p2-no-activity"
-                        checked={!!child.noFavoriteActivity}
-                        onChange={(checked) =>
-                          patch({
-                            noFavoriteActivity: checked,
-                            ...(checked ? { favoriteActivity: "" } : {}),
-                          })
-                        }
-                        label={c.q3None}
-                      />
-                    </div>
+                    <AlternativeAnswer
+                      id={`p2-no-activity-${child.id}`}
+                      selected={!!child.noFavoriteActivity}
+                      onChange={(checked) => {
+                        patch({
+                          noFavoriteActivity: checked,
+                          ...(checked ? { favoriteActivity: "" } : {}),
+                        });
+                        if (checked) setAttempted(false);
+                      }}
+                      label={c.q3NoneAnswer}
+                      locale={locale}
+                    />
                     <ErrorLine>{showError}</ErrorLine>
                   </div>
                 )}
@@ -483,7 +489,7 @@ export default function Phase02({
                             patch(reconcileDream("has-dream"));
                             setAttempted(false);
                           }}
-                          className="mt-3 inline-flex items-center gap-1.5 font-sans text-[13.5px] font-medium text-text-secondary hover:text-text-primary"
+                          className="mt-3 inline-flex min-h-[44px] items-center gap-1.5 font-sans text-[14.5px] font-medium text-text-secondary underline decoration-border-strong underline-offset-4 hover:text-text-primary"
                         >
                           {c.q4BackToDream}
                         </button>
@@ -516,18 +522,19 @@ export default function Phase02({
                             aria-invalid={showError ? true : undefined}
                           />
                         </div>
-                        <div className="mt-4">
-                          <CheckRow
-                            id="p2-no-dream"
-                            checked={false}
-                            onChange={(checked) => {
-                              if (!checked) return;
-                              patch(reconcileDream("not-yet"));
-                              setAttempted(false);
-                            }}
-                            label={c.q4NotYet}
-                          />
-                        </div>
+                        {/* Choosing this is a branch, not an end: the
+                            adult's own hope is asked next, on this screen. */}
+                        <AlternativeAnswer
+                          id={`p2-no-dream-${child.id}`}
+                          selected={false}
+                          onChange={(checked) => {
+                            if (!checked) return;
+                            patch(reconcileDream("not-yet"));
+                            setAttempted(false);
+                          }}
+                          label={c.q4NotYet}
+                          locale={locale}
+                        />
                         <ErrorLine>{showError}</ErrorLine>
                       </motion.div>
                     )}

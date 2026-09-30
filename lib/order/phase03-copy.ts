@@ -340,8 +340,12 @@ export interface Phase03Copy {
   q3CustomToggle: string;
   q3CustomPlaceholder: string;
   q3CustomHint: string;
+  /** ARCHIVE wording — printed into the order payload by `profileText`.
+   *  Never reword it for UI reasons; the card uses `q3NoneAnswer`. */
   q3None: string;
-  /** Shown under the exclusive "no concern" row (spec §20). */
+  /** The alternative-answer card, in the parent's own voice. */
+  q3NoneAnswer: string;
+  /** Shown under the card while behaviours are selected (spec §20). */
   q3NoneHelp: string;
   errGrowth: string;
 
@@ -399,7 +403,7 @@ const uz: Phase03Copy = {
   q2SectionLabel: "SIZ TANLAGAN JIHATLAR",
   q2Intro: "Endi har bir jihatni bir og‘iz aniqlashtiramiz — u qachon ko‘proq seziladi?",
   q2Placeholder: "Bir-ikki jumla yetarli…",
-  q2ItemNone: "Misol hozir xayolimga kelmadi",
+  q2ItemNone: "Hozircha misol esimga kelmadi",
   errExample:
     "Har bir jihat uchun bir misol yozing yoki “Misol hozir xayolimga kelmadi”ni belgilang.",
 
@@ -410,6 +414,7 @@ const uz: Phase03Copy = {
   q3CustomPlaceholder: "Masalan: yutqazsa tez xafa bo‘ladi, ertalab turishga erinadi...",
   q3CustomHint: "Bolaning o‘zini emas, odat yoki vaziyatni yozing.",
   q3None: "Alohida yaxshilashni istagan odat hozircha yo‘q",
+  q3NoneAnswer: "Hozircha bunday odati yo‘q",
   q3NoneHelp: "Buni tanlasangiz, yuqoridagi tanlovlar bekor qilinadi.",
   errGrowth: "Iltimos, birini tanlang yoki “Alohida yaxshilashni istagan odat hozircha yo‘q”ni belgilang.",
 
@@ -418,7 +423,7 @@ const uz: Phase03Copy = {
   q4ItemQuestion: "Bu holat ko‘proq qachon seziladi?",
   q4ItemPlaceholder:
     "Masalan: o‘yinda yutqazganda yoki xohlagan narsasi darrov bo‘lmaganda...",
-  q4ItemNone: "Aniq bir vaziyat yo‘q",
+  q4ItemNone: "Har xil paytda bo‘ladi",
 
   q5: (name) => `Hikoya orqali ${name.trim()}da qaysi qadriyatlarni yanada qo‘llab-quvvatlashni istardingiz?`,
   q5Help:
@@ -460,7 +465,7 @@ const en: Phase03Copy = {
   q2SectionLabel: "THE QUALITIES YOU CHOSE",
   q2Intro: "Now a line on each one — when does it show up most?",
   q2Placeholder: "A sentence or two is enough…",
-  q2ItemNone: "No example comes to mind right now",
+  q2ItemNone: "No example comes to mind yet",
   errExample:
     "For each quality, add an example or check “No example comes to mind right now”.",
 
@@ -471,6 +476,7 @@ const en: Phase03Copy = {
   q3CustomPlaceholder: "For example: gets upset when they lose, is reluctant to get up in the morning...",
   q3CustomHint: "Describe the habit or the situation, not the child.",
   q3None: "Nothing I'd like to work on in particular",
+  q3NoneAnswer: "Nothing I'd change right now",
   q3NoneHelp: "Choosing this clears the selections above.",
   errGrowth: "Please choose one, or select “Nothing I'd like to work on in particular”.",
 
@@ -479,7 +485,7 @@ const en: Phase03Copy = {
   q4ItemQuestion: "When does this tend to show up?",
   q4ItemPlaceholder:
     "For example: when they lose a game, or when something isn't available right away...",
-  q4ItemNone: "No particular situation",
+  q4ItemNone: "It happens at different times",
 
   q5: (name) => `Which values would you like the story to strengthen in ${name.trim()}?`,
   q5Help:
@@ -523,7 +529,7 @@ const ru: Phase03Copy = {
   q2SectionLabel: "ВЫБРАННЫЕ ВАМИ КАЧЕСТВА",
   q2Intro: "Теперь по строчке о каждом — когда оно проявляется чаще всего?",
   q2Placeholder: "Одного-двух предложений достаточно…",
-  q2ItemNone: "Пример сейчас не приходит на ум",
+  q2ItemNone: "Пока пример не вспоминается",
   errExample:
     "Для каждого качества добавьте пример или отметьте «Пример сейчас не приходит на ум».",
 
@@ -535,6 +541,7 @@ const ru: Phase03Copy = {
   q3CustomPlaceholder: "Например: расстраивается, когда проигрывает; неохотно встаёт по утрам...",
   q3CustomHint: "Опишите привычку или ситуацию, а не самого ребёнка.",
   q3None: "Нет ничего, над чем хотелось бы поработать особо",
+  q3NoneAnswer: "Сейчас ничего такого нет",
   q3NoneHelp: "Если выбрать это, отметки выше снимутся.",
   errGrowth:
     "Пожалуйста, выберите один пункт или отметьте «Нет ничего, над чем хотелось бы поработать особо».",
@@ -544,7 +551,7 @@ const ru: Phase03Copy = {
   q4ItemQuestion: "Когда это обычно проявляется?",
   q4ItemPlaceholder:
     "Например: когда проигрывает в игре или когда что-то нельзя получить сразу...",
-  q4ItemNone: "Нет конкретной ситуации",
+  q4ItemNone: "Бывает в разное время",
 
   q5: (name) =>
     `Какие ценности Вы хотели бы, чтобы история укрепила в ${name.trim()}?`,

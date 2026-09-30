@@ -5,8 +5,8 @@
  * ----------------------------------------------------------------
  * The single true binary on/off control for the order flow (add a
  * personal message, include other characters, add the closing-page
- * photo). NOT for "skip / none / I don't know" affordances — those
- * stay `CheckRow` checkboxes.
+ * photo). NOT for "none / I don't know" answers — those are the
+ * `AlternativeAnswer` card.
  *
  * DETERMINISTIC GEOMETRY (identical in OFF / ON / hover / focus /
  * disabled — nothing else moves):

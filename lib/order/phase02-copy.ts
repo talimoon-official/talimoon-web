@@ -207,8 +207,8 @@ export interface Phase02Copy {
    *  label (spec §12: "Bunda aynan nima X ga ko‘proq yoqadi?"). */
   q2ItemQuestion: (name: string) => string;
   q2Placeholder: string;
-  q2SkipLabel: string;
-  q2SkipSupport: string;
+  /** The alternative answer under the per-interest details. */
+  q2NothingToAdd: string;
 
   // Q3 — SEVIMLI MASHG‘ULOTI: WHAT does the child actually love DOING?
   //      Deliberately NOT "what about the interest attracts them" (that
@@ -219,7 +219,11 @@ export interface Phase02Copy {
   q3Help: string;
   q3Example: string;
   q3Placeholder: string;
+  /** ARCHIVE wording — printed into the order payload by `profileText`.
+   *  Never reword it for UI reasons; the card uses `q3NoneAnswer`. */
   q3None: string;
+  /** The alternative-answer card, in the parent's own voice. */
+  q3NoneAnswer: string;
   errActivity: string;
 
   // Q4 — ORZUSI: WHAT does the child dream of becoming? Answered
@@ -282,8 +286,7 @@ const uz: Phase02Copy = {
     "Masalan: qaysi turi, qanday xususiyati yoki undagi nima uning e’tiborini tortadi. (Futbol — o‘zi o‘ynash, futbolchilar yoki jamoalar; mashinalar — o‘ynash, chizish, markalari yoki modellari.)",
   q2ItemQuestion: (name) => `Bunda aynan nima ${name.trim()}ga ko‘proq yoqadi?`,
   q2Placeholder: "Bir necha so‘z bilan yozing...",
-  q2SkipLabel: "Asosiylarini esladik",
-  q2SkipSupport: "Boshqa muhim detal bo‘lmasa, shuni belgilang va davom eting.",
+  q2NothingToAdd: "Qo‘shimcha aytadigan gapim yo‘q",
 
   q3Label: "SEVIMLI MASHG‘ULOTI",
   q3: (name) => `${name.trim()} nima qilayotganda vaqtni ham unutib qo‘yadi?`,
@@ -293,6 +296,7 @@ const uz: Phase02Copy = {
     "Masalan: hovliga chiqib to‘p tepadi, konstruktor bilan uzoq o‘tiradi, rasm chizadi yoki bir narsani qayta-qayta yasab ko‘radi.",
   q3Placeholder: "Masalan: hovlida futbol o‘ynasa, vaqtni unutib qo‘yadi...",
   q3None: "Aniq bir mashg‘uloti yo‘q",
+  q3NoneAnswer: "Aniq bittasini ayta olmayman",
   errActivity: "Iltimos, yozing yoki “Aniq bir mashg‘uloti yo‘q”ni tanlang.",
 
   q4Label: "ORZUSI",
@@ -350,8 +354,7 @@ const en: Phase02Copy = {
     "For example: which kind, what particular trait, or exactly what catches their attention. (Football — playing it, the players, or the teams; cars — playing, drawing, the brands or models.)",
   q2ItemQuestion: (name) => `What exactly about this does ${name.trim()} enjoy most?`,
   q2Placeholder: "A few words is enough...",
-  q2SkipLabel: "We've got the main ones",
-  q2SkipSupport: "If there's nothing else important, check this and continue.",
+  q2NothingToAdd: "Nothing more to add",
 
   q3Label: "FAVOURITE ACTIVITY",
   q3: (name) => `What does ${name.trim()} do that makes them lose all track of time?`,
@@ -361,6 +364,7 @@ const en: Phase02Copy = {
     "For example: goes out to kick a ball, sits for ages with building blocks, draws, or makes the same thing over and over.",
   q3Placeholder: "For example: playing football in the yard, they lose all track of time...",
   q3None: "No single activity like that",
+  q3NoneAnswer: "I can't name just one",
   errActivity: "Please write something, or choose “No single activity like that”.",
 
   q4Label: "DREAM",
@@ -419,8 +423,7 @@ const ru: Phase02Copy = {
     "Например: какой именно вид, какая черта или что конкретно привлекает внимание. (Футбол — играть самому, футболисты или команды; машины — играть, рисовать, марки или модели.)",
   q2ItemQuestion: (name) => `Что именно в этом нравится ${name.trim()} больше всего?`,
   q2Placeholder: "Несколько слов...",
-  q2SkipLabel: "Главное мы отметили",
-  q2SkipSupport: "Если больше нет важных деталей, отметьте это и продолжайте.",
+  q2NothingToAdd: "Мне нечего добавить",
 
   q3Label: "ЛЮБИМОЕ ЗАНЯТИЕ",
   q3: (name) => `За каким занятием ${name.trim()} забывает о времени?`,
@@ -430,6 +433,7 @@ const ru: Phase02Copy = {
     "Например: выбегает во двор погонять мяч, подолгу сидит с конструктором, рисует или снова и снова мастерит одно и то же.",
   q3Placeholder: "Например: играя в футбол во дворе, забывает о времени...",
   q3None: "Нет одного такого занятия",
+  q3NoneAnswer: "Не могу выделить что-то одно",
   errActivity: "Пожалуйста, напишите или выберите «Нет одного такого занятия».",
 
   q4Label: "МЕЧТА",

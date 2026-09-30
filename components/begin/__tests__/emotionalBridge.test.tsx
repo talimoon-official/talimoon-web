@@ -96,23 +96,98 @@ describe("EmotionalBridge — KO'NGIL SO'ZLARI flow", () => {
     }
   });
 
-  it("is fully skippable and guilt-free: every step reaches completion without input", async () => {
+  it("every step offers a ready answer card; choosing each one reaches completion", async () => {
     const u = userEvent.setup();
     const onComplete = vi.fn();
     render(<Harness onComplete={onComplete} />);
 
     await next(u); // intro -> situation
-    await u.click(screen.getByRole("button", { name: "Alohida vaziyat yo‘q" }));
-    // experience
-    await u.click(screen.getByRole("button", { name: "Bilmayman yoki aniq ayta olmayman" }));
-    // feeling (no skip button — Continue with empty textarea)
-    await next(u);
-    // sensitivity
-    await u.click(screen.getByRole("button", { name: "Alohida cheklov yo‘q" }));
-    // done
+    for (const label of [
+      "Bunday vaziyat yo‘q",
+      "Aniq ayta olmayman",
+      "Bu borada sizga ishonaman",
+      "Bu borada xavotirim yo‘q",
+    ]) {
+      expect(screen.getByText("YOKI")).toBeInTheDocument();
+      const card = screen.getByRole("checkbox", { name: label });
+      expect(card).not.toBeChecked();
+      // the whole card (its visible text) is the target, not a tiny box
+      await u.click(screen.getByText(label));
+      expect(card).toBeChecked();
+      await next(u); // choosing never auto-advances — Continue does
+    }
     expect(screen.getByText(/Rahmat\./)).toBeInTheDocument();
     await next(u);
     expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it("text and the ready answer are exclusive, and Back keeps the choice", async () => {
+    const u = userEvent.setup();
+    const seen: ChildProfile[][] = [];
+    function Capture() {
+      const [k, setK] = useState<ChildProfile[]>([makeChild()]);
+      seen.push(k);
+      return (
+        <LanguageProvider>
+          <EmotionalBridge
+            childrenIn={k}
+            onPatchChild={(id, p) => setK((ks) => ks.map((c) => (c.id === id ? { ...c, ...p } : c)))}
+            onComplete={() => {}}
+            onBack={() => {}}
+          />
+        </LanguageProvider>
+      );
+    }
+    render(<Capture />);
+    const eb = () => seen[seen.length - 1][0].emotionalBridge ?? {};
+
+    await next(u); // situation
+    const text = screen.getByRole("textbox");
+    const card = screen.getByRole("checkbox", { name: "Bunday vaziyat yo‘q" });
+    await u.type(text, "Yangi maktab");
+    await u.click(card);
+    expect(card).toBeChecked();
+    expect(text).toHaveValue("");
+    expect(eb()).toMatchObject({ privateContext: "", noSituation: true });
+
+    await u.type(text, "Aslida bor");
+    expect(card).not.toBeChecked();
+    expect(eb()).toMatchObject({ privateContext: "Aslida bor", noSituation: false });
+
+    // keyboard: Space on the focused card selects it
+    card.focus();
+    await u.keyboard(" ");
+    expect(card).toBeChecked();
+    expect(eb().privateContext).toBe("");
+
+    await next(u); // experience
+    await u.click(screen.getByRole("button", { name: /Orqaga/ }));
+    expect(screen.getByRole("checkbox", { name: "Bunday vaziyat yo‘q" })).toBeChecked();
+  });
+
+  it("restores a stored ready-answer choice (persistent draft) as selected", async () => {
+    render(
+      <LanguageProvider>
+        <EmotionalBridge
+          childrenIn={[makeChild({ emotionalBridge: { noSensitivities: true } })]}
+          onPatchChild={() => {}}
+          onComplete={() => {}}
+          onBack={() => {}}
+          resume={{ idx: 0, screen: "sensitivity" }}
+        />
+      </LanguageProvider>,
+    );
+    expect(screen.getByRole("checkbox", { name: "Bu borada xavotirim yo‘q" })).toBeChecked();
+    expect(screen.getByRole("textbox")).toHaveValue("");
+  });
+
+  it("the old weak skip links are gone", async () => {
+    const u = userEvent.setup();
+    render(<Harness />);
+    await next(u);
+    for (const old of ["Alohida vaziyat yo‘q", "Bilmayman yoki aniq ayta olmayman", "Alohida cheklov yo‘q"]) {
+      expect(screen.queryByRole("button", { name: old })).not.toBeInTheDocument();
+    }
   });
 
   it("captures the four separate answers on the child (distance / abroad path)", async () => {

@@ -108,7 +108,7 @@ describe("KO'NGIL SO'ZLARI copy — psychological safety", () => {
         expect(s2).not.toMatch(/nima deb o['’]ylaydi\b/);
         expect(s2).not.toMatch(/what does .* think\b/);
         // an explicit "I don't know" escape hatch exists
-        expect(c.s2Skip.toLowerCase()).toMatch(/bilmayman|don['’]t know|не знаю/);
+        expect(c.s2Alt.toLowerCase()).toMatch(/ayta olmayman|can['’]t say|не могу сказать/);
       });
 
       it("does not duplicate Esdalik Sahifasi (no request for a message / wish to the child)", () => {
@@ -121,12 +121,13 @@ describe("KO'NGIL SO'ZLARI copy — psychological safety", () => {
         expect(text).not.toContain("what would you say to them");
       });
 
-      it("keeps skip options on steps 1, 2 and 4 (guilt-free, no forced disclosure)", () => {
-        expect(c.s1Skip.trim().length).toBeGreaterThan(0);
-        expect(c.s2Skip.trim().length).toBeGreaterThan(0);
-        expect(c.s4Skip.trim().length).toBeGreaterThan(0);
-        // step 1 skip reads as "nothing in particular", not "I refuse"
-        expect(c.s1Skip.toLowerCase()).toMatch(/yo[‘'’ʻ`]q|nothing|ничего/);
+      it("offers an alternative answer on every step (guilt-free, no forced disclosure)", () => {
+        expect(c.s1Alt.trim().length).toBeGreaterThan(0);
+        expect(c.s2Alt.trim().length).toBeGreaterThan(0);
+        expect(c.s3Alt.trim().length).toBeGreaterThan(0);
+        expect(c.s4Alt.trim().length).toBeGreaterThan(0);
+        // step 1 reads as "nothing in particular", not "I refuse"
+        expect(c.s1Alt.toLowerCase()).toMatch(/yo[‘'’ʻ`]q|nothing|нет/);
       });
 
       it("Step 3 asks for an emotional direction, not a quote to the child", () => {
@@ -157,16 +158,16 @@ describe("KO'NGIL SO'ZLARI copy — psychological safety", () => {
           "introHeading",
           "trustNote",
           "s1Help",
-          "s1Skip",
+          "s1Alt",
           "s2Help",
           "s2Placeholder",
-          "s2Skip",
+          "s2Alt",
           "s3Help",
           "s3Placeholder",
           "s4Q",
           "s4Help",
           "s4Placeholder",
-          "s4Skip",
+          "s4Alt",
           "ackHeading",
           "privacyExplanation",
         ];
