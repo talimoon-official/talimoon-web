@@ -1,24 +1,21 @@
 /**
  * The unfinished order, kept on THIS DEVICE until it is sent.
  *
- * TALIMOON's form is long (and carries 3–5 photos per child), so losing it to
- * a reload, a closed PWA or the OS evicting a backgrounded tab is not
- * acceptable. The draft lives in IndexedDB — not scattered localStorage keys
- * — because it must hold File objects (photos, the voice note) as-is, by
- * structured clone, without base64 blow-up. Where IndexedDB is unavailable
- * (some in-app browsers, private modes) it degrades to tab memory.
+ * TALIMOON's form is long, so losing the typed answers to a reload, a closed
+ * PWA or the OS evicting a backgrounded tab is not acceptable. The draft
+ * lives in IndexedDB (one structured record per flow; tab memory where
+ * IndexedDB is unavailable — some in-app browsers, private modes).
  *
- * TWO records per flow, with different retention:
+ * TEXT + CHOICES + PROGRESS ONLY. Photos, voice notes and any other file are
+ * NEVER written here (product decision, 2026-10-01): after a later resume
+ * the form asks for the required files again (components/begin/orderDraft
+ * `resumeStepFor`). The record is kept 7 days from the LAST TIME THE
+ * CUSTOMER WORKED ON THE ORDER (`savedAt`, refreshed on every debounced
+ * save); `sweepExpiredDrafts()` enforces that on every app start.
  *
- *   "<flow>"        the answers + form position        kept 7 days
- *   "<flow>:media"  photos + the voice note (Blobs)    kept 48 hours
- *
- * Both clocks run from the LAST TIME THE CUSTOMER WORKED ON THE ORDER (the
- * answers record's `savedAt`, refreshed on every debounced save). So an
- * order in progress never loses its photos mid-way, while photos of an
- * abandoned order leave the device 48 hours after it was abandoned — the
- * answers 7 days after. `sweepExpiredDrafts()` enforces this on every app
- * start, not only when the form is reopened.
+ * Earlier builds kept a separate "<flow>:media" record (photos + voice, 48h).
+ * It is no longer written; any such record still on a device is deleted on
+ * the next read / sweep / clear.
  *
  * No encryption: any key this same-origin app could read back would sit
  * next to the data and guard nothing against the only realistic attacker
@@ -27,9 +24,8 @@
  *
  * WHAT goes in is decided by the caller's explicit allowlist
  * (components/begin/orderDraft.ts) — never the whole component state. No
- * capability / payment / resume token, payment code or signature is ever
- * written here. Media Blobs are never logged, never put in URLs, in
- * localStorage/sessionStorage or in any report — only in the media record.
+ * capability / payment / resume token, payment code, signature, consent or
+ * file is ever written here.
  *
  * A record of another schema version / flow, or past its age, is DELETED on
  * read and treated as absent — an old draft can never crash a newer form.
@@ -37,17 +33,17 @@
 
 /** Bump when the persisted shape changes incompatibly. Old records are then
  *  discarded (or migrated in `readDraft`, if a migration is written).
- *  v2: media split into its own record with a 48h retention. */
+ *  v2: answers record carries a count-only media manifest. (Unchanged when
+ *  media stopped being persisted: v2 answers records stay valid.) */
 export const DRAFT_SCHEMA_VERSION = 2;
 
 /** Answers + position: deleted 7 days after the last activity. */
 export const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-/** Photos + voice note: deleted 48 hours after the last activity. */
-export const MEDIA_MAX_AGE_MS = 48 * 60 * 60 * 1000;
 
 export type DraftFlow = "personalized-book";
 const FLOWS: readonly DraftFlow[] = ["personalized-book"];
-const mediaKey = (flow: DraftFlow) => `${flow}:media`;
+/** Written by builds before 2026-10-01 only; now just deleted. */
+export const legacyMediaKey = (flow: DraftFlow) => `${flow}:media`;
 
 export interface DraftEnvelope<T> {
   v: number;
@@ -154,51 +150,26 @@ function validEnvelope(raw: unknown, flow: DraftFlow): raw is DraftEnvelope<unkn
   );
 }
 
-export interface DraftRead<T, M> {
-  payload: T;
-  /** undefined when there is no media record, or it has expired (and was
-   *  deleted) — the caller compares with what the answers say existed */
-  media: M | undefined;
-  /** the media record existed but was past MEDIA_MAX_AGE_MS */
-  mediaExpired: boolean;
-}
-
-export async function readDraft<T, M = unknown>(
-  flow: DraftFlow,
-  now = Date.now(),
-): Promise<DraftRead<T, M> | undefined> {
+/**
+ * Reads the answers record. Expired / foreign records are deleted. A legacy
+ * media record (older builds) is always deleted — media is never restored.
+ */
+export async function readDraft<T>(flow: DraftFlow, now = Date.now()): Promise<T | undefined> {
   const s = defaultStorage();
   let raw: unknown;
-  let rawMedia: unknown;
   try {
     raw = await s.get(flow);
-    rawMedia = await s.get(mediaKey(flow));
+    if ((await s.get(legacyMediaKey(flow))) != null) await s.delete(legacyMediaKey(flow)).catch(() => {});
   } catch {
     return undefined;
   }
-  if (raw == null) {
-    // media without answers is an orphan: never keep it
-    if (rawMedia != null) await s.delete(mediaKey(flow)).catch(() => {});
-    return undefined;
-  }
+  if (raw == null) return undefined;
   if (!validEnvelope(raw, flow) || now - raw.savedAt > MAX_AGE_MS) {
     // incompatible version, foreign shape or expired: discard all, never guess
     await clearDraft(flow);
     return undefined;
   }
-  let media: M | undefined;
-  let mediaExpired = false;
-  if (rawMedia != null) {
-    if (!validEnvelope(rawMedia, flow)) {
-      await s.delete(mediaKey(flow)).catch(() => {});
-    } else if (now - raw.savedAt > MEDIA_MAX_AGE_MS) {
-      mediaExpired = true;
-      await s.delete(mediaKey(flow)).catch(() => {});
-    } else {
-      media = rawMedia.payload as M;
-    }
-  }
-  return { payload: raw.payload as T, media, mediaExpired };
+  return raw.payload as T;
 }
 
 /** Writes the answers record (refreshing the activity clock). */
@@ -207,26 +178,16 @@ export async function writeDraft<T>(flow: DraftFlow, payload: T): Promise<void> 
   await defaultStorage().put(flow, env);
 }
 
-/** Writes (or, with null, deletes) the media record. */
-export async function writeDraftMedia<M>(flow: DraftFlow, media: M | null): Promise<void> {
-  if (media == null) {
-    await defaultStorage().delete(mediaKey(flow));
-    return;
-  }
-  const env: DraftEnvelope<M> = { v: DRAFT_SCHEMA_VERSION, flow, savedAt: Date.now(), payload: media };
-  await defaultStorage().put(mediaKey(flow), env);
-}
-
-/** Deletes the answers AND the media of a flow. */
+/** Deletes the draft of a flow (and any legacy media record). */
 export async function clearDraft(flow: DraftFlow): Promise<void> {
   const s = defaultStorage();
-  await Promise.all([s.delete(flow).catch(() => {}), s.delete(mediaKey(flow)).catch(() => {})]);
+  await Promise.all([s.delete(flow).catch(() => {}), s.delete(legacyMediaKey(flow)).catch(() => {})]);
 }
 
 /**
- * Enforces both retention windows without the form being opened: run once
- * per app start. Reading applies every rule (expired answers → everything
- * deleted; expired media → media deleted; orphan media → deleted).
+ * Enforces the retention window without the form being opened: run once per
+ * app start. Reading applies every rule (expired → deleted; legacy media
+ * record → deleted).
  */
 export async function sweepExpiredDrafts(now = Date.now()): Promise<void> {
   for (const flow of FLOWS) await readDraft(flow, now).catch(() => {});

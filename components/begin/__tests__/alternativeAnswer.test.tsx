@@ -11,7 +11,7 @@ import Phase02 from "../Phase02";
 import Phase03 from "../Phase03";
 import { emptyForm, type FormData } from "../PersonalizedBookOrderForm";
 import { STEPS } from "../orderFormData";
-import { restoreOrderDraft, splitMedia, toPersisted, type OrderDraft } from "../orderDraft";
+import { restoreOrderDraft, stripMedia, toPersisted, type OrderDraft } from "../orderDraft";
 import type { SubPosition } from "../flowPosition";
 import type { ChildProfile } from "@/lib/order/types";
 import { phase02Copy } from "@/lib/order/phase02-copy";
@@ -361,13 +361,13 @@ describe("draft & payload compatibility", () => {
       marketTouched: false,
       phase01Seeded: true,
     };
-    const { text, media, manifest } = splitMedia(toPersisted(f));
-    return { payload: { ...draft, data: text, media: manifest }, media };
+    const { text, manifest } = stripMedia(toPersisted(f));
+    return { payload: { ...draft, data: text, media: manifest } };
   }
 
   it("every ready-answer choice survives a save → restore round trip", () => {
     const s = stored([child]);
-    const r = restoreOrderDraft(JSON.parse(JSON.stringify(s.payload)), emptyForm(), STEPS.length, s.media)!;
+    const r = restoreOrderDraft(JSON.parse(JSON.stringify(s.payload)), emptyForm(), STEPS.length)!;
     expect(r.data.children[0]).toMatchObject({
       noInterestDetails: true,
       noFavoriteActivity: true,
@@ -384,7 +384,7 @@ describe("draft & payload compatibility", () => {
       interests: [{ id: "football", source: "preset", detail: "Darvozabon bo‘lish" }],
     };
     const s = stored([typed]);
-    const r = restoreOrderDraft(JSON.parse(JSON.stringify(s.payload)), emptyForm(), STEPS.length, s.media)!;
+    const r = restoreOrderDraft(JSON.parse(JSON.stringify(s.payload)), emptyForm(), STEPS.length)!;
     const c = r.data.children[0]!;
     expect(c.interests![0]!.detail).toBe("Darvozabon bo‘lish");
     render(<Kids Comp={Phase02} initial={[c]} resume={{ idx: 0, screen: "deepen" }} />);
@@ -396,7 +396,7 @@ describe("draft & payload compatibility", () => {
     const old: ChildProfile = { ...child, emotionalBridge: { privateContext: "Yangi maktab", done: true } };
     delete old.noInterestDetails;
     const s = stored([old]);
-    const r = restoreOrderDraft(JSON.parse(JSON.stringify(s.payload)), emptyForm(), STEPS.length, s.media)!;
+    const r = restoreOrderDraft(JSON.parse(JSON.stringify(s.payload)), emptyForm(), STEPS.length)!;
     const c = r.data.children[0]!;
     expect(c.emotionalBridge).toEqual({ privateContext: "Yangi maktab", done: true });
     expect(c.noFavoriteActivity).toBe(true); // the old CheckRow flags keep their keys

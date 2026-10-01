@@ -22,7 +22,6 @@ import {
   registerDraftFlusher,
   setDraftStorage,
   writeDraft,
-  writeDraftMedia,
 } from "@/lib/order/formDraft";
 
 let reload: ReturnType<typeof vi.fn<() => void>>;
@@ -87,13 +86,10 @@ describe("controlled reload", () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
-  it("never deletes the order draft or its media", async () => {
+  it("never deletes the order draft", async () => {
     await writeDraft("personalized-book", { phase: "steps" });
-    await writeDraftMedia("personalized-book", { photos: ["p"] });
     await safeReload("stale_build_recovery", "chunk:1");
-    const r = await readDraft("personalized-book");
-    expect(r?.payload).toEqual({ phase: "steps" });
-    expect(r?.media).toEqual({ photos: ["p"] });
+    expect(await readDraft("personalized-book")).toEqual({ phase: "steps" });
   });
 
   it("waits while an order / payment is being sent, then reloads once", async () => {

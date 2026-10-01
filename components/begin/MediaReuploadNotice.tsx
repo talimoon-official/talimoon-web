@@ -1,11 +1,11 @@
 "use client";
 
 /**
- * Shown when an unfinished order was restored but some of its files are no
- * longer on the device: photos and the voice note are kept for only 48
- * hours after the customer last worked on the order (the answers for 7
- * days). The answers and the place in the form are back — only the listed
- * files need adding again. Nothing here asks the customer to start over.
+ * Shown when an unfinished order was resumed: photos and the voice note are
+ * NEVER stored with the draft (only text, choices and progress are), so the
+ * form reopened on the earliest step whose required files are missing, with
+ * every answer back. Only the listed files need adding again — calm, not an
+ * error, and nothing here asks the customer to start over.
  *
  *   variant "banner" — once, above the current screen (dismissible)
  *   variant "inline" — on the step that owns the files, until re-added
@@ -24,7 +24,12 @@ type Loc = "uz" | "en" | "ru";
 export const REUPLOAD_COPY: Record<
   Loc,
   {
-    title: string;
+    /** banner title when only photos are missing */
+    titlePhotos: string;
+    /** … only the voice note */
+    titleVoice: string;
+    /** … both kinds */
+    titleMixed: string;
     body: string;
     inlineTitle: string;
     childPhotos: (name: string, n: number) => string;
@@ -40,8 +45,10 @@ export const REUPLOAD_COPY: Record<
   }
 > = {
   uz: {
-    title: "Javoblaringiz saqlangan. Faqat ayrim fayllarni qayta yuklash kerak.",
-    body: "Formadagi joyingiz ham saqlangan. Xavfsizlik uchun suratlar va ovozli xabar bu qurilmada faqat 48 soat saqlanadi, shuning uchun faqat quyidagilarni qayta yuklang:",
+    titlePhotos: "Javoblaringiz saqlangan. Davom etish uchun rasmlarni qayta yuklang.",
+    titleVoice: "Javoblaringiz saqlangan. Davom etish uchun ovozli faylni qayta qo‘shing.",
+    titleMixed: "Javoblaringiz saqlangan. Faqat kerakli fayllarni qayta yuklang.",
+    body: "Maxfiylik uchun suratlar va ovozli xabar qurilmada saqlanmaydi. Keyingi javoblaringiz ham joyida. Qayta qo‘shish kerak:",
     inlineTitle: "Qayta qo‘shish kerak",
     childPhotos: (name, n) => `${name || "Farzandingiz"} suratlari (${n} ta)`,
     characterPhotos: (name, n) => `${name || "Qo‘shimcha qahramon"} suratlari (${n} ta)`,
@@ -54,8 +61,10 @@ export const REUPLOAD_COPY: Record<
     unreadableBody: "Javoblaringiz saqlangan. Faqat quyidagini qayta tanlang:",
   },
   en: {
-    title: "Your answers are saved. Only a few files need uploading again.",
-    body: "Your place in the form is saved too. For your privacy, photos and the voice note are kept on this device for only 48 hours, so only these need adding again:",
+    titlePhotos: "Your answers are saved. Please upload the photos again to continue.",
+    titleVoice: "Your answers are saved. Please add the voice note again to continue.",
+    titleMixed: "Your answers are saved. Just upload the needed files again.",
+    body: "For your privacy, photos and voice notes are not stored on this device. Your later answers are all still here. To add again:",
     inlineTitle: "Needs adding again",
     childPhotos: (name, n) => `${name || "Your child"}’s photos (${n})`,
     characterPhotos: (name, n) => `${name || "Additional character"}’s photos (${n})`,
@@ -68,8 +77,10 @@ export const REUPLOAD_COPY: Record<
     unreadableBody: "Your answers are saved. Only choose this again:",
   },
   ru: {
-    title: "Ваши ответы сохранены. Нужно заново загрузить лишь несколько файлов.",
-    body: "Ваше место в форме тоже сохранено. Ради конфиденциальности фото и голосовое сообщение хранятся на этом устройстве только 48 часов, поэтому заново нужно добавить только это:",
+    titlePhotos: "Ваши ответы сохранены. Чтобы продолжить, загрузите фото заново.",
+    titleVoice: "Ваши ответы сохранены. Чтобы продолжить, добавьте голосовое сообщение заново.",
+    titleMixed: "Ваши ответы сохранены. Загрузите заново только нужные файлы.",
+    body: "Ради конфиденциальности фото и голосовые сообщения не хранятся на устройстве. Остальные ответы на месте. Добавить заново:",
     inlineTitle: "Нужно добавить заново",
     childPhotos: (name, n) => `Фото: ${name || "ребёнок"} (${n})`,
     characterPhotos: (name, n) => `Фото: ${name || "дополнительный герой"} (${n})`,
@@ -107,6 +118,14 @@ export function unreadableTitle(gaps: MediaGap[], loc: Loc): string | null {
   if (bad.every((g) => g.kind === "voice")) return c.unreadableVoice;
   if (bad.every((g) => g.kind !== "voice")) return c.unreadablePhoto;
   return c.unreadableFile;
+}
+
+/** The calm resume title: photos, the voice note, or both. */
+export function resumeTitle(gaps: MediaGap[], loc: Loc): string {
+  const c = REUPLOAD_COPY[loc];
+  if (gaps.every((g) => g.kind === "voice")) return c.titleVoice;
+  if (gaps.every((g) => g.kind !== "voice")) return c.titlePhotos;
+  return c.titleMixed;
 }
 
 export function MediaReuploadNotice({
@@ -158,7 +177,7 @@ export function MediaReuploadNotice({
       >
         <ImagePlus size={17} strokeWidth={1.75} className="mt-0.5 shrink-0 text-accent-primary" aria-hidden="true" />
         <div className="min-w-0 flex-1">
-          <p className="font-medium">{unreadable ?? c.title}</p>
+          <p className="font-medium">{unreadable ?? resumeTitle(gaps, loc)}</p>
           <p className="mt-1 text-text-secondary">{unreadable ? c.unreadableBody : c.body}</p>
           {list}
         </div>

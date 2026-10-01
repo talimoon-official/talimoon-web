@@ -496,6 +496,8 @@ export function emptyAdditionalCharacter(): AdditionalCharacter {
 
 /** Minimum reference photos per additional character (mirrors the
  *  main-child photo minimum). */
+/** Every child needs at least this many photos (the photos step gate). */
+export const MIN_CHILD_PHOTOS = 3;
 export const MIN_CHARACTER_PHOTOS = 2;
 /** Per-character upper bound — keeps the existing global upload ceiling
  *  intact while still allowing more than the minimum. */

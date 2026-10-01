@@ -3,15 +3,14 @@ import { IDBFactory } from "fake-indexeddb";
 import {
   DRAFT_SCHEMA_VERSION,
   MAX_AGE_MS,
-  MEDIA_MAX_AGE_MS,
   clearDraft,
+  legacyMediaKey,
   indexedDbStorage,
   memoryStorage,
   readDraft,
   setDraftStorage,
   sweepExpiredDrafts,
   writeDraft,
-  writeDraftMedia,
   type DraftStorage,
 } from "../formDraft";
 import { consumeReturnedToMenu, markReturnedToMenu } from "../menuReturn";
@@ -28,84 +27,66 @@ function withIdb(idb = new IDBFactory()): DraftStorage {
   return s;
 }
 
-describe("retention windows", () => {
-  it("are 7 days for answers and 48 hours for media", () => {
+describe("retention window", () => {
+  it("is 7 days for the (text-only) draft", () => {
     expect(MAX_AGE_MS).toBe(7 * DAY);
-    expect(MEDIA_MAX_AGE_MS).toBe(48 * HOUR);
   });
 });
 
-describe("persistent draft store (IndexedDB)", () => {
-  it("round-trips the answers record and the separate media record", async () => {
-    withIdb();
-    await writeDraft(FLOW, { phase: "world" });
-    await writeDraftMedia(FLOW, { photos: ["p1"] });
-    expect(await readDraft(FLOW)).toEqual({ payload: { phase: "world" }, media: { photos: ["p1"] }, mediaExpired: false });
-  });
+/** what builds before 2026-10-01 left on devices: a separate media record */
+async function putLegacyMedia(s: DraftStorage) {
+  await s.put(legacyMediaKey(FLOW), { v: DRAFT_SCHEMA_VERSION, flow: FLOW, savedAt: Date.now(), payload: { photos: ["p1"] } });
+}
 
-  it("media survives a restart within 48 hours (new connection, 47h later)", async () => {
+describe("persistent draft store (IndexedDB)", () => {
+  it("round-trips the answers record across a restart", async () => {
     const idb = new IDBFactory();
     withIdb(idb);
     await writeDraft(FLOW, { step: 4 });
-    await writeDraftMedia(FLOW, { photos: ["p1", "p2"] });
     withIdb(idb); // app killed + reopened
-    const r = await readDraft(FLOW, Date.now() + 47 * HOUR);
-    expect(r?.payload).toEqual({ step: 4 });
-    expect(r?.media).toEqual({ photos: ["p1", "p2"] });
-    expect(r?.mediaExpired).toBe(false);
+    expect(await readDraft(FLOW, Date.now() + 6 * DAY)).toEqual({ step: 4 });
   });
 
-  it("after 48h the media is deleted while the answers survive (up to 7 days)", async () => {
+  it("answers are deleted after 7 days of inactivity", async () => {
     const s = withIdb();
     await writeDraft(FLOW, { step: 4 });
-    await writeDraftMedia(FLOW, { photos: ["p1"] });
-    const r = await readDraft(FLOW, Date.now() + 49 * HOUR);
-    expect(r?.payload).toEqual({ step: 4 });
-    expect(r?.media).toBeUndefined();
-    expect(r?.mediaExpired).toBe(true);
-    expect(await s.get(`${FLOW}:media`)).toBeUndefined(); // really gone
-    // the answers are still there on day 6 …
-    expect((await readDraft(FLOW, Date.now() + 6 * DAY))?.payload).toEqual({ step: 4 });
-    // … and gone after day 7
     expect(await readDraft(FLOW, Date.now() + 7 * DAY + HOUR)).toBeUndefined();
     expect(await s.get(FLOW)).toBeUndefined();
   });
 
-  it("both clocks run from the last activity: working on the order keeps its photos", async () => {
+  it("a legacy media record (older builds) is deleted on read; the answers survive", async () => {
     const s = withIdb();
-    await writeDraftMedia(FLOW, { photos: ["p1"] });
-    // media written 3 days ago, but the customer saved answers just now
-    const env = (await s.get(`${FLOW}:media`)) as { savedAt: number };
-    await s.put(`${FLOW}:media`, { ...env, savedAt: Date.now() - 3 * DAY });
-    await writeDraft(FLOW, { step: 5 });
-    expect((await readDraft(FLOW))?.media).toEqual({ photos: ["p1"] });
+    await writeDraft(FLOW, { step: 4 });
+    await putLegacyMedia(s);
+    expect(await readDraft(FLOW)).toEqual({ step: 4 });
+    expect(await s.get(legacyMediaKey(FLOW))).toBeUndefined();
   });
 
-  it("the app-start sweep enforces retention without the form being opened", async () => {
+  it("the app-start sweep enforces retention and removes legacy media", async () => {
     const s = withIdb();
     await writeDraft(FLOW, { step: 1 });
-    await writeDraftMedia(FLOW, { photos: ["p1"] });
-    await sweepExpiredDrafts(Date.now() + 49 * HOUR);
-    expect(await s.get(`${FLOW}:media`)).toBeUndefined();
+    await putLegacyMedia(s);
+    await sweepExpiredDrafts();
+    expect(await s.get(legacyMediaKey(FLOW))).toBeUndefined();
     expect(await s.get(FLOW)).toBeDefined();
     await sweepExpiredDrafts(Date.now() + 8 * DAY);
     expect(await s.get(FLOW)).toBeUndefined();
   });
 
-  it("orphan media (no answers record) is deleted", async () => {
+  it("orphan legacy media (no answers record) is deleted", async () => {
     const s = withIdb();
-    await writeDraftMedia(FLOW, { photos: ["p1"] });
+    await putLegacyMedia(s);
     expect(await readDraft(FLOW)).toBeUndefined();
-    expect(await s.get(`${FLOW}:media`)).toBeUndefined();
+    expect(await s.get(legacyMediaKey(FLOW))).toBeUndefined();
   });
 
   it("an incompatible schema version fails safely: absent + everything deleted", async () => {
     const s = withIdb();
     await s.put(FLOW, { v: DRAFT_SCHEMA_VERSION + 1, flow: FLOW, savedAt: Date.now(), payload: { x: 1 } });
-    await writeDraftMedia(FLOW, { photos: ["p1"] });
+    await putLegacyMedia(s);
     await expect(readDraft(FLOW)).resolves.toBeUndefined();
     expect(await s.get(FLOW)).toBeUndefined();
-    expect(await s.get(`${FLOW}:media`)).toBeUndefined();
+    expect(await s.get(legacyMediaKey(FLOW))).toBeUndefined();
   });
 
   it("the previous (v1) single-record format is discarded, never half-read", async () => {
@@ -122,13 +103,13 @@ describe("persistent draft store (IndexedDB)", () => {
     expect(await s.get(FLOW)).toBeUndefined();
   });
 
-  it("clear removes the answers AND the media", async () => {
+  it("clear removes the draft (and any legacy media)", async () => {
     const s = withIdb();
     await writeDraft(FLOW, { step: 1 });
-    await writeDraftMedia(FLOW, { photos: ["p1"] });
+    await putLegacyMedia(s);
     await clearDraft(FLOW);
     expect(await s.get(FLOW)).toBeUndefined();
-    expect(await s.get(`${FLOW}:media`)).toBeUndefined();
+    expect(await s.get(legacyMediaKey(FLOW))).toBeUndefined();
   });
 
   it("a failing storage reads as 'no draft' instead of throwing", async () => {
@@ -144,7 +125,7 @@ describe("persistent draft store (IndexedDB)", () => {
   it("memory fallback has the same behaviour", async () => {
     setDraftStorage(memoryStorage());
     await writeDraft(FLOW, { step: 2 });
-    expect((await readDraft(FLOW))?.payload).toEqual({ step: 2 });
+    expect(await readDraft(FLOW)).toEqual({ step: 2 });
   });
 });
 

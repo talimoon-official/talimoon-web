@@ -18,7 +18,7 @@ export function resolveDraftLoad(
   chosenBookType: BookType | undefined,
 ): { restored: RestoredOrderDraft | null; ask: boolean; discard: boolean } {
   const restored = loaded
-    ? restoreOrderDraft(loaded.payload, emptyForm(), STEPS.length, loaded.media)
+    ? restoreOrderDraft(loaded.payload, emptyForm(), STEPS.length)
     : null;
   if (!restored) return { restored: null, ask: false, discard: loaded != null };
   return { restored, ask: chosenBookType != null, discard: false };

@@ -13,11 +13,9 @@ import { LanguageProvider, useLanguage } from "@/lib/i18n/LanguageContext";
 import {
   DRAFT_SCHEMA_VERSION,
   MAX_AGE_MS,
-  MEDIA_MAX_AGE_MS,
   memoryStorage,
   setDraftStorage,
   writeDraft,
-  writeDraftMedia,
   type DraftStorage,
 } from "@/lib/order/formDraft";
 import { ENTRY_PATH, FORM_PATH, PRICE_PATH, RESUME_PATH } from "@/lib/order/paths";
@@ -34,7 +32,7 @@ import {
   createDraftSaver,
   hasResumableOrderDraft,
   loadOrderDraft,
-  splitMedia,
+  stripMedia,
   toPersisted,
   type OrderDraft,
 } from "../orderDraft";
@@ -74,7 +72,7 @@ function draftData(): FormData {
 }
 
 function draftParts(extra: Partial<OrderDraft> = {}) {
-  const { text, media, manifest } = splitMedia(toPersisted(draftData()));
+  const { text, manifest } = stripMedia(toPersisted(draftData()));
   const payload: OrderDraft = {
     bookType: "single",
     data: text,
@@ -85,13 +83,12 @@ function draftParts(extra: Partial<OrderDraft> = {}) {
     media: manifest,
     ...extra,
   };
-  return { payload, media };
+  return { payload };
 }
 
 async function saveDraft(extra: Partial<OrderDraft> = {}) {
   const p = draftParts(extra);
   await writeDraft(FLOW, p.payload);
-  await writeDraftMedia(FLOW, p.media);
 }
 
 /** Stores records as if last edited `ageMs` ago. */
@@ -99,7 +96,6 @@ async function saveAgedDraft(ageMs: number, extra: Partial<OrderDraft> = {}) {
   const p = draftParts(extra);
   const savedAt = Date.now() - ageMs;
   await store.put(FLOW, { v: DRAFT_SCHEMA_VERSION, flow: FLOW, savedAt, payload: p.payload });
-  await store.put(MEDIA, { v: DRAFT_SCHEMA_VERSION, flow: FLOW, savedAt, payload: p.media });
 }
 
 function SetLanguage({ to }: { to: "UZ" | "RU" | "EN" }) {
@@ -185,16 +181,16 @@ describe("C · Davom ettirish", () => {
     expect(nav.replace).toHaveBeenCalledWith(FORM_PATH);
     expect(nav.push).not.toHaveBeenCalled();
     expect(await store.get(FLOW)).toBeDefined();
-    expect(await store.get(MEDIA)).toBeDefined();
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("the form then reopens on the exact saved step with answers, photos and cards", async () => {
-    await saveDraft({ stepIndex: PHOTOS_STEP });
+  it("with no missing required media before it, the form reopens on the exact saved step", async () => {
+    await saveDraft({ stepIndex: 0 });
     wrap(<FormRoute />); // no plan intent = the Continue path
-    expect(await screen.findByRole("heading", { name: STEPS[PHOTOS_STEP]!.titleUz })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: STEPS[0]!.titleUz })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: c.title })).toBeNull();
-    expect(document.querySelector("[data-media-reupload]")).toBeNull(); // photos came back
+    expect(screen.getByDisplayValue("Seni yaxshi ko‘ramiz")).toBeInTheDocument();
+    expect(document.querySelector("[data-media-reupload]")).toBeNull();
   });
 
   it("restores a per-child sub-screen and every answer, optional cards included", async () => {
@@ -207,17 +203,17 @@ describe("C · Davom ettirish", () => {
     expect(child.noFavoriteActivity).toBe(true);
     expect(child.emotionalBridge).toMatchObject({ noSituation: true, sensitivities: "Ehtiyot bo‘ling", done: true });
     expect(child.phase02Done && child.phase03Done).toBe(true);
-    expect(child.photos).toHaveLength(3);
+    expect(child.photos).toEqual([]); // files are never stored
     expect(r.data.personalMessage).toBe("Seni yaxshi ko‘ramiz");
   });
 
   it("from the form route's own choice: continue reopens the saved step", async () => {
     const u = userEvent.setup();
-    await saveDraft({ stepIndex: PHOTOS_STEP });
+    await saveDraft({ stepIndex: 0 });
     setPlanIntent("multi");
     wrap(<FormRoute />);
     await u.click(await screen.findByRole("button", { name: new RegExp(c.continueCta) }));
-    expect(await screen.findByRole("heading", { name: STEPS[PHOTOS_STEP]!.titleUz })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: STEPS[0]!.titleUz })).toBeInTheDocument();
   });
 });
 
@@ -236,7 +232,6 @@ describe("D · Yangi buyurtma boshlash", () => {
     await u.click(document.querySelector<HTMLButtonElement>('[data-resume-action="cancel-new"]')!);
     expect(screen.getByRole("heading", { name: c.title })).toBeInTheDocument();
     expect(await store.get(FLOW)).toBeDefined();
-    expect(await store.get(MEDIA)).toBeDefined();
 
     // confirm → both records gone, normal first step (pricing)
     await u.click(screen.getByRole("button", { name: new RegExp(c.startNewCta) }));
@@ -310,17 +305,19 @@ describe("F · expired answers (> 7 days)", () => {
   });
 });
 
-describe("G · expired media (> 48 hours, answers still valid)", () => {
-  it("still offers to continue; Continue restores the step and asks only for the files", async () => {
-    await saveAgedDraft(MEDIA_MAX_AGE_MS + 60_000, { stepIndex: PHOTOS_STEP });
+describe("G · media is never stored: Continue goes back to the earliest required file", () => {
+  it("saved on the photos step → reopens on Esdalik (keepsake photo) with a calm notice, answers filled", async () => {
+    await saveDraft({ stepIndex: PHOTOS_STEP });
+    expect(await store.get(MEDIA)).toBeUndefined();
     expect(await hasResumableOrderDraft()).toBe(true);
     wrap(<FormRoute />);
-    expect(await screen.findByRole("heading", { name: STEPS[PHOTOS_STEP]!.titleUz })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: STEPS[0]!.titleUz })).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Seni yaxshi ko‘ramiz")).toBeInTheDocument();
     const banner = document.querySelector('[data-media-reupload="banner"]')!;
-    expect(banner.textContent).toContain(REUPLOAD_COPY.uz.title);
-    expect(REUPLOAD_COPY.uz.title).toBe("Javoblaringiz saqlangan. Faqat ayrim fayllarni qayta yuklash kerak.");
+    expect(banner.getAttribute("role")).toBe("status"); // not an alert / error
+    expect(banner.textContent).toContain(REUPLOAD_COPY.uz.titlePhotos);
+    expect(REUPLOAD_COPY.uz.titlePhotos).toBe("Javoblaringiz saqlangan. Davom etish uchun rasmlarni qayta yuklang.");
     expect(banner.textContent).toMatch(/Nodira suratlari \(3 ta\)/);
-    expect(await store.get(MEDIA)).toBeUndefined();
   });
 });
 
@@ -401,8 +398,8 @@ describe("J · copy", () => {
         expect(RESUME_COPY[loc][k]).not.toBe(RESUME_COPY.uz[k]);
       }
     }
-    expect(REUPLOAD_COPY.en.title).toMatch(/answers are saved/i);
-    expect(REUPLOAD_COPY.ru.title).toMatch(/ответы сохранены/i);
+    expect(REUPLOAD_COPY.en.titlePhotos).toMatch(/answers are saved/i);
+    expect(REUPLOAD_COPY.ru.titlePhotos).toMatch(/ответы сохранены/i);
   });
 
   it("renders in RU and EN with the site language", async () => {

@@ -15,7 +15,7 @@ import { memoryStorage, setDraftStorage } from "@/lib/order/formDraft";
 import { SignatureModel } from "@/lib/order/signaturePad";
 import PersonalizedBookOrderForm, { emptyForm, type FormData } from "../PersonalizedBookOrderForm";
 import { STEPS } from "../orderFormData";
-import { restoreOrderDraft, splitMedia, toPersisted, type OrderDraft, type RestoredOrderDraft } from "../orderDraft";
+import { restoreOrderDraft, stripMedia, toPersisted, type OrderDraft, type RestoredOrderDraft } from "../orderDraft";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -100,7 +100,7 @@ function fullData(photos: File[]): FormData {
 }
 
 function restoredAtConsent(data: FormData): RestoredOrderDraft {
-  const { text, manifest } = splitMedia(toPersisted(data));
+  const { text, manifest } = stripMedia(toPersisted(data));
   const payload: OrderDraft = {
     bookType: "single",
     data: text,
@@ -111,8 +111,9 @@ function restoredAtConsent(data: FormData): RestoredOrderDraft {
     media: manifest,
   };
   const r = restoreOrderDraft(JSON.parse(JSON.stringify(payload)), emptyForm(), STEPS.length)!;
-  // the live form data (with its files and the consent of THIS session)
-  return { ...r, data, mediaGaps: [] };
+  // the live form data (with its files and the consent of THIS session) —
+  // a same-session state, so no resume rewind to a missing-media step
+  return { ...r, data, stepIndex: CONSENT_STEP, savedStepIndex: undefined, mediaGaps: [] };
 }
 
 const mount = (r: RestoredOrderDraft) =>

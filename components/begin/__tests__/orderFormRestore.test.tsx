@@ -7,12 +7,12 @@ import {
   readDraft,
   setDraftStorage,
   writeDraft,
-  writeDraftMedia,
   type DraftStorage,
 } from "@/lib/order/formDraft";
 import PersonalizedBookOrderForm, { emptyForm, type FormData } from "../PersonalizedBookOrderForm";
 import { STEPS } from "../orderFormData";
-import { restoreOrderDraft, splitMedia, toPersisted, type OrderDraft } from "../orderDraft";
+import { restoreOrderDraft, stripMedia, toPersisted, type OrderDraft } from "../orderDraft";
+import { REUPLOAD_COPY } from "../MediaReuploadNotice";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -34,7 +34,7 @@ function seededData(): FormData {
 }
 
 function storedParts(extra: Partial<OrderDraft>, data = seededData()) {
-  const { text, media, manifest } = splitMedia(toPersisted(data));
+  const { text, manifest } = stripMedia(toPersisted(data));
   const payload: OrderDraft = {
     bookType: "single",
     data: text,
@@ -45,12 +45,12 @@ function storedParts(extra: Partial<OrderDraft>, data = seededData()) {
     media: manifest,
     ...extra,
   };
-  return { payload, media };
+  return { payload };
 }
 
-function restored(extra: Partial<OrderDraft>, withMedia = true) {
+function restored(extra: Partial<OrderDraft>) {
   const s = storedParts(extra);
-  return restoreOrderDraft(JSON.parse(JSON.stringify(s.payload)), emptyForm(), STEPS.length, withMedia ? s.media : undefined)!;
+  return restoreOrderDraft(JSON.parse(JSON.stringify(s.payload)), emptyForm(), STEPS.length)!;
 }
 
 let store: DraftStorage;
@@ -85,22 +85,24 @@ describe("the whole form reopens where the customer left it", () => {
     expect(document.querySelector("[data-media-reupload]")).toBeNull(); // nothing expired
   });
 
-  it("media expired: same step, answers intact, and ONLY the missing files are asked for", () => {
-    mount(restored({ phase: "steps", stepIndex: PHOTOS_STEP }, false));
-    // still on the photos step — not restarted
-    expect(screen.getByRole("heading", { name: STEPS[PHOTOS_STEP]!.titleUz })).toBeInTheDocument();
+  it("saved past a required-media step: reopens there (never restarts), answers intact, only the files asked for", () => {
+    mount(restored({ phase: "steps", stepIndex: PHOTOS_STEP }));
+    // files are never stored: the Esdalik keepsake photo (required, before
+    // the photos step) is the earliest missing one
+    expect(screen.getByRole("heading", { name: STEPS[0]!.titleUz })).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Seni yaxshi ko‘ramiz")).toBeInTheDocument();
     const banner = document.querySelector('[data-media-reupload="banner"]')!;
     expect(banner).not.toBeNull();
-    expect(banner.textContent).toMatch(/48 soat/);
+    expect(banner.textContent).toContain(REUPLOAD_COPY.uz.titlePhotos);
+    expect(banner.textContent).toMatch(/Esdalik surati/);
     expect(banner.textContent).toMatch(/Nodira suratlari \(3 ta\)/);
-    const inline = document.querySelector('[data-media-reupload="inline"]')!;
-    expect(inline.textContent).toMatch(/Nodira suratlari/);
+    expect(banner.textContent).not.toMatch(/48/);
     expect(screen.queryByText(/Assalomu alaykum/)).toBeNull();
   });
 
   it("the banner can be dismissed; the inline marker stays on the step until re-added", async () => {
     const u = userEvent.setup();
-    mount(restored({ phase: "steps", stepIndex: PHOTOS_STEP }, false));
+    mount(restored({ phase: "steps", stepIndex: PHOTOS_STEP }));
     await u.click(screen.getByRole("button", { name: "Tushunarli" }));
     expect(document.querySelector('[data-media-reupload="banner"]')).toBeNull();
     expect(document.querySelector('[data-media-reupload="inline"]')).not.toBeNull();
@@ -114,7 +116,7 @@ describe("the whole form reopens where the customer left it", () => {
     });
     vi.useRealTimers();
     await vi.waitFor(async () => {
-      const d = (await readDraft<OrderDraft>(FLOW))?.payload;
+      const d = await readDraft<OrderDraft>(FLOW);
       expect(d?.phase).toBe("steps");
       expect(d?.data.orderer.name).toBe("Sherzod");
       expect(d && "consentDrawnSignature" in d.data).toBe(false);
@@ -142,7 +144,7 @@ describe("world → character: the removed bridge screen", () => {
     const d = seededData();
     d.children = [{ ...d.children[0]!, childDream: "Uchuvchi" }];
     const s = storedParts(extra, d);
-    return restoreOrderDraft(JSON.parse(JSON.stringify(s.payload)), emptyForm(), STEPS.length, s.media)!;
+    return restoreOrderDraft(JSON.parse(JSON.stringify(s.payload)), emptyForm(), STEPS.length)!;
   }
   const h2 = () => screen.getByRole("heading", { level: 2 }).textContent ?? "";
 
@@ -173,7 +175,7 @@ describe("world → character: the removed bridge screen", () => {
     expect(h2()).toMatch(/Nodira.*kim bo‘lmoqchi/);
     expect(document.body.textContent).not.toMatch(BRIDGE);
     await vi.waitFor(async () => {
-      const d = (await readDraft<OrderDraft>(FLOW))?.payload;
+      const d = await readDraft<OrderDraft>(FLOW);
       expect(d?.phase).toBe("world");
       expect(d?.pos).toEqual({ idx: 0, screen: "dream" });
     }, { timeout: 3000 });
@@ -183,18 +185,16 @@ describe("world → character: the removed bridge screen", () => {
     const d = seededData();
     d.children = [d.children[0]!, { id: "c2", name: "Vali", age: 5 }];
     const s = storedParts({ bookType: "multi", phase: "world", pos: { idx: 0, screen: "child-done" } }, d);
-    const r = restoreOrderDraft(JSON.parse(JSON.stringify(s.payload)), emptyForm(), STEPS.length, s.media)!;
+    const r = restoreOrderDraft(JSON.parse(JSON.stringify(s.payload)), emptyForm(), STEPS.length)!;
     expect(r.pos).toEqual({ idx: 0, screen: "child-done" });
   });
 });
 
-describe("'Yangi buyurtma boshlash' deletes the previous draft AND its media", () => {
-  it("through the real route: choice screen → start new → both records gone", async () => {
+describe("'Yangi buyurtma boshlash' deletes the previous draft", () => {
+  it("through the real route: choice screen → confirm → draft gone", async () => {
     const u = userEvent.setup();
     const s = storedParts({ bookType: "single" });
     await writeDraft(FLOW, s.payload);
-    await writeDraftMedia(FLOW, s.media);
-    expect(await store.get(`${FLOW}:media`)).toBeDefined();
 
     const { setPlanIntent } = await import("@/lib/order/planIntent");
     const { default: Route } = await import("@/app/begin/personalized-book/form/PersonalizedBookFormRoute");

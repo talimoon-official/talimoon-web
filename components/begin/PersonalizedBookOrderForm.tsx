@@ -68,6 +68,7 @@ import type { SubPosition } from "./flowPosition";
 import {
   additionalCharacterLabel,
   additionalCharacterNamed,
+  MIN_CHILD_PHOTOS,
   bookTypeForChildCount,
   deliveryRequired,
   emptyAdditionalCharacter,
@@ -855,7 +856,6 @@ export function emptyForm(market: Market = "UZ"): FormData {
 }
 
 /** Minimum child photos before the photos step can advance (spec §7). */
-const MIN_CHILD_PHOTOS = 3;
 const MAX_CHILD_PHOTOS = 5;
 
 /**
@@ -1097,15 +1097,12 @@ export default function PersonalizedBookOrderForm({
   //    position (components/begin/orderDraft). Only once the customer has
   //    entered something, never after the order is saved. Flushed when the
   //    page is hidden / left (a backgrounded PWA may be killed) and on
-  //    unmount.
-  const [saver] = useState(() => {
-    const s = createDraftSaver();
-    // the restored files are already on disk — no immediate rewrite
-    if (restored) s.seedMedia(restored.data);
-    return s;
-  });
-  // Files that expired (48h) while the answers survived: only these are
-  // asked for again — a banner once, and inline on the step that owns them.
+  //    unmount. Files are never stored (only a count-only manifest).
+  const [saver] = useState(() => createDraftSaver());
+  // Files a resumed draft must ask for again (they are never stored): a
+  // banner once, and inline on the step that owns them. The restore already
+  // moved the position back to the earliest step whose required files are
+  // missing (orderDraft `resumeStepFor`); every later answer is still here.
   const [mediaGaps, setMediaGaps] = useState<MediaGap[]>(() => restored?.mediaGaps ?? []);
   const [gapBannerOpen, setGapBannerOpen] = useState(true);
   const openGaps = mediaGaps.filter((g) => gapIsOpen(g, data));

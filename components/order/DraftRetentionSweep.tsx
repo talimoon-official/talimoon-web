@@ -1,9 +1,10 @@
 "use client";
 
 /**
- * Enforces the order-draft retention windows on every app start (answers 7
- * days, photos + voice 48 hours after the last activity) — so the files of
- * an abandoned order leave the device even if the form is never reopened.
+ * Enforces the order-draft retention on every app start (the text-only
+ * draft, 7 days after the last activity) — so an abandoned order leaves the
+ * device even if the form is never reopened. Also deletes any media record
+ * left by builds that still stored photos / voice.
  *
  * Opens IndexedDB ONLY if our database already exists (never creates an
  * empty one for ordinary visitors). Renders nothing.
