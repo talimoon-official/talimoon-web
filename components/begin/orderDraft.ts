@@ -273,7 +273,7 @@ export function restoreOrderDraft(
       pos = { idx: pos.idx, screen: "dream" };
     }
     const bookType = raw.bookType === "multi" ? "multi" : "single";
-    const resumeStep = phase === "steps" ? resumeStepFor(data, manifest, stepIndex) : stepIndex;
+    const resumeStep = phase === "steps" ? resumeStepFor(data, stepIndex) : stepIndex;
     return {
       bookType,
       data,
@@ -294,19 +294,24 @@ export function restoreOrderDraft(
 // ── required media + the resume step ─────────────────────────────────────────
 
 /**
- * The files `stepId` REQUIRES that `data` does not hold — the same rules
- * that gate the step's "Davom etish" (isStepComplete), plus the voice note
- * when the customer chose one ("Ha") and had recorded it (manifest). Only
- * the required MINIMUM is asked for — never the extra photos above it, nor a
- * voice never recorded: optional media never pulls the customer back.
+ * The files `stepId` REQUIRES that `data` does not hold — exactly the media
+ * rules that gate the step's "Davom etish" (isStepComplete):
+ *
+ *   1. the keepsake photo (Esdalik)
+ *   2. each child's minimum photos
+ *   3. each named additional character's minimum photos, when that option
+ *      is on
+ *
+ * Only the required MINIMUM is asked for. OPTIONAL MEDIA NEVER PULLS THE
+ * CUSTOMER BACK: the voice note is optional in the form, so it is ignored
+ * here completely — even after "Ha" and a recording in an earlier session.
+ * That recording is simply not carried over; the customer may record again
+ * if they reach the Esdalik step.
  */
-export function requiredMediaGaps(stepId: StepId, data: FormData, manifest: MediaManifest): MediaGap[] {
+export function requiredMediaGaps(stepId: StepId, data: FormData): MediaGap[] {
   const gaps: MediaGap[] = [];
   if (stepId === "personal-touch") {
     if (data.specialPhoto == null) gaps.push({ kind: "special" });
-    if (data.keepsakeWantsVoice === true && manifest.finalVoice && data.finalVoice == null) {
-      gaps.push({ kind: "voice" });
-    }
   } else if (stepId === "photos") {
     for (const c of data.children) {
       const have = c.photos?.length ?? 0;
@@ -335,9 +340,9 @@ export function requiredMediaGaps(stepId: StepId, data: FormData, manifest: Medi
  * stepping forward again finds it all filled in; the next missing-media
  * step is then gated by its own "Davom etish" rule and inline notice.
  */
-export function resumeStepFor(data: FormData, manifest: MediaManifest, savedStepIndex: number): number {
+export function resumeStepFor(data: FormData, savedStepIndex: number): number {
   for (let i = 0; i < savedStepIndex && i < STEPS.length; i++) {
-    if (requiredMediaGaps(STEPS[i]!.id, data, manifest).length > 0) return i;
+    if (requiredMediaGaps(STEPS[i]!.id, data).length > 0) return i;
   }
   return savedStepIndex;
 }
@@ -351,7 +356,7 @@ export function resumeStepFor(data: FormData, manifest: MediaManifest, savedStep
 export function resumeGaps(data: FormData, manifest: MediaManifest, savedStepIndex: number): MediaGap[] {
   const gaps: MediaGap[] = [];
   for (let i = 0; i <= savedStepIndex && i < STEPS.length; i++) {
-    const step = requiredMediaGaps(STEPS[i]!.id, data, manifest);
+    const step = requiredMediaGaps(STEPS[i]!.id, data);
     if (i < savedStepIndex) {
       gaps.push(...step);
       continue;
@@ -361,7 +366,7 @@ export function resumeGaps(data: FormData, manifest: MediaManifest, savedStepInd
         g.kind === "child" ? (manifest.children[g.id] ?? 0) > 0
           : g.kind === "character" ? (manifest.characters[g.id] ?? 0) > 0
             : g.kind === "special" ? manifest.specialPhoto
-              : manifest.finalVoice;
+              : false; // the optional voice is never a resume requirement
       if (had) gaps.push(g);
     }
   }

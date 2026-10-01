@@ -214,15 +214,13 @@ describe("restore", () => {
     expect(r.data.orderer.phone).toBe("+998901234567");
   });
 
-  it("a gap closes as soon as the file is added again (or the voice is switched off)", () => {
+  it("a gap closes as soon as the required minimum is added again", () => {
     const r = restore(stored(filledForm(), { stepIndex: RV }));
     const d = r.data;
     const child = r.mediaGaps.find((g) => g.kind === "child")!;
     expect(gapIsOpen(child, d)).toBe(true);
     expect(gapIsOpen(child, { ...d, children: [{ ...d.children[0]!, photos: [photo("1"), photo("2")] }] })).toBe(true);
     expect(gapIsOpen(child, { ...d, children: [{ ...d.children[0]!, photos: [photo("1"), photo("2"), photo("3")] }] })).toBe(false);
-    const voice = r.mediaGaps.find((g) => g.kind === "voice")!;
-    expect(gapIsOpen(voice, { ...d, keepsakeWantsVoice: false })).toBe(false);
   });
 
   it("clamps a stale step index and a stale child index", () => {
@@ -393,7 +391,6 @@ describe("resume step: earliest REQUIRED missing media, else the saved step", ()
     expect(r.data.additionalCharacters[0]!.name).toBe("Karim");
     expect(r.mediaGaps).toEqual([
       { kind: "special" },
-      { kind: "voice" },
       { kind: "child", id: "c1", name: "Nodira", count: 3, expected: 3 },
       { kind: "character", id: "k1", name: "Karim", count: 2, expected: 2 },
     ]);
@@ -401,17 +398,16 @@ describe("resume step: earliest REQUIRED missing media, else the saved step", ()
 
   it("D/E · after re-adding one step's files the NEXT missing step wins; later answers stay filled", () => {
     const r = restore(stored(filledForm(), { stepIndex: RV }));
-    const m = (stored(filledForm()).payload as { media: MediaManifest }).media;
     // re-add the Esdalik files → the photos step is next
     const afterEsdalik = { ...r.data, specialPhoto: photo("k.jpg"), finalVoice: new File(["v"], "v.webm") };
-    expect(resumeStepFor(afterEsdalik, m, RV)).toBe(PH);
+    expect(resumeStepFor(afterEsdalik, RV)).toBe(PH);
     // re-add the child + character photos → straight on to the saved step
     const afterPhotos: FormData = {
       ...afterEsdalik,
       children: [{ ...afterEsdalik.children[0]!, photos: [photo("1"), photo("2"), photo("3")] }],
       additionalCharacters: [{ ...afterEsdalik.additionalCharacters[0]!, photos: [photo("x"), photo("y")] }],
     };
-    expect(resumeStepFor(afterPhotos, m, RV)).toBe(RV);
+    expect(resumeStepFor(afterPhotos, RV)).toBe(RV);
     expect(afterPhotos.personalMessage).toBe("Seni yaxshi ko‘ramiz");
     expect(afterPhotos.orderer.phone).toBe("+998901234567");
     expect(afterPhotos.bookLanguageCode).toBe("uz");
@@ -430,44 +426,68 @@ describe("resume step: earliest REQUIRED missing media, else the saved step", ()
     expect(r.mediaGaps).toEqual([]);
   });
 
-  it("on the step the customer was ON, only files they had added count as re-uploads", () => {
-    // at Esdalik, keepsake photo never added yet, voice recorded
-    const f = { ...filledForm(), specialPhoto: null };
-    const r = restore(stored(f, { stepIndex: PT }));
-    expect(r.mediaGaps).toEqual([{ kind: "voice" }]);
-    expect(resumeTitle(r.mediaGaps, "uz")).toBe("Javoblaringiz saqlangan. Davom etish uchun ovozli faylni qayta qo‘shing.");
+  it("on the step the customer was ON, only required files they had added count as re-uploads", () => {
+    // at Esdalik, keepsake photo never added yet (voice recorded — ignored)
+    const notYet = restore(stored({ ...filledForm(), specialPhoto: null }, { stepIndex: PT }));
+    expect(notYet.mediaGaps).toEqual([]);
+    // keepsake photo had been added → asked for again, the voice still not
+    const had = restore(stored(filledForm(), { stepIndex: PT }));
+    expect(had.mediaGaps).toEqual([{ kind: "special" }]);
+    expect(resumeTitle(had.mediaGaps, "uz")).toBe("Javoblaringiz saqlangan. Davom etish uchun rasmlarni qayta yuklang.");
   });
 
   it("F · optional media never pulls back: voice 'Yo‘q', a voice never recorded, extra photos above the minimum", () => {
     const base = { ...filledForm(), specialPhoto: photo("k.jpg") };
     // voice declined
     const noVoice = { ...base, keepsakeWantsVoice: false, finalVoice: null };
-    expect(requiredMediaGaps("personal-touch", noVoice, manifestOf(noVoice))).toEqual([]);
+    expect(requiredMediaGaps("personal-touch", noVoice)).toEqual([]);
     // "Ha" but nothing was ever recorded
     const neverRecorded = { ...base, finalVoice: null };
-    expect(requiredMediaGaps("personal-touch", neverRecorded, manifestOf(neverRecorded))).toEqual([]);
+    expect(requiredMediaGaps("personal-touch", neverRecorded)).toEqual([]);
     // 5 photos had, only the minimum (3) is asked for
     const many = { ...base, children: [{ ...base.children[0]!, photos: [1, 2, 3, 4, 5].map((n) => photo(`${n}`)) }] };
     const m = manifestOf(many);
     expect(m.children.c1).toBe(5);
-    const gap = requiredMediaGaps("photos", { ...many, children: [{ ...many.children[0]!, photos: [] }] }, m)[0];
+    const gap = requiredMediaGaps("photos", { ...many, children: [{ ...many.children[0]!, photos: [] }] })[0];
     expect(gap).toMatchObject({ kind: "child", count: 3, expected: 3 });
     // additional characters switched off → their photos are not required
     const noChars = { ...base, wantsCharacters: false };
     const stripped = { ...noChars, children: [{ ...noChars.children[0]!, photos: [] }] };
-    expect(requiredMediaGaps("photos", stripped, manifestOf(noChars)).map((g) => g.kind)).toEqual(["child"]);
+    expect(requiredMediaGaps("photos", stripped).map((g) => g.kind)).toEqual(["child"]);
   });
 
-  it("G · a recorded voice the customer chose ('Ha') is required: resumes at the Esdalik (voice) step", () => {
+  it("G · a previously recorded optional voice never pulls resume backward", () => {
+    // "Ha" + a recording in the earlier session (manifest says so)
     const f = filledForm();
-    const r = restore(stored(f, { stepIndex: PH }));
-    expect(STEPS[r.stepIndex]!.id).toBe("personal-touch");
-    expect(r.mediaGaps.map((g) => g.kind)).toContain("voice");
-    // only the voice left open → the voice-only message
-    const esdalik = r.mediaGaps.filter((g) => g.kind === "special" || g.kind === "voice");
-    const onlyVoice = esdalik.filter((g) => gapIsOpen(g, { ...r.data, specialPhoto: photo("k") }));
-    expect(onlyVoice.map((g) => g.kind)).toEqual(["voice"]);
-    expect(resumeTitle(onlyVoice, "uz")).toBe(REUPLOAD_COPY.uz.titleVoice);
+    const m = (stored(f).payload as { media: MediaManifest }).media;
+    expect(m.finalVoice).toBe(true);
+    const r = restore(stored(f, { stepIndex: RV }));
+    // the choice survives, the recording does not — and it is not required
+    expect(r.data.keepsakeWantsVoice).toBe(true);
+    expect(r.data.finalVoice).toBeNull();
+    expect(r.mediaGaps.map((g) => g.kind)).not.toContain("voice");
+    expect(requiredMediaGaps("personal-touch", { ...r.data, specialPhoto: photo("k") })).toEqual([]);
+    // with every REQUIRED file back, resume goes straight to the saved step
+    const requiredBack: FormData = {
+      ...r.data,
+      specialPhoto: photo("k"),
+      children: [{ ...r.data.children[0]!, photos: [photo("1"), photo("2"), photo("3")] }],
+      additionalCharacters: [{ ...r.data.additionalCharacters[0]!, photos: [photo("x"), photo("y")] }],
+    };
+    expect(resumeStepFor(requiredBack, RV)).toBe(RV);
+    expect(resumeStepFor(requiredBack, PH)).toBe(PH);
+    // later saved text intact
+    expect(requiredBack.personalMessage).toBe("Seni yaxshi ko‘ramiz");
+    expect(requiredBack.orderer.phone).toBe("+998901234567");
+  });
+
+  it("G · missing REQUIRED photos still pull back to the earliest photo step, voice or not", () => {
+    const f = filledForm();
+    const r = restore(stored(f, { stepIndex: RV }));
+    expect(STEPS[r.stepIndex]!.id).toBe("personal-touch"); // keepsake photo
+    const afterKeepsake = { ...r.data, specialPhoto: photo("k") };
+    expect(STEPS[resumeStepFor(afterKeepsake, RV)]!.id).toBe("photos"); // child photos
+    expect(afterKeepsake.additionalCharacters[0]!.name).toBe("Karim");
   });
 
   it("messages: photos / voice / both", () => {
@@ -503,12 +523,12 @@ describe("resume step: earliest REQUIRED missing media, else the saved step", ()
     expect(r.stepIndex).toBe(PT);
     const afterKeepsake = { ...r.data, specialPhoto: photo("k2") };
     const m = (stored(two).payload as { media: MediaManifest }).media;
-    expect(resumeStepFor(afterKeepsake, m, RV)).toBe(PH);
+    expect(resumeStepFor(afterKeepsake, RV)).toBe(PH);
     const gaps = resumeGaps(afterKeepsake, m, RV).filter((g) => gapIsOpen(g, afterKeepsake));
     expect(gaps.map((g) => ("id" in g ? g.id : g.kind))).toEqual(["c1", "c2"]);
     // child 1 re-added: child 2 is still asked for, its text untouched
     const afterC1 = { ...afterKeepsake, children: [{ ...afterKeepsake.children[0]!, photos: [photo("1"), photo("2"), photo("3")] }, afterKeepsake.children[1]!] };
-    expect(resumeStepFor(afterC1, m, RV)).toBe(PH);
+    expect(resumeStepFor(afterC1, RV)).toBe(PH);
     expect(gaps.filter((g) => gapIsOpen(g, afterC1)).map((g) => ("id" in g ? g.id : g.kind))).toEqual(["c2"]);
     expect(afterC1.children[1]).toMatchObject({ name: "Bobur", favoriteActivity: "Futbol", emotionalBridge: { privateContext: "Yangi maktab" } });
     expect(afterC1.children[0]!.favoriteActivity).toBe("Rasm chizish");
