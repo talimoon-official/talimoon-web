@@ -40,8 +40,8 @@ export const REUPLOAD_COPY: Record<
   }
 > = {
   uz: {
-    title: "Faqat ba’zi fayllarni qayta qo‘shing",
-    body: "Javoblaringiz va formadagi joyingiz saqlangan. Xavfsizlik uchun suratlar va ovozli xabar bu qurilmada faqat 48 soat saqlanadi, shuning uchun faqat quyidagilarni qayta qo‘shish kerak:",
+    title: "Javoblaringiz saqlangan. Faqat ayrim fayllarni qayta yuklash kerak.",
+    body: "Formadagi joyingiz ham saqlangan. Xavfsizlik uchun suratlar va ovozli xabar bu qurilmada faqat 48 soat saqlanadi, shuning uchun faqat quyidagilarni qayta yuklang:",
     inlineTitle: "Qayta qo‘shish kerak",
     childPhotos: (name, n) => `${name || "Farzandingiz"} suratlari (${n} ta)`,
     characterPhotos: (name, n) => `${name || "Qo‘shimcha qahramon"} suratlari (${n} ta)`,
@@ -54,8 +54,8 @@ export const REUPLOAD_COPY: Record<
     unreadableBody: "Javoblaringiz saqlangan. Faqat quyidagini qayta tanlang:",
   },
   en: {
-    title: "Only a few files need adding again",
-    body: "Your answers and your place in the form are saved. For your privacy, photos and the voice note are kept on this device for only 48 hours, so only these need adding again:",
+    title: "Your answers are saved. Only a few files need uploading again.",
+    body: "Your place in the form is saved too. For your privacy, photos and the voice note are kept on this device for only 48 hours, so only these need adding again:",
     inlineTitle: "Needs adding again",
     childPhotos: (name, n) => `${name || "Your child"}’s photos (${n})`,
     characterPhotos: (name, n) => `${name || "Additional character"}’s photos (${n})`,
@@ -68,8 +68,8 @@ export const REUPLOAD_COPY: Record<
     unreadableBody: "Your answers are saved. Only choose this again:",
   },
   ru: {
-    title: "Нужно заново добавить только несколько файлов",
-    body: "Ваши ответы и место в форме сохранены. Ради конфиденциальности фото и голосовое сообщение хранятся на этом устройстве только 48 часов, поэтому заново нужно добавить только это:",
+    title: "Ваши ответы сохранены. Нужно заново загрузить лишь несколько файлов.",
+    body: "Ваше место в форме тоже сохранено. Ради конфиденциальности фото и голосовое сообщение хранятся на этом устройстве только 48 часов, поэтому заново нужно добавить только это:",
     inlineTitle: "Нужно добавить заново",
     childPhotos: (name, n) => `Фото: ${name || "ребёнок"} (${n})`,
     characterPhotos: (name, n) => `Фото: ${name || "дополнительный герой"} (${n})`,

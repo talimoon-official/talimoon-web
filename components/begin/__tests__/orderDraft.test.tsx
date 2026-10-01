@@ -18,7 +18,7 @@ import {
   type OrderDraft,
   type OrderDraftMedia,
 } from "../orderDraft";
-import { resolveDraftLoad } from "@/app/begin/personalized-book/form/PersonalizedBookFormRoute";
+import { resolveDraftLoad } from "../draftLoad";
 import Phase01, { type Phase01Snapshot } from "../Phase01";
 import EmotionalBridge from "../EmotionalBridge";
 import type { SubPosition } from "../flowPosition";
@@ -250,13 +250,14 @@ describe("restore", () => {
   });
 });
 
-describe("book-type scoping (route)", () => {
+describe("resume decision (route)", () => {
   const single = stored(filledForm(), { bookType: "single" });
-  it("same (or no) chosen type → restore without asking", () => {
-    expect(resolveDraftLoad(single, "single")).toMatchObject({ ask: false, discard: false });
+  it("no fresh plan choice (reload / Continue / PWA reopen) → restore without asking", () => {
+    expect(resolveDraftLoad(single, undefined)).toMatchObject({ ask: false, discard: false });
     expect(resolveDraftLoad(single, undefined).restored?.data.orderer.name).toBe("Sherzod");
   });
-  it("a DIFFERENT chosen type never silently reuses the draft — the customer is asked", () => {
+  it("a fresh plan choice never silently reuses the draft — same type or not, the customer is asked", () => {
+    expect(resolveDraftLoad(single, "single").ask).toBe(true);
     expect(resolveDraftLoad(single, "multi").ask).toBe(true);
   });
   it("an unreadable draft is discarded", () => {

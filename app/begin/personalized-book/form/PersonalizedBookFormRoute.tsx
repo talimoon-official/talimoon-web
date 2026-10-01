@@ -7,16 +7,10 @@ import { ENTRY_PATH, PRICE_PATH } from "@/lib/order/paths";
 import { markReturnedToMenu } from "@/lib/order/menuReturn";
 import { createFormHistoryGuard, type FormHistoryGuard } from "@/lib/order/formHistoryGuard";
 import { FlowBackProvider, type FlowBackRegistry } from "@/components/begin/FlowBack";
-import PersonalizedBookOrderForm, { emptyForm } from "@/components/begin/PersonalizedBookOrderForm";
-import { STEPS, type BookType } from "@/components/begin/orderFormData";
-import {
-  clearOrderDraft,
-  loadOrderDraft,
-  restoreOrderDraft,
-  type LoadedOrderDraft,
-  type RestoredOrderDraft,
-} from "@/components/begin/orderDraft";
-import DraftChoice from "@/components/begin/DraftChoice";
+import PersonalizedBookOrderForm from "@/components/begin/PersonalizedBookOrderForm";
+import { clearOrderDraft, loadOrderDraft, type RestoredOrderDraft } from "@/components/begin/orderDraft";
+import { resolveDraftLoad } from "@/components/begin/draftLoad";
+import ResumeChoice from "@/components/begin/ResumeChoice";
 
 /**
  * Thin client wrapper around the EXISTING `PersonalizedBookOrderForm`:
@@ -24,9 +18,12 @@ import DraftChoice from "@/components/begin/DraftChoice";
  *  - Loads the unfinished order saved on this device (IndexedDB, see
  *    components/begin/orderDraft) BEFORE the form renders, so the form opens
  *    straight on the saved step — no flash of the first question.
- *  - When the customer arrives having chosen a DIFFERENT book type than the
- *    saved draft, asks: continue the saved order, or start a new one (which
- *    discards the draft). Two drafts are never merged.
+ *  - When the customer arrives having just chosen a plan (pricing page /
+ *    product page) while an unfinished order is saved, asks first
+ *    (ResumeChoice): continue the saved order as it was, or — after one
+ *    confirmation — delete it and start the chosen plan fresh. Two drafts
+ *    are never merged. (From the order menu the same question is asked
+ *    earlier, on /begin/personalized-book/resume.)
  *  - A draft that cannot be rendered (e.g. written by an incompatible
  *    build) is discarded and the form restarts clean — never a crash loop.
  *  - "Back" from the form's first screen returns to the book-type choice
@@ -43,20 +40,6 @@ type Load =
 
 /** If storage never answers, open a fresh form rather than wait forever. */
 const LOAD_TIMEOUT_MS = 2500;
-
-export function resolveDraftLoad(
-  loaded: LoadedOrderDraft | undefined,
-  chosenBookType: BookType | undefined,
-): { restored: RestoredOrderDraft | null; ask: boolean; discard: boolean } {
-  const restored = loaded
-    ? restoreOrderDraft(loaded.payload, emptyForm(), STEPS.length, loaded.media)
-    : null;
-  if (!restored) return { restored: null, ask: false, discard: loaded != null };
-  if (chosenBookType && restored.bookType !== chosenBookType) {
-    return { restored, ask: true, discard: false };
-  }
-  return { restored, ask: false, discard: false };
-}
 
 export default function PersonalizedBookFormRoute() {
   const router = useRouter();
@@ -128,14 +111,12 @@ export default function PersonalizedBookFormRoute() {
   } else if (load.status === "choose") {
     const draft = load.restored;
     body = (
-      <DraftChoice
-        draft={draft}
-        chosenBookType={initialBookType!}
+      <ResumeChoice
         onBack={leaveToPricing}
         onContinue={() => setLoad({ status: "ready", restored: draft })}
         onStartNew={() => {
-          // The customer chose a NEW order: the old answers AND all its
-          // stored media are deleted first, then a fresh form opens.
+          // Confirmed NEW order: the old answers AND all its stored media
+          // are deleted first, then a fresh form opens on the chosen plan.
           void clearOrderDraft().then(() => setLoad({ status: "ready", restored: null }));
         }}
       />

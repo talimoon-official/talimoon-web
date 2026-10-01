@@ -9,9 +9,16 @@
  *
  *   A · Yangi buyurtma               → /begin/personalized-book/price
  *                                      (its own page: the book-type choice)
+ *                                      — or, when this device holds a valid
+ *                                      unfinished order, first
+ *                                      /begin/personalized-book/resume
+ *                                      ("continue it, or start new?")
  *   B · Mavjud buyurtma uchun to‘lov → /pay (payment code). NEVER the form.
  *
- * Both cards are plain links: no inline reveal, no state on this screen.
+ * Both cards are plain links: no inline reveal, no state on this screen. The
+ * local draft is probed on mount (IndexedDB, nothing leaves the device); the
+ * "Yangi buyurtma" click awaits that probe (bounded) and routes accordingly.
+ * Modifier / middle clicks keep the plain link.
  * "Orqaga" returns to the product choice (`/begin`). This is also where the
  * saved-order screen returns to (after "Keyinroq to‘lash" / Back); focus lands on
  * the heading (lib/order/menuReturn).
@@ -21,13 +28,18 @@
  * Motion: 240ms colour / 2px lift, off under reduced motion.
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type MouseEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, BookOpen, Check, KeyRound } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { ENTRY_COPY } from "@/lib/order/entry-copy";
-import { PAY_PATH, PRICE_PATH } from "@/lib/order/paths";
-import { consumeReturnedToMenu } from "@/lib/order/menuReturn";
+import { PAY_PATH, PRICE_PATH, RESUME_PATH } from "@/lib/order/paths";
+import { consumeReturnedToMenu, markOpenedFromMenu } from "@/lib/order/menuReturn";
+import { hasResumableOrderDraft } from "@/components/begin/orderDraft";
+
+/** Never hold the tap longer than this on a slow / stuck storage. */
+const DRAFT_PROBE_TIMEOUT_MS = 1500;
 
 /**
  * Keyboard focus for the cards: a ring (box-shadow) that follows each card's
@@ -45,6 +57,32 @@ export default function PersonalizedBookEntry() {
   useEffect(() => {
     if (consumeReturnedToMenu()) headingRef.current?.focus({ preventScroll: true });
   }, []);
+
+  const router = useRouter();
+  const draftProbe = useRef<Promise<boolean> | null>(null);
+  useEffect(() => {
+    draftProbe.current = hasResumableOrderDraft().catch(() => false);
+  }, []);
+  const navigating = useRef(false);
+
+  async function startNewOrder(e: MouseEvent<HTMLAnchorElement>) {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    if (navigating.current) return;
+    navigating.current = true;
+    const probe = draftProbe.current ?? hasResumableOrderDraft().catch(() => false);
+    const hasDraft = await Promise.race([
+      probe,
+      new Promise<boolean>((r) => setTimeout(() => r(false), DRAFT_PROBE_TIMEOUT_MS)),
+    ]);
+    if (hasDraft) {
+      markOpenedFromMenu();
+      router.push(RESUME_PATH);
+    } else {
+      router.push(PRICE_PATH);
+    }
+    navigating.current = false;
+  }
 
   return (
     <section aria-labelledby="order-entry-heading" className="w-full bg-surface-base">
@@ -79,6 +117,7 @@ export default function PersonalizedBookEntry() {
         <div className="mx-auto mt-10 grid max-w-[880px] gap-4 sm:mt-14 sm:grid-cols-2 sm:gap-6">
           <Link
             href={PRICE_PATH}
+            onClick={startNewOrder}
             data-intent="new"
             className={[
               "group relative flex h-full flex-col overflow-hidden rounded-[20px] focus-visible:rounded-[20px]! border p-6 text-left sm:p-8",

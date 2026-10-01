@@ -17,3 +17,23 @@ export function consumeReturnedToMenu(): boolean {
   pending = false;
   return was;
 }
+
+/**
+ * The opposite direction: "the resume screen was opened from the order menu
+ * by a client navigation", so the menu is right behind it in history and its
+ * Back can simply step back (no duplicate menu entry). Peeked, not consumed,
+ * so a StrictMode double render reads the same answer.
+ */
+let openedFromMenu = false;
+
+export function markOpenedFromMenu(): void {
+  openedFromMenu = true;
+}
+
+export function peekOpenedFromMenu(): boolean {
+  return openedFromMenu;
+}
+
+export function clearOpenedFromMenu(): void {
+  openedFromMenu = false;
+}

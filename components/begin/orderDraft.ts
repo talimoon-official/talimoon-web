@@ -392,6 +392,27 @@ export async function loadOrderDraft(): Promise<LoadedOrderDraft | undefined> {
   return r ? { payload: r.payload, media: r.media } : undefined;
 }
 
+/**
+ * Is there an unfinished order on this device worth offering to continue?
+ * Cheap enough for the order menu (no form code): the same minimum
+ * `restoreOrderDraft` demands — answers with at least one identified child.
+ * Expired / foreign-version records are already deleted by `readDraft`; a
+ * record failing this check is deleted here too, so it is never offered.
+ * The resume screen still runs the full restore before showing the choice.
+ */
+export async function hasResumableOrderDraft(): Promise<boolean> {
+  const loaded = await loadOrderDraft();
+  if (!loaded) return false;
+  const raw = loaded.payload;
+  const ok =
+    isObj(raw) &&
+    isObj(raw.data) &&
+    Array.isArray(raw.data.children) &&
+    raw.data.children.some((c) => isObj(c) && typeof c.id === "string" && typeof c.name === "string");
+  if (!ok) await clearOrderDraft().catch(() => {});
+  return ok;
+}
+
 /** Deletes the answers AND all stored media. */
 export function clearOrderDraft(): Promise<void> {
   return clearDraft(FLOW);

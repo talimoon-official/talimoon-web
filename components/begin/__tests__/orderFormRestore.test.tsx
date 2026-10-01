@@ -204,7 +204,10 @@ describe("'Yangi buyurtma boshlash' deletes the previous draft AND its media", (
         <Route />
       </LanguageProvider>,
     );
-    await u.click(await screen.findByRole("button", { name: "Yangi buyurtma boshlash" }));
+    await u.click(await screen.findByRole("button", { name: /Yangi buyurtma boshlash/ }));
+    // one lightweight confirmation before anything is deleted
+    expect(await store.get(FLOW)).toBeDefined();
+    await u.click(screen.getByRole("button", { name: "Ha, yangi boshlayman" }));
     await waitFor(async () => {
       expect(await store.get(FLOW)).toBeUndefined();
       expect(await store.get(`${FLOW}:media`)).toBeUndefined();
